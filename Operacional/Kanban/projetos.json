@@ -3,7 +3,13 @@
     {
       "id": "board-projetos-1",
       "name": "Projetos Ativos",
-      "columns": ["Backlog", "A Fazer", "Em Andamento", "Em Revisão", "Concluído"],
+      "columns": [
+        "Backlog",
+        "A Fazer",
+        "Em Andamento",
+        "Em Revisão",
+        "Concluído"
+      ],
       "cards": [
         {
           "id": "proj-int-juridica",
@@ -11,13 +17,16 @@
           "client": "Não Informado",
           "column": "Em Andamento",
           "health_status": "No Prazo",
-          "tags": ["Jurídico", "IA"],
+          "tags": [
+            "Jurídico",
+            "IA"
+          ],
           "artifacts": [],
           "tasks": [
             {
               "id": "task-ij-1",
               "title": "Revisar o período de teste",
-              "assignee": "",
+              "assignee": "Joãozíssimo",
               "status": "pending",
               "dueDate": "",
               "reminders": []
@@ -25,7 +34,7 @@
             {
               "id": "task-ij-2",
               "title": "Atualizar o repositório de entrega do cliente",
-              "assignee": "",
+              "assignee": "Joãozíssimo",
               "status": "pending",
               "dueDate": "",
               "reminders": []
@@ -38,7 +47,10 @@
           "client": "Empresa do Canadá (via Guilherme Stack)",
           "column": "Em Andamento",
           "health_status": "No Prazo",
-          "tags": ["Squad", "Internacional"],
+          "tags": [
+            "Squad",
+            "Internacional"
+          ],
           "artifacts": [],
           "tasks": []
         }
