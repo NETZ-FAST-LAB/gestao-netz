@@ -1,0 +1,66 @@
+{
+    "boards": [
+        {
+            "id": "board-iniciativas-1",
+            "name": "Iniciativas Internas",
+            "columns": [
+                "Ideias",
+                "To Do",
+                "Doing",
+                "Review",
+                "Done"
+            ],
+            "cards": [
+                {
+                    "id": "inic-visita-sebrae",
+                    "title": "Visita ao Sebrae",
+                    "owner": "Time NETZ",
+                    "column": "To Do",
+                    "health_status": "No Prazo",
+                    "tags": [
+                        "Parcerias",
+                        "Evento"
+                    ],
+                    "artifacts": [],
+                    "tasks": []
+                },
+                {
+                    "id": "inic-atualizacao-site",
+                    "title": "Atualização do Site",
+                    "owner": "Time de Comunicação/Marketing",
+                    "column": "To Do",
+                    "health_status": "No Prazo",
+                    "tags": [
+                        "Comunicação",
+                        "Web"
+                    ],
+                    "artifacts": [],
+                    "tasks": []
+                },
+                {
+                    "id": "inic-assistente-tarefas",
+                    "title": "Assistente de Gestão de Tarefas",
+                    "owner": "Time de Operações / Antigravity",
+                    "column": "Doing",
+                    "health_status": "No Prazo",
+                    "tags": [
+                        "IA",
+                        "Operacional",
+                        "Automação"
+                    ],
+                    "artifacts": [],
+                    "tasks": [
+                        {
+                            "id": "task-at-1",
+                            "title": "Criar estrutura inicial de dados em JSON",
+                            "assignee": "Antigravity",
+                            "status": "completed",
+                            "dueDate": "2026-03-04",
+                            "reminders": []
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
