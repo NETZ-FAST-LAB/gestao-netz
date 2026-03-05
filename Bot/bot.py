@@ -1,11 +1,11 @@
 import os
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 from dotenv import load_dotenv
 import github_client
+import datetime
 
 load_dotenv()
-TOKEN = os.getenv("DISCORD_TOKEN")
 
 # Setup intent and bot instance
 intents = discord.Intents.default()
@@ -20,6 +20,29 @@ async def on_ready():
         print(f"Sincronizado {len(synced)} comando(s) slash.")
     except Exception as e:
         print(e)
+    
+    # Inicia a rotina de encerramento do expediente se não estiver rodando
+    if not lembrete_fim_de_dia.is_running():
+        lembrete_fim_de_dia.start()
+
+# Configura o horário de Brasília (UTC-3) para 19:19
+hora_rotina = datetime.time(hour=19, minute=19, tzinfo=datetime.timezone(datetime.timedelta(hours=-3)))
+
+@tasks.loop(time=hora_rotina)
+async def lembrete_fim_de_dia():
+    canal_gestao_tarefas_id = 1479226481782554634
+    canal = bot.get_channel(canal_gestao_tarefas_id)
+    
+    if canal:
+        mensagem = (
+            "🐈 **Miau! O expediente está acabando, humanos.**\n\n"
+            "Vão descansar e deixem tudo organizado para os próximos dias.\n"
+            "Por favor, revisem o nosso Kanban e cadastrem as novas tarefas para não esquecermos de nada amanhã!"
+        )
+        await canal.send(mensagem)
+    else:
+        print(f"ERRO: Canal de ID {canal_gestao_tarefas_id} não encontrado para enviar o lembrete.")
+
 
 @bot.event
 async def on_message(message: discord.Message):
