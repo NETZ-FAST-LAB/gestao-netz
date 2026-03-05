@@ -53,6 +53,18 @@
           ],
           "artifacts": [],
           "tasks": []
+        },
+        {
+          "id": "proj-ai-3",
+          "title": "VIEX",
+          "owner": "Guilherme Roennau",
+          "column": "Backlog",
+          "health_status": "No Prazo",
+          "tags": [
+            "AI-Created"
+          ],
+          "artifacts": [],
+          "tasks": []
         }
       ]
     }
