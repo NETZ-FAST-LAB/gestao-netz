@@ -23,14 +23,21 @@ async def on_ready():
 
 @bot.event
 async def on_message(message: discord.Message):
+    print(f"LOG MESSAGE: {message.content} FROM: {message.author}")
     # Ignore messages from the bot itself
     if message.author == bot.user:
         return
 
-    # Process AI interaction if the bot is mentioned
-    if bot.user in message.mentions:
+    # Process AI interaction if the bot is mentioned (user or role)
+    bot_mention = f"<@{bot.user.id}>"
+    if bot.user in message.mentions or bot_mention in message.content or any(role.name.lower() == "mintzie" for role in message.role_mentions):
+        
         # Strip the mention from the message to send clean text to Gemini
-        clean_prompt = message.content.replace(f'<@{bot.user.id}>', '').strip()
+        clean_prompt = message.content.replace(bot_mention, '').strip()
+        # Fallback to remove role mention text if its id is present
+        for role in message.role_mentions:
+            if role.name.lower() == "mintzie":
+                clean_prompt = clean_prompt.replace(f"<@&{role.id}>", "").strip()
         
         if not clean_prompt:
              await message.reply("O que foi, humano? Me acordou pra quê?")
@@ -44,7 +51,8 @@ async def on_message(message: discord.Message):
                 session_id = str(message.channel.id) 
                 
                 chat_session = gemini_logic.get_chat_session(session_id)
-                response = chat_session.send_message(clean_prompt)
+                prompt_enriquecido = f"[Mensagem de: {message.author.display_name}] {clean_prompt}"
+                response = chat_session.send_message(prompt_enriquecido)
                 
                 # Send the final response from the cat
                 await message.reply(response.text)
