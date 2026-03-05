@@ -64,7 +64,16 @@
             "AI-Created"
           ],
           "artifacts": [],
-          "tasks": []
+          "tasks": [
+            {
+              "id": "task-ai-1",
+              "title": "refatorar app planaterra",
+              "assignee": "Dênis Polidoro",
+              "status": "pending",
+              "dueDate": "",
+              "reminders": []
+            }
+          ]
         }
       ]
     }
