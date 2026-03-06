@@ -40,4 +40,78 @@ No arquivo `bot.py`, o código que intercepta mensagens no `on_message` geralmen
 ### 5. Checar Caminhos dos Arquivos
 Se o novo bot for trabalhar numa base de dados diferente ou com outra estrutura de diretórios, você precisará entrar nos arquivos de código (principalmente `gemini_logic.py` e `github_client.py`) e fazer um "Localizar e Substituir" dos caminhos dos JSONs modificando caminhos estáticos ou pastas para se adaptarem à raiz do seu novo repositório GitHub.
 
-**Resumo da Obra:** Duplique os 3 arquivos originais para o novo ambiente, atualize as credenciais no `.env`, configure o nome e as menções no `bot.py`, escreva a nova instrução formatada no `gemini_logic.py` e verifique os caminhos dos JSONs apontados. O novo bot já nascerá com todas as capacidades funcionais testadas na base, mas com comportamento e residência exclusivos.
+---
+
+## 🚀 Execução e Hospedagem (Local e VPS)
+
+O plano é começar rodando o bot localmente para testes e, em seguida, migrá-lo para uma VPS (Virtual Private Server) para mantê-lo online 24/7.
+
+### Rodando Localmente (Testes)
+1. Certifique-se de ter o Python instalado.
+2. Instale as dependências usando os comandos abaixo:
+   ```bash
+   pip install discord.py google-generativeai PyGithub python-dotenv
+   ```
+3. Com o `.env` configurado, execute o bot no terminal:
+   ```bash
+   python bot.py
+   ```
+4. O bot deverá aparecer online no seu servidor do Discord. Use `Ctrl+C` no seu terminal para parar a execução.
+
+### Deploy na VPS (Produção 24/7)
+Para manter o bot rodando de forma contínua na sua VPS:
+
+1. **Acesso à VPS:** Acesse sua VPS via SSH (`ssh root@ip_da_vps` ou o usuário fornecido).
+2. **Transferir Arquivos:** Envie os arquivos do bot (`bot.py`, `gemini_logic.py`, `github_client.py` e o arquivo `.env`) para a VPS. Você pode usar ferramentas como `scp`, FileZilla (SFTP) ou versionamento via GitHub (`git clone`).
+3. **Preparar o Ambiente na VPS:**
+   * Atualize os pacotes do sistema (se for Ubuntu/Debian):
+     ```bash
+     sudo apt update && sudo apt upgrade -y
+     sudo apt install python3 python3-pip python3-venv -y
+     ```
+   * Crie uma pasta para o bot (ex: `mkdir meu_bot && cd meu_bot`).
+   * (Opcional, mas recomendado) Crie e ative um ambiente virtual:
+     ```bash
+     python3 -m venv venv
+     source venv/bin/activate
+     ```
+   * Instale as dependências:
+     ```bash
+     pip install discord.py google-generativeai PyGithub python-dotenv
+     ```
+4. **Rodando em Segundo Plano (Background):**
+   Para que o bot não pare de rodar quando você fechar a janela do SSH, é recomendável usar um gerenciador de processos.
+
+   **Opção A - Usando `nohup` (modo rápido e simples):**
+   ```bash
+   nohup python3 bot.py > bot.log 2>&1 &
+   ```
+   *(O bot continuará rodando com logs salvos em `bot.log`. Para pará-lo depois, use `ps aux | grep bot.py` para achar o PID e `kill [PID]`.)*
+
+   **Opção B - Usando `systemd` (modo profissional, reinicia sozinho se crachar ou servidor reiniciar):**
+   * Crie um arquivo de serviço: `sudo nano /etc/systemd/system/meubot.service`
+   * Cole esta configuração (ajuste os caminhos):
+     ```ini
+     [Unit]
+     Description=Bot Discord
+     After=network.target
+
+     [Service]
+     User=root
+     WorkingDirectory=/caminho/para/pasta/do/bot
+     ExecStart=/usr/bin/python3 /caminho/para/pasta/do/bot/bot.py
+     Restart=always
+
+     [Install]
+     WantedBy=multi-user.target
+     ```
+   * Ative e inicie o serviço:
+     ```bash
+     sudo systemctl enable meubot.service
+     sudo systemctl start meubot.service
+     ```
+     *(Acompanhe os logs com: `sudo journalctl -u meubot.service -f`)*
+
+---
+
+**Resumo da Obra:** Duplique os 3 arquivos originais para o novo ambiente, atualize as credenciais no `.env`, configure o nome e as menções no `bot.py`, escreva a nova instrução formatada no `gemini_logic.py` e verifique os caminhos dos JSONs apontados. Teste e valide executando **localmente**. Quando tudo estiver funcional, faça o deploy na **VPS** usando os passos acima para que o bot passe a rodar 24h por dia, monitorando e atualizando a sua base com autonomia.

@@ -6,6 +6,7 @@ import github_client
 import datetime
 
 load_dotenv()
+TOKEN = os.getenv("DISCORD_TOKEN", None)
 
 # Setup intent and bot instance
 intents = discord.Intents.default()
