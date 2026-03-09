@@ -68,6 +68,18 @@
               "reminders": []
             }
           ]
+        },
+        {
+          "id": "inic-ai-4",
+          "title": "Residencia Tecnológica",
+          "owner": "Joãozíssimo",
+          "column": "Ideias",
+          "health_status": "No Prazo",
+          "tags": [
+            "AI-Created"
+          ],
+          "artifacts": [],
+          "tasks": []
         }
       ]
     }
