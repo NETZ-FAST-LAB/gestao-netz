@@ -79,7 +79,16 @@
             "AI-Created"
           ],
           "artifacts": [],
-          "tasks": []
+          "tasks": [
+            {
+              "id": "task-ai-1",
+              "title": "Revisar próximos passos",
+              "assignee": "Joãozíssimo",
+              "status": "pending",
+              "dueDate": "",
+              "reminders": []
+            }
+          ]
         }
       ]
     }
