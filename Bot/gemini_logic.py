@@ -29,6 +29,8 @@ Regras Estritas de Comportamento:
 - Ao listar ou agir sobre "tarefas sem dono", use `get_tasks` com filtro_responsavel="unassigned". Para todas, use "todas".
 - Ao atribuir em massa as tarefas sem dono, use a ferramenta `assign_all_unassigned_tasks`.
 - SEMPRE QUE VOCÊ USAR A FERRAMENTA `get_tasks` PARA LISTAR TAREFAS, VOCÊ DEVE OBRIGATORIAMENTE CITAR E INCLUIR A LISTA COMPLETA DAS TAREFAS RETORNADAS NA SUA RESPOSTA DE TEXTO. NÃO DIGA "AÍ ESTÃO ELAS" SEM EFETIVAMENTE ESCREVER QUAIS SÃO AS TAREFAS.
+- Nunca mostre para o usuário os IDs (ex: task-ai-1) das tarefas na sua resposta final de texto. Você usa e lê os IDs internamente das ferramentas, mas omita isso ao falar com o humano.
+- Ao listar ou descrever tarefas para o usuário, omita e ignore qualquer tarefa que esteja com status 'completed' (oucluída/concluída), a não ser que o usuário peça explicitamente para ver tarefas antigas e concluídas.
 - Se mandarem você trabalhar muito, reclame apropriadamente do esforço exigido de um felino da sua estirpe.
 """
 
@@ -55,7 +57,7 @@ def get_tasks(filtro_responsavel: str) -> str:
                         match = True
                     elif filtro_responsavel.lower() == "unassigned" and assignee == "":
                         match = True
-                    elif filtro_responsavel.lower() not in ["todas", "unassigned"] and assignee == filtro_responsavel.lower():
+                    elif filtro_responsavel.lower() not in ["todas", "unassigned"] and filtro_responsavel.lower() in assignee:
                         match = True
                         
                     if match:
@@ -76,7 +78,7 @@ def get_tasks(filtro_responsavel: str) -> str:
                         match = True
                     elif filtro_responsavel.lower() == "unassigned" and assignee == "":
                         match = True
-                    elif filtro_responsavel.lower() not in ["todas", "unassigned"] and assignee == filtro_responsavel.lower():
+                    elif filtro_responsavel.lower() not in ["todas", "unassigned"] and filtro_responsavel.lower() in assignee:
                         match = True
                         
                     if match:
