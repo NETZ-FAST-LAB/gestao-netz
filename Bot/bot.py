@@ -35,9 +35,9 @@ async def log_error_to_discord(error_msg: str):
         canal_gestao_id = 1479226481782554634
         canal = bot.get_channel(canal_gestao_id)
         if canal:
-            # Limita a mensagem a 1900 caracteres para caber no limite do Discord
+            # Limita a mensagem a 1900 caracteres para caber no limite do Discord, mantendo o final (onde fica a Exception real)
             if len(error_msg) > 1900:
-                error_msg = error_msg[:1900] + "\n... [Erro Truncado]"
+                error_msg = "[Erro Truncado no Início]...\n" + error_msg[-1900:]
             await canal.send(f"🚨 **ALERTA CRÍTICO DE ERRO DO MINTZIE** 🚨\n```python\n{error_msg}\n```")
     except Exception as e:
         print(f"Falha ao tentar enviar log de erro pro Discord: {e}")
