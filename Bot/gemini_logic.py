@@ -160,13 +160,17 @@ def create_new_kanban_card(tipo: str, titulo: str, responsavel: str) -> str:
     new_card = {
         "id": f"{prefix}-ai-{len(board.get('cards', [])) + 1}",
         "title": titulo,
-        "owner": responsavel,
         "column": coluna_inicial,
         "health_status": "No Prazo",
         "tags": ["AI-Created"],
         "artifacts": [],
         "tasks": []
     }
+    
+    if tipo.lower().startswith("proj"):
+        new_card["client"] = responsavel
+    else:
+        new_card["owner"] = responsavel
     
     board["cards"].append(new_card)
     
