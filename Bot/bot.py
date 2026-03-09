@@ -4,6 +4,8 @@ from discord.ext import commands, tasks
 from dotenv import load_dotenv
 import github_client
 import datetime
+import traceback
+import sys
 
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN", None)
@@ -25,6 +27,44 @@ async def on_ready():
     # Inicia a rotina de encerramento do expediente se não estiver rodando
     if not lembrete_fim_de_dia.is_running():
         lembrete_fim_de_dia.start()
+
+# --- REMOTE LOGGING ---
+async def log_error_to_discord(error_msg: str):
+    """Envia erros graves diretamente para o canal de Gestão para que você saiba na hora!"""
+    try:
+        canal_gestao_id = 1479226481782554634
+        canal = bot.get_channel(canal_gestao_id)
+        if canal:
+            # Limita a mensagem a 1900 caracteres para caber no limite do Discord
+            if len(error_msg) > 1900:
+                error_msg = error_msg[:1900] + "\n... [Erro Truncado]"
+            await canal.send(f"🚨 **ALERTA CRÍTICO DE ERRO DO MINTZIE** 🚨\n```python\n{error_msg}\n```")
+    except Exception as e:
+        print(f"Falha ao tentar enviar log de erro pro Discord: {e}")
+
+@bot.event
+async def on_error(event, *args, **kwargs):
+    """Captura exceções globais silenciosas que geralmente matam eventos silenciosamente."""
+    err_type, err, tb = sys.exc_info()
+    error_traceback = "".join(traceback.format_exception(err_type, err, tb))
+    print(f"ERRO GLOBAL NO EVENTO {event}:\n{error_traceback}")
+    await log_error_to_discord(f"Evento que falhou: {event}\n\n{error_traceback}")
+
+@bot.tree.error
+async def on_app_command_error(interaction: discord.Interaction, error: discord.app_commands.AppCommandError):
+    """Captura falhas nos comandos de barra (/iniciativas, etc)"""
+    error_traceback = "".join(traceback.format_exception(type(error), error, error.__traceback__))
+    print(f"ERRO DE COMANDO:\n{error_traceback}")
+    await log_error_to_discord(f"Comando falhou: {interaction.command.name if interaction.command else 'Descoecido'}\nUsuário: {interaction.user}\n\n{error_traceback}")
+    
+    try:
+         if not interaction.response.is_done():
+              await interaction.response.send_message("❌ Um erro feio aconteceu e os desenvolvedores acabam de ser notificados na sala de gestão.", ephemeral=True)
+         else:
+              await interaction.followup.send("❌ Um erro interno feio aconteceu.", ephemeral=True)
+    except:
+         pass
+# ----------------------
 
 # Configura o horário de Brasília (UTC-3) para 19:19
 hora_rotina = datetime.time(hour=19, minute=19, tzinfo=datetime.timezone(datetime.timedelta(hours=-3)))
@@ -81,9 +121,10 @@ async def on_message(message: discord.Message):
                 # Send the final response from the cat
                 await message.reply(response.text)
             except Exception as e:
-                import traceback
-                print(f"Erro na IA:\n{traceback.format_exc()}")
-                await message.reply("Tive uma indigestão de bola de pelo. Ocorreu um erro interno. Verifique o terminal.")
+                error_traceback = traceback.format_exc()
+                print(f"Erro na IA:\n{error_traceback}")
+                await message.reply("Tive uma indigestão de bola de pelo. Ocorreu um erro interno cruel. Mandando os logs pros servos arrumarem.")
+                await log_error_to_discord(f"Erro de IA:\nMensagem de {message.author}: {clean_prompt}\n\n{error_traceback}")
 
     # Always needed so the slash commands keep working
     await bot.process_commands(message)
