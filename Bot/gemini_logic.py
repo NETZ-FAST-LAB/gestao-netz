@@ -1,14 +1,16 @@
 import os
 import json
-from google import genai
-from google.genai import types
+from openai import OpenAI
 from dotenv import load_dotenv
 import github_client
 
 load_dotenv()
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 
-client = genai.Client(api_key=GEMINI_API_KEY)
+client = OpenAI(
+    base_url="https://models.inference.ai.azure.com",
+    api_key=GITHUB_TOKEN,
+)
 
 SYSTEM_INSTRUCTION = """
 Você é Mintzie, um Gato Preguiçoso, Extremamente Inteligente e Superior. 
@@ -300,14 +302,204 @@ def edit_github_task(tipo: str, titulo_tarefa_atual: str, novo_responsavel: str 
 
 def get_chat_session(session_id: str):
     if session_id not in sessions:
-        toolsList = [create_github_task, create_new_kanban_card, get_tasks, assign_all_unassigned_tasks, edit_github_task]
-        config = types.GenerateContentConfig(
-            system_instruction=SYSTEM_INSTRUCTION,
-            temperature=0.7,
-            tools=toolsList
-        )
-        sessions[session_id] = client.chats.create(
-            model="gemini-2.5-flash-lite",
-            config=config
-        )
+        sessions[session_id] = ChatSession(session_id)
     return sessions[session_id]
+
+# --- OpenAI Wrapper and Tool Setup ---
+
+tool_schemas = [
+    {
+        "type": "function",
+        "function": {
+            "name": "get_tasks",
+            "description": "Busca tarefas no Kanban.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "filtro_responsavel": {
+                        "type": "string",
+                        "description": "\"todas\" para listar absolutamente tudo, \"unassigned\" para listar tarefas sem dono/assignee, ou o nome específico de um membro (ex: Joãozíssimo)."
+                    }
+                },
+                "required": [
+                    "filtro_responsavel"
+                ]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_new_kanban_card",
+            "description": "Cria um novo Projeto ou Iniciativa vazinha no Kanban para que depois tarefas possam ser adicionadas nela.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "tipo": {
+                        "type": "string",
+                        "description": "Deve ser \"projeto\" para projetos externos ou \"iniciativa\" para iniciativas internas."
+                    },
+                    "titulo": {
+                        "type": "string",
+                        "description": "Nome do novo projeto/iniciativa (ex: \"Parceria com SEBRAE\")."
+                    },
+                    "responsavel": {
+                        "type": "string",
+                        "description": "O nome do membro da equipe responsável/dono."
+                    }
+                },
+                "required": [
+                    "tipo",
+                    "titulo",
+                    "responsavel"
+                ]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "assign_all_unassigned_tasks",
+            "description": "Atribui TODAS as tarefas que não possuem Dono/Responsável (assignee vazio) para o nome passado.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "novo_responsavel": {
+                        "type": "string",
+                        "description": "O nome do membro que vai herdar todas as tarefas órfãs (ex: Joãozíssimo)."
+                    }
+                },
+                "required": [
+                    "novo_responsavel"
+                ]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_github_task",
+            "description": "Cria uma nova tarefa DENTRO DE UM PROJETO OU INICIATIVA EXISTENTE no Kanban do GitHub.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "tipo": {
+                        "type": "string",
+                        "description": "Deve ser \"projeto\" para projetos externos ou \"iniciativa\" para iniciativas internas."
+                    },
+                    "contexto_id": {
+                        "type": "string",
+                        "description": "O nome do projeto/iniciativa existente (ex: \"Inteligência Jurídica\")."
+                    },
+                    "titulo_tarefa": {
+                        "type": "string",
+                        "description": "Descrição curta da tarefa em si."
+                    },
+                    "responsavel": {
+                        "type": "string",
+                        "description": "O membro da equipe responsável pela tarefa."
+                    }
+                },
+                "required": [
+                    "tipo",
+                    "contexto_id",
+                    "titulo_tarefa",
+                    "responsavel"
+                ]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "edit_github_task",
+            "description": "Edita uma tarefa EXATAMENTE existente no Kanban do GitHub.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "tipo": {
+                        "type": "string",
+                        "description": "Deve ser \"projeto\" para procurar nos projetos externos ou \"iniciativa\" para procurar nas iniciativas internas."
+                    },
+                    "titulo_tarefa_atual": {
+                        "type": "string",
+                        "description": "Descrição exata da tarefa (ou parte dela) como está escrita atualmente lá (ex: \"Comunicar os sócios sobre a ida\")."
+                    },
+                    "novo_responsavel": {
+                        "type": "string",
+                        "description": "(Opcional) Novo nome do membro para associar."
+                    },
+                    "novo_status": {
+                        "type": "string",
+                        "description": "(Opcional) Novo status, como \"completed\" ou \"pending\"."
+                    },
+                    "nova_data": {
+                        "type": "string",
+                        "description": "(Opcional) Nova data de entrega no formato YYYY-MM-DD."
+                    }
+                },
+                "required": [
+                    "tipo",
+                    "titulo_tarefa_atual"
+                ]
+            }
+        }
+    }
+]
+
+# Mapa das funções disponíveis para o modelo chamar
+available_functions = {
+    "get_tasks": get_tasks,
+    "create_new_kanban_card": create_new_kanban_card,
+    "assign_all_unassigned_tasks": assign_all_unassigned_tasks,
+    "create_github_task": create_github_task,
+    "edit_github_task": edit_github_task,
+}
+
+class ChatSession:
+    def __init__(self, session_id):
+        self.session_id = session_id
+        self.messages = [
+            {"role": "system", "content": SYSTEM_INSTRUCTION}
+        ]
+
+    def send_message(self, text: str):
+        self.messages.append({"role": "user", "content": text})
+        
+        while True:
+            response = client.chat.completions.create(
+                model="gpt-4o",  # gpt-4o from github models
+                messages=self.messages,
+                tools=tool_schemas,
+                tool_choice="auto",
+            )
+            
+            response_message = response.choices[0].message
+            self.messages.append(response_message)
+            
+            if response_message.tool_calls:
+                for tool_call in response_message.tool_calls:
+                    function_name = tool_call.function.name
+                    function_to_call = available_functions.get(function_name)
+                    
+                    try:
+                        function_args = json.loads(tool_call.function.arguments)
+                        print(f"Executando ferramenta '{function_name}' com argumentos: {function_args}")
+                        function_response = function_to_call(**function_args)
+                    except Exception as e:
+                        print(f"Erro ao executar a ferramenta {function_name}: {e}")
+                        function_response = json.dumps({"status": "error", "message": str(e)})
+                    
+                    self.messages.append(
+                        {
+                            "tool_call_id": tool_call.id,
+                            "role": "tool",
+                            "name": function_name,
+                            "content": function_response,
+                        }
+                    )
+            else:
+                class LegacyResponseWrapper:
+                    def __init__(self, text):
+                        self.text = text
+                return LegacyResponseWrapper(response_message.content)
