@@ -132,6 +132,14 @@
               "status": "pending",
               "dueDate": "",
               "reminders": []
+            },
+            {
+              "id": "task-ai-2",
+              "title": "Revisar a estratégia de parceria VIEX até quinta-feira",
+              "assignee": "Gui R",
+              "status": "pending",
+              "dueDate": "",
+              "reminders": []
             }
           ],
           "owner": "Joãozíssimo"
