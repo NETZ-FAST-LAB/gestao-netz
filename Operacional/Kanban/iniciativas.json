@@ -60,6 +60,14 @@
               "status": "pending",
               "dueDate": "",
               "reminders": []
+            },
+            {
+              "id": "task-ai-3",
+              "title": "Revisar o ICP até quinta-feira",
+              "assignee": "Gui R",
+              "status": "pending",
+              "dueDate": "",
+              "reminders": []
             }
           ]
         },
