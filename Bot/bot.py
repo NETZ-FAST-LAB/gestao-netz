@@ -7,9 +7,11 @@ import datetime
 import traceback
 import sys
 import time
+import uuid
 
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN", None)
+HIGHLANDER_ID = str(uuid.uuid4())
 
 # Setup intent and bot instance
 intents = discord.Intents.default()
@@ -18,13 +20,21 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 @bot.event
 async def on_ready():
-    print(f'Bot {bot.user} conectado com sucesso!')
+    print(f'Bot {bot.user} conectado com sucesso! Highlander ID: {HIGHLANDER_ID}')
     try:
         synced = await bot.tree.sync()
         print(f"Sincronizado {len(synced)} comando(s) slash.")
     except Exception as e:
         print(e)
-    
+        
+    canal_gestao_id = 1479226481782554634
+    canal = bot.get_channel(canal_gestao_id)
+    if canal:
+        try:
+            await canal.send(f"[HIGHLANDER-LOCK] Nova instância acordou. Destruindo clones silenciosamente. ID: {HIGHLANDER_ID}")
+        except:
+            pass
+            
     # Inicia a rotina de encerramento do expediente se não estiver rodando
     if not lembrete_fim_de_dia.is_running():
         lembrete_fim_de_dia.start()
@@ -114,6 +124,21 @@ async def lembrete_fim_de_dia():
 
 @bot.event
 async def on_message(message: discord.Message):
+    # --- HIGHLANDER LOCK ---
+    # Garante que apenas 1 instância rode globalmente (A mais recente mata a mais velha)
+    if message.author == bot.user and message.content.startswith("[HIGHLANDER-LOCK]"):
+        if HIGHLANDER_ID not in message.content:
+            print("🚨 OUTRA INSTÂNCIA INICIOU (Ex: Alguém ligou a VPS). Eu sou um clone obsoleto. Desligando-me permanentemente...")
+            await bot.close()
+            sys.exit(0)
+        else:
+            # Sou a instância nova e soberana. Apago a própria mensagem de trava pra não poluir o canal
+            try:
+                await message.delete()
+            except:
+                pass
+        return
+
     # Ignore messages from the bot itself IMMEDIATELY to prevent infinite logging loops
     if message.author == bot.user:
         return
