@@ -87,10 +87,16 @@ async def lembrete_fim_de_dia():
 
 @bot.event
 async def on_message(message: discord.Message):
-    print(f"LOG MESSAGE: {message.content} FROM: {message.author}")
-    # Ignore messages from the bot itself
+    # Ignore messages from the bot itself IMMEDIATELY to prevent infinite logging loops
     if message.author == bot.user:
         return
+        
+    try:
+        print(f"LOG MESSAGE: {message.content} FROM: {message.author}")
+    except TypeError:
+        pass
+    except UnicodeEncodeError:
+        print(f"LOG MESSAGE: <Mensagem possui emojis não compativeis com o terminal> FROM: {message.author}")
 
     # Process AI interaction if the bot is mentioned (user or role)
     bot_mention = f"<@{bot.user.id}>"
