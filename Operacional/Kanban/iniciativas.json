@@ -52,6 +52,14 @@
               "status": "pending",
               "dueDate": "",
               "reminders": []
+            },
+            {
+              "id": "task-ai-2",
+              "title": "Revisar o ICP até quinta-feira",
+              "assignee": "Dênis",
+              "status": "pending",
+              "dueDate": "",
+              "reminders": []
             }
           ]
         },
