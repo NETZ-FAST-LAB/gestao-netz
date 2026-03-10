@@ -124,7 +124,16 @@
             "AI-Created"
           ],
           "artifacts": [],
-          "tasks": [],
+          "tasks": [
+            {
+              "id": "task-ai-1",
+              "title": "Revisar a estratégia de parceria VIEX até quinta-feira",
+              "assignee": "Dênis",
+              "status": "pending",
+              "dueDate": "",
+              "reminders": []
+            }
+          ],
           "owner": "Joãozíssimo"
         }
       ]
