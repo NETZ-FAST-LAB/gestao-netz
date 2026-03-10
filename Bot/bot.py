@@ -6,6 +6,7 @@ import github_client
 import datetime
 import traceback
 import sys
+import time
 
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN", None)
@@ -29,15 +30,41 @@ async def on_ready():
         lembrete_fim_de_dia.start()
 
 # --- REMOTE LOGGING ---
+last_error_time = 0
+error_spam_count = 0
+MAX_ERRORS_PER_MINUTE = 3
+
 async def log_error_to_discord(error_msg: str):
     """Envia erros graves diretamente para o canal de Gestão para que você saiba na hora!"""
+    global last_error_time, error_spam_count
+    
+    current_time = time.time()
+    
+    # Reset flood counter if it's been more than 60 seconds
+    if current_time - last_error_time > 60:
+        error_spam_count = 0
+        
+    last_error_time = current_time
+    error_spam_count += 1
+    
+    if error_spam_count > MAX_ERRORS_PER_MINUTE:
+        print(f"ANTI-FLOOD ATIVADO: Suprimindo envio pro Discord para evitar loop. Erro real:\n{error_msg}")
+        return
+        
     try:
         canal_gestao_id = 1479226481782554634
         canal = bot.get_channel(canal_gestao_id)
         if canal:
-            # Limita a mensagem a 1900 caracteres para caber no limite do Discord, mantendo o final (onde fica a Exception real)
             if len(error_msg) > 1900:
                 error_msg = "[Erro Truncado no Início]...\n" + error_msg[-1900:]
+                
+            if error_spam_count == MAX_ERRORS_PER_MINUTE:
+                warning = "⚠️ **MUITOS ERROS SEGUIDOS (ANTI-FLOOD ATIVADO)! O Mintzie vai desligar a sirene por 1 minuto.** ⚠️\n\n"
+                # Garante que vai caber subtraindo o tamanho do aviso
+                if len(error_msg) + len(warning) > 1900:
+                    error_msg = error_msg[len(warning):]
+                error_msg = warning + error_msg
+                
             await canal.send(f"🚨 **ALERTA CRÍTICO DE ERRO DO MINTZIE** 🚨\n```python\n{error_msg}\n```")
     except Exception as e:
         print(f"Falha ao tentar enviar log de erro pro Discord: {e}")
