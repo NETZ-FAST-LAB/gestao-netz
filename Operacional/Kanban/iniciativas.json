@@ -114,6 +114,18 @@
               "reminders": []
             }
           ]
+        },
+        {
+          "id": "inic-ai-5",
+          "title": "Parcerias Comerciais",
+          "column": "Ideias",
+          "health_status": "No Prazo",
+          "tags": [
+            "AI-Created"
+          ],
+          "artifacts": [],
+          "tasks": [],
+          "owner": "Joãozíssimo"
         }
       ]
     }
