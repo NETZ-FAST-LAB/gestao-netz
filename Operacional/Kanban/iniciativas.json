@@ -143,6 +143,18 @@
             }
           ],
           "owner": "Joãozíssimo"
+        },
+        {
+          "id": "inic-ai-6",
+          "title": "Pesquisas Netz",
+          "column": "Ideias",
+          "health_status": "No Prazo",
+          "tags": [
+            "AI-Created"
+          ],
+          "artifacts": [],
+          "tasks": [],
+          "owner": "Joãozíssimo"
         }
       ]
     }
