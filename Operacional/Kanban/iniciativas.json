@@ -44,7 +44,16 @@
             "Web"
           ],
           "artifacts": [],
-          "tasks": []
+          "tasks": [
+            {
+              "id": "task-ai-1",
+              "title": "Revisar o site no dia 12/03/26",
+              "assignee": "Joãozíssimo",
+              "status": "pending",
+              "dueDate": "",
+              "reminders": []
+            }
+          ]
         },
         {
           "id": "inic-assistente-tarefas",
