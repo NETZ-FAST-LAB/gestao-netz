@@ -522,11 +522,15 @@ async def on_message(message: discord.Message):
                 session_id = str(message.channel.id) 
                 chat_session = gemini_logic.get_chat_session(session_id)
                 
-                # Context Awareness: Let the AI know where it is replying
+                # Context Awareness: Let the AI know where it is replying and what time it is
                 channel_name = message.channel.name if hasattr(message.channel, 'name') else "DM"
                 category_name = message.channel.category.name if hasattr(message.channel, 'category') and message.channel.category else "Sem Categoria"
                 
-                contexto = f"\n\n[CONTEXTO DO CHAT: Você está respondendo no canal #{channel_name} dentro da categoria '{category_name}']"
+                import datetime
+                agora = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=-3)))
+                data_formatada = agora.strftime("%A, %d de %B de %Y as %H:%M (Horário de Brasília)").capitalize()
+                
+                contexto = f"\n\n[CONTEXTO DO CHAT: Data/Hora atual: {data_formatada}. Você está respondendo no canal #{channel_name} dentro da categoria '{category_name}']"
                 prompt_enriquecido = f"[Mensagem de: {message.author.display_name}] {clean_prompt} {contexto}"
                 
                 response = chat_session.send_message(prompt_enriquecido)
