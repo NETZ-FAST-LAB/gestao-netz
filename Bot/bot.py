@@ -160,17 +160,21 @@ async def gerar_e_enviar_resumo(destination_channel):
              await destination_channel.send("😾 Nenhuma discussão foi encontrada nas últimas 24 horas para resumir. Vocês trabalharam hoje?")
              return
              
-        prompt_llm = f"""Faça um resumo das principais discussões, decisões e gargalos que aconteceram nas últimas 24 horas.
-Marque com '@' os coleguinhas envolvidos nas discussões principais.
+        prompt_llm = f"""Baseado no histórico do Discord abaixo, crie um resumo executivo brilhante das últimas 24 horas.
 
-Encerre com recomendações práticas (ex: atualizar documentações corporativas ou marcar reuniões de alinhamento).
+INSTRUÇÕES DE FORMATO:
+1. Comece de forma enérgica e celebrativa ("Viva! Bravo!"), vibrando que os projetos estão vivos e pulsantes, e incorpore os canais monitorados diretamente nesse parágrafo introdutório.
+2. Faça um Resumo Executivo das principais discussões divididas por tópicos/iniciativas. Oculte a seção de "Gargalos".
+3. Use os nomes dos sócios/pessoas envolvidas explicitamente no texto e abuse de apelidos, mas **NÃO MARQUE ELES COM '@' DURANTE O TEXTO**.
+4. No final do resumo crie a seção "Provocações Geniais", focada em fazer a NETZ crescer exponencialmente com o mínimo esforço, substituindo as recomendações rotineiras.
+5. Muito Importante: **SOMENTE NO ÚLTIMO PARÁGRAFO** ("Call to Action"), você deve marcar as pessoas envolvidas usando estritamente o '@' seguido do nome/ID delas, convidando-os a revisar o que precisa virar tarefa no Kanban.
 
 Abaixo o histórico das mensagens das últimas 24 horas:
 
 {historico_str}"""
 
         import gemini_logic
-        await destination_channel.send("🐈 *Iniciando a leitura telepática das mensagens em todos os canais... (isso pode levar um instante)*")
+        await destination_channel.send("🐈 *Afiando as garras e lendo telepaticamente todos os canais para o resumo diário...*")
         
         # Chama o LLM via wrapper direto do cliente
         response = gemini_logic.client.chat.completions.create(
