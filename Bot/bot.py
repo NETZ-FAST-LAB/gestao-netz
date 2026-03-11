@@ -4,7 +4,6 @@ from discord.ext import commands, tasks
 from dotenv import load_dotenv
 import github_client
 import datetime
-import datetime
 import traceback
 import sys
 import time
@@ -526,7 +525,6 @@ async def on_message(message: discord.Message):
                 channel_name = message.channel.name if hasattr(message.channel, 'name') else "DM"
                 category_name = message.channel.category.name if hasattr(message.channel, 'category') and message.channel.category else "Sem Categoria"
                 
-                import datetime
                 agora = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=-3)))
                 data_formatada = agora.strftime("%A, %d de %B de %Y as %H:%M (Horário de Brasília)").capitalize()
                 
