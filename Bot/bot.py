@@ -520,9 +520,15 @@ async def on_message(message: discord.Message):
                 import gemini_logic
                 # Use channel id or thread id for session persistence to keep context
                 session_id = str(message.channel.id) 
-                
                 chat_session = gemini_logic.get_chat_session(session_id)
-                prompt_enriquecido = f"[Mensagem de: {message.author.display_name}] {clean_prompt}"
+                
+                # Context Awareness: Let the AI know where it is replying
+                channel_name = message.channel.name if hasattr(message.channel, 'name') else "DM"
+                category_name = message.channel.category.name if hasattr(message.channel, 'category') and message.channel.category else "Sem Categoria"
+                
+                contexto = f"\n\n[CONTEXTO DO CHAT: Você está respondendo no canal #{channel_name} dentro da categoria '{category_name}']"
+                prompt_enriquecido = f"[Mensagem de: {message.author.display_name}] {clean_prompt} {contexto}"
+                
                 response = chat_session.send_message(prompt_enriquecido)
                 
                 # Send the final response from the cat, paginated if necessary
