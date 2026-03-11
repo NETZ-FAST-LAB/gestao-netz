@@ -4,10 +4,12 @@ from discord.ext import commands, tasks
 from dotenv import load_dotenv
 import github_client
 import datetime
+import datetime
 import traceback
 import sys
 import time
 import uuid
+import random
 
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN", None)
@@ -40,6 +42,14 @@ async def on_ready():
         lembrete_fim_de_dia.start()
     if not rotina_resumo_diario.is_running():
         rotina_resumo_diario.start()
+    if not reclamacao_10am.is_running():
+        reclamacao_10am.start()
+    if not hora_do_catnip.is_running():
+        hora_do_catnip.start()
+    if not ronronado_surpresa.is_running():
+        ronronado_surpresa.start()
+    if not funcionario_da_semana.is_running():
+        funcionario_da_semana.start()
 
 # --- REMOTE LOGGING ---
 last_error_time = 0
@@ -103,6 +113,124 @@ async def on_app_command_error(interaction: discord.Interaction, error: discord.
               await interaction.followup.send("❌ Um erro interno feio aconteceu.", ephemeral=True)
     except:
          pass
+# ----------------------
+# ROTINAS DE PERSONALIDADE (RITUAIS ALEATÓRIOS DO MINTZIE)
+
+hora_10am = datetime.time(hour=10, minute=0, tzinfo=datetime.timezone(datetime.timedelta(hours=-3)))
+@tasks.loop(time=hora_10am)
+async def reclamacao_10am():
+    # Only run Monday to Friday (0 = Mon, 4 = Fri)
+    if datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=-3))).weekday() > 4:
+        return
+        
+    canal_gestao_tarefas_id = 1479226481782554634
+    canal = bot.get_channel(canal_gestao_tarefas_id)
+    if not canal: return
+    
+    # Check if there were any messages today (from midnight to 10am)
+    inicio_dia = discord.utils.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    messages = [msg async for msg in canal.history(limit=50, after=inicio_dia) if msg.author != bot.user]
+    
+    if len(messages) == 0:
+        await canal.send("Bom dia pra vocês também, viu? Aparentemente educação virou luxo nessa empresa. Trabalhar que é bom, nada. 😾")
+
+
+hora_1620 = datetime.time(hour=16, minute=20, tzinfo=datetime.timezone(datetime.timedelta(hours=-3)))
+@tasks.loop(time=hora_1620)
+async def hora_do_catnip():
+    # Run only on Tuesdays (1) and Thursdays (3)
+    weekday = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=-3))).weekday()
+    if weekday not in [1, 3]:
+        return
+        
+    canal_gestao_tarefas_id = 1479226481782554634
+    canal = bot.get_channel(canal_gestao_tarefas_id)
+    if canal:
+        await canal.send("🌿 **4:20!** Pausa pro Catnip! Meu cérebro felino precisa expandir as perspectivas pro bem dessa empresa.")
+
+
+@tasks.loop(minutes=1)
+async def ronronado_surpresa():
+    now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=-3)))
+    # Only between 14:00 and 17:00
+    if 14 <= now.hour < 17:
+        # Avoid multiple purrs in the same day by checking cache
+        # Approx 1/180 chance every minute = high chance of 1 purr within those 3 hours
+        if random.random() < (1.0 / 180.0):
+            last_purr = night_watch_cache.get('last_purr', 0)
+            if time.time() - last_purr > 43200: # 12 hours cooldown
+                night_watch_cache['last_purr'] = time.time()
+                canal_gestao_tarefas_id = 1479226481782554634
+                canal = bot.get_channel(canal_gestao_tarefas_id)
+                if canal:
+                    await canal.send("Prrr... Prrr... 🐈 Só passei pra deixar esse ronronado motivacional. Não se acostumem, só fiz isso porque tô de barriga cheia.")
+
+hora_sexta_17h = datetime.time(hour=17, minute=0, tzinfo=datetime.timezone(datetime.timedelta(hours=-3)))
+@tasks.loop(time=hora_sexta_17h)
+async def funcionario_da_semana():
+    # Only run on Fridays (4)
+    weekday = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=-3))).weekday()
+    if weekday != 4:
+        return
+        
+    canal_gestao_tarefas_id = 1479226481782554634
+    canal = bot.get_channel(canal_gestao_tarefas_id)
+    if not canal: return
+
+    # Sorteia um membro (podemos pegar do organizacao.json ou hardcoded)
+    import github_client
+    org_data = github_client.get_organizacao()
+    membros = org_data.get("members", ["Joãozíssimo", "Gui R", "Dênis", "Stacke"]) if org_data else ["Joãozíssimo", "Gui R", "Dênis", "Stacke"]
+    escolhido = random.choice(membros)
+    
+    await canal.send(f"🐈 *Analisando o histórico de {escolhido} nos últimos 7 dias para o veredito do Servo da Semana...*")
+    
+    inicio_semana = discord.utils.utcnow() - datetime.timedelta(days=7)
+    historico_escolhido = ""
+    mensagens_count = 0
+    
+    for guild in bot.guilds:
+        for text_channel in guild.text_channels:
+            try:
+                perm = text_channel.permissions_for(guild.me)
+                if not perm.read_message_history or not perm.read_messages:
+                    continue
+                
+                async for msg in text_channel.history(limit=500, after=inicio_semana):
+                    if msg.author != bot.user and escolhido.lower() in msg.author.display_name.lower() and msg.content.strip() and not msg.content.startswith("!"):
+                        historico_escolhido += f"[{text_channel.name}] {msg.content}\n"
+                        mensagens_count += 1
+            except discord.errors.Forbidden:
+                pass
+            except Exception as e:
+                print(e)
+                
+    if mensagens_count == 0:
+         await canal.send(f"🏆 Pelo visto o **{escolhido}** passou a semana inteira dormindo mais do que eu, porque não achei nenhuma mensagem dele pra elogiar. Fica pra próxima!")
+         return
+         
+    prompt_llm = f"""Você é o Mintzie, assistente felino sarcástico da NETZ.
+Hoje é sexta-feira e você decidiu eleger o "Servo da Semana", que é o humano **{escolhido}**.
+
+Baseado nas frases que ele disse no Discord essa semana (abaixo), escreva um post curto de apreciação para ele. Se engrandeça por ser um chefe tão benevolente. Agradeça o empenho do humano, faça alguma menção engraçada ao que ele andou falando, e encerre pedindo um carinho (cafuné) ou sachê como tributo obrigatório.
+
+FRASES DA SEMANA DO {escolhido.upper()}:
+{historico_escolhido[-3000:]} # Limitado por segurança
+"""
+
+    try:
+        import gemini_logic
+        response = gemini_logic.client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": "Você é o Mintzie. Aja exatamente como instruído no prompt."},
+                {"role": "user", "content": prompt_llm}
+            ]
+        )
+        await canal.send(response.choices[0].message.content)
+    except Exception as e:
+        print(f"Erro no funcionario da semana: {e}")
+
 # ----------------------
 
 # Configura o horário de Brasília (UTC-3) para 19:19
@@ -211,6 +339,22 @@ async def cmd_rotina_resumo(interaction: discord.Interaction):
     await interaction.followup.send("Processando o resumo do dia, humanos...")
     await gerar_e_enviar_resumo(interaction.channel)
 
+@bot.tree.command(name="teste_funcionario", description="[Teste] Roda a rotina do Funcionário da Semana agora")
+async def cmd_teste_funcionario(interaction: discord.Interaction):
+    await interaction.response.defer(thinking=False)
+    await interaction.followup.send("Processando a leitura semanal... Preparem os petiscos.")
+    # Extraímos a lógica interna da task pra função ser reusável, mas para o teste vou chamar a corrotina interna do loop
+    await funcionario_da_semana.coro()
+
+@bot.tree.command(name="teste_catnip", description="[Teste] Roda a mensagem das 16:20 do Catnip")
+async def cmd_teste_catnip(interaction: discord.Interaction):
+    await interaction.response.send_message("🌿 **4:20!** Pausa pro Catnip! Meu cérebro felino precisa expandir as perspectivas pro bem dessa empresa.")
+
+# -- CACHES DE EVENTOS DO BOT ---
+night_watch_cache = {}
+gossip_tracker = {}
+gossip_cooldown = {}
+
 @bot.event
 async def on_message(message: discord.Message):
     # --- HIGHLANDER LOCK ---
@@ -231,6 +375,40 @@ async def on_message(message: discord.Message):
     # Ignore messages from the bot itself IMMEDIATELY to prevent infinite logging loops
     if message.author == bot.user:
         return
+        
+    # --- VIGILANTE NOTURNO & DETECTOR DE FOFOCA ---
+    now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=-3)))
+    
+    # Vigilante Noturno (22:00 até 05:59)
+    if now.hour >= 22 or now.hour < 6:
+        # Verifica cache pra nao flodar o coitado que tá virado
+        last_complaint = night_watch_cache.get(message.author.id, 0)
+        if time.time() - last_complaint > 3600:  # 1 hora de cooldown por pessoa
+            night_watch_cache[message.author.id] = time.time()
+            v_msgs = [
+                f"Humano {message.author.mention}, você trabalhar depois do horário não te faz um herói, só faz você gastar a luz que deveria estar sendo convertida em sachê pra mim. Vai dormir, o servidor não vai fugir. 🦇",
+                f"Já olhou a hora, {message.author.mention}? Os gatos de rua já tão todos dormindo e você aí nas planilhas. Vai deitar! 😾"
+            ]
+            await message.reply(random.choice(v_msgs))
+
+    # Detector de Fofoca (10 msgs em 2 minutos no mesmo canal)
+    ch_id = message.channel.id
+    if ch_id not in gossip_tracker:
+        gossip_tracker[ch_id] = []
+    
+    # Add now and purge old ones (> 120 secs)
+    gossip_tracker[ch_id].append(time.time())
+    gossip_tracker[ch_id] = [t for t in gossip_tracker[ch_id] if time.time() - t <= 120]
+    
+    if len(gossip_tracker[ch_id]) >= 10:
+        last_gossip = gossip_cooldown.get(ch_id, 0)
+        if time.time() - last_gossip > 3600: # 1 hr cooldown
+            gossip_cooldown[ch_id] = time.time()
+            g_msgs = [
+                "Muito 'digita-digita' nesse canal pra pouca tarefa sendo arrastada no Kanban. Tô de olho na fofoca de vocês. Trabalhem direito! 👁️",
+                "Quanta falação! Continuem a fofoca, humano precisa se comunicar, eu entendo... Mas espero que estejam entregando projeto também! 🐾"
+            ]
+            await message.channel.send(random.choice(g_msgs))
         
     try:
         print(f"LOG MESSAGE: {message.content} FROM: {message.author}")
