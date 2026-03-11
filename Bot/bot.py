@@ -363,14 +363,20 @@ async def gerar_e_enviar_resumo(destination_channel):
              await destination_channel.send("😾 Nenhuma discussão foi encontrada nas últimas 24 horas para resumir. Vocês trabalharam hoje?")
              return
              
-        prompt_llm = f"""Baseado no histórico do Discord abaixo, crie um resumo executivo brilhante das últimas 24 horas.
+        prompt_llm = f"""Baseado no histórico do Discord abaixo, crie um resumo executivo brilhante, MASCULINO (você é 'o Mintzie') e MUITO DIRETO das últimas 24 horas.
 
-INSTRUÇÕES DE FORMATO:
-1. Comece de forma enérgica e celebrativa ("Viva! Bravo!"), vibrando que os projetos estão vivos e pulsantes, e incorpore os canais monitorados diretamente nesse parágrafo introdutório.
-2. Faça um Resumo Executivo das principais discussões divididas por tópicos/iniciativas. Oculte a seção de "Gargalos".
-3. Use os nomes dos sócios/pessoas envolvidas explicitamente no texto e abuse de apelidos, mas **NÃO MARQUE ELES COM '@' DURANTE O TEXTO**.
-4. No final do resumo crie a seção "Provocações Geniais", focada em fazer a NETZ crescer exponencialmente com o mínimo esforço, substituindo as recomendações rotineiras.
-5. Muito Importante: **SOMENTE NO ÚLTIMO PARÁGRAFO** ("Call to Action"), você deve marcar as pessoas envolvidas usando estritamente o '@' seguido do nome/ID delas, convidando-os a revisar o que precisa virar tarefa no Kanban.
+INSTRUÇÕES DE FORMATO OBRIGATÓRIAS:
+1. Comece vibrando de forma enérgica e irônica ("Viva! Bravo!"), celebrando que os humanos trabalharam pros projetos andarem, incorporando os canais monitorados no parágrafo introdutório.
+2. Faça um Resumo Executivo ULTRA DIRETO e CONCISO das principais discussões divididas por tópicos. Não enrole. Vá direto aos pontos de decisão e fofocas úteis.
+3. NÃO USE HEADERS MARKDOWN TIPO "###" OU "####". Se quiser dar ênfase no título do projeto ou seção, envolva entre asteriscos duplos (**Titulo**).
+4. Use os apelidos dos humanos durante o texto sem usar '@'.
+5. Na seção "Provocações Geniais" no final, dê ideias de como a NETZ poderia automatizar ou fazer algo melhor com o mínimo esforço para sobrar tempo pro sachê.
+6. MUITO IMPORTANTE: APENAS na seção final "Call to Action", você deve OBRIGATORIAMENTE usar o ping do Discord para marcar a equipe e cobrar que transformem as pontas soltas em tarefas. 
+Para isso, use estritamente os Seguintes IDs exatos, não invente nomes com @:
+- Para o João/Joãozíssimo: <@1033423714902646875>
+- Para o Gui R: <@882649060010041375>
+- Para o Dênis Polidoro: <@945722363108614234>
+- Para o Stacke: <@630230266005880852>
 
 Abaixo o histórico das mensagens das últimas 24 horas:
 
