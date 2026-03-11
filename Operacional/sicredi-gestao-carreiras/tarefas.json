@@ -1,0 +1,363 @@
+{
+  "projeto": "Sicredi - Gestão de Carreiras",
+  "descricao": "Desenvolvimento de solução integrada de gestão de carreira para 753 cooperativas",
+  "status": "em_desenvolvimento",
+  "data_inicio": "2026-03-11",
+  "data_conclusao_estimada": "2026-06-30",
+  "lider": "Gui Viegas (Pulsar)",
+  "equipe": {
+    "pulsar": "Gui Viegas (Líder)",
+    "uttana": "Renata",
+    "netz": "João (Co-responsável)"
+  },
+  "bot_gestor": "Mintzie (Netz)",
+  "escopo_github": "Tarefas da Netz apenas",
+  
+  "marcos_alinhamento": [
+    {
+      "id": "marco_1",
+      "titulo": "Alinhamento Quinzenal #1",
+      "data": "2026-03-25",
+      "descricao": "Primeira reunião de alinhamento quinzenal com equipe",
+      "responsavel": "João",
+      "prioridade": "alta"
+    },
+    {
+      "id": "marco_2",
+      "titulo": "Alinhamento Quinzenal #2",
+      "data": "2026-04-08",
+      "descricao": "Segunda reunião de alinhamento quinzenal",
+      "responsavel": "João",
+      "prioridade": "alta"
+    },
+    {
+      "id": "marco_3",
+      "titulo": "Alinhamento Quinzenal #3",
+      "data": "2026-04-22",
+      "descricao": "Terceira reunião de alinhamento quinzenal",
+      "responsavel": "João",
+      "prioridade": "alta"
+    },
+    {
+      "id": "marco_4",
+      "titulo": "Alinhamento Quinzenal #4",
+      "data": "2026-05-06",
+      "descricao": "Quarta reunião de alinhamento quinzenal",
+      "responsavel": "João",
+      "prioridade": "alta"
+    },
+    {
+      "id": "marco_5",
+      "titulo": "Alinhamento Quinzenal #5",
+      "data": "2026-05-20",
+      "descricao": "Quinta reunião de alinhamento quinzenal",
+      "responsavel": "João",
+      "prioridade": "alta"
+    },
+    {
+      "id": "marco_6",
+      "titulo": "Alinhamento Quinzenal #6",
+      "data": "2026-06-03",
+      "descricao": "Sexta reunião de alinhamento quinzenal",
+      "responsavel": "João",
+      "prioridade": "alta"
+    },
+    {
+      "id": "marco_7",
+      "titulo": "Alinhamento Quinzenal #7",
+      "data": "2026-06-17",
+      "descricao": "Sétima reunião de alinhamento quinzenal",
+      "responsavel": "João",
+      "prioridade": "alta"
+    },
+    {
+      "id": "marco_1mes",
+      "titulo": "Checkpoint 1 Mês",
+      "data": "2026-04-11",
+      "descricao": "Revisão de progresso após 1 mês de projeto",
+      "responsavel": "João",
+      "prioridade": "alta",
+      "tipo": "checkpoint"
+    },
+    {
+      "id": "marco_2mes",
+      "titulo": "Checkpoint 2 Meses",
+      "data": "2026-05-11",
+      "descricao": "Revisão de progresso após 2 meses de projeto",
+      "responsavel": "João",
+      "prioridade": "alta",
+      "tipo": "checkpoint"
+    },
+    {
+      "id": "marco_fechamento",
+      "titulo": "Preparação Fechamento do Projeto",
+      "data": "2026-06-15",
+      "descricao": "Consolidar resultados, lições aprendidas e documentação final",
+      "responsavel": "João",
+      "prioridade": "alta",
+      "tipo": "fechamento"
+    },
+    {
+      "id": "marco_upsell",
+      "titulo": "Preparação Upsell 3º Trimestre",
+      "data": "2026-06-20",
+      "descricao": "Preparar proposta de expansão e continuidade para 3º trimestre",
+      "responsavel": "João",
+      "prioridade": "alta",
+      "tipo": "upsell"
+    }
+  ],
+  
+  "fases": [
+    {
+      "id": "fase_1",
+      "nome": "Priorização & Planejamento",
+      "periodo": "Março 2026",
+      "status": "em_progresso",
+      "data_inicio": "2026-03-11",
+      "data_fim": "2026-03-31",
+      "tarefas": [
+        {
+          "id": "task_1_1",
+          "titulo": "Organizar projeto no GitHub",
+          "descricao": "Estruturar pasta e arquivos no repositório NETZ",
+          "responsavel": "João",
+          "status": "concluido",
+          "prioridade": "alta",
+          "data_criacao": "2026-03-11",
+          "data_conclusao": "2026-03-11"
+        },
+        {
+          "id": "task_1_2",
+          "titulo": "Pesquisar custos de membros no Notion",
+          "descricao": "Investigar opções de planos e custos para uso do Notion. Retornar ao grupo com informações",
+          "responsavel": "João",
+          "status": "planejado",
+          "prioridade": "alta",
+          "data_criacao": "2026-03-11",
+          "data_prevista": "2026-03-14"
+        },
+        {
+          "id": "task_1_3",
+          "titulo": "Preparar material para reunião de sexta-feira",
+          "descricao": "Propostas de cronograma e caminhos para o trabalho. Reunião com Márcia, André e GP",
+          "responsavel": "João",
+          "status": "planejado",
+          "prioridade": "alta",
+          "data_criacao": "2026-03-11",
+          "data_prevista": "2026-03-14",
+          "notas": "Foco em escuta, não apresentação. Pitch de 5 minutos"
+        },
+        {
+          "id": "task_1_4",
+          "titulo": "Mapear cronograma reverso de integração",
+          "descricao": "Identificar interdependências entre Senior, Cicred Aprende, Elofy, Tech6 e Mapa de Carreira",
+          "responsavel": "João",
+          "status": "planejado",
+          "prioridade": "alta",
+          "data_criacao": "2026-03-11",
+          "data_prevista": "2026-03-14"
+        },
+        {
+          "id": "task_1_5",
+          "titulo": "Validar integrações técnicas",
+          "descricao": "Confirmar viabilidade de integração entre 4 sistemas + Mapa de Carreira",
+          "responsavel": "João",
+          "status": "planejado",
+          "prioridade": "alta",
+          "data_criacao": "2026-03-11",
+          "data_prevista": "2026-03-20"
+        }
+      ]
+    },
+    {
+      "id": "fase_2",
+      "nome": "Co-criação com Cooperativas",
+      "periodo": "Abril-Maio 2026",
+      "status": "planejado",
+      "data_inicio": "2026-04-01",
+      "data_fim": "2026-05-31",
+      "tarefas": [
+        {
+          "id": "task_2_1",
+          "titulo": "Mapear agendas de escuta com cooperativas",
+          "descricao": "Coordenar com Luana para agendar escutas com cooperativas que já têm contato",
+          "responsavel": "João",
+          "status": "planejado",
+          "prioridade": "alta",
+          "data_prevista": "2026-04-15"
+        },
+        {
+          "id": "task_2_2",
+          "titulo": "Desenhar modelo 70/30",
+          "descricao": "Definir 70% padrão e 30% customização por cooperativa",
+          "responsavel": "João",
+          "status": "planejado",
+          "prioridade": "alta",
+          "data_prevista": "2026-04-30"
+        },
+        {
+          "id": "task_2_3",
+          "titulo": "Co-criar framework integrado",
+          "descricao": "Trabalhar com grupos de cooperativas para desenhar framework",
+          "responsavel": "João",
+          "status": "planejado",
+          "prioridade": "alta",
+          "data_prevista": "2026-05-15"
+        }
+      ]
+    },
+    {
+      "id": "fase_3",
+      "nome": "Prototipagem & Entregas Incrementais",
+      "periodo": "Maio-Junho 2026",
+      "status": "planejado",
+      "data_inicio": "2026-05-15",
+      "data_fim": "2026-06-15",
+      "tarefas": [
+        {
+          "id": "task_3_1",
+          "titulo": "Desenvolver demonstrações com dados fora do sistema",
+          "descricao": "Criar demos rápidas para equipes visualizarem e testarem antes da implementação",
+          "responsavel": "João",
+          "status": "planejado",
+          "prioridade": "alta",
+          "data_prevista": "2026-05-30"
+        },
+        {
+          "id": "task_3_2",
+          "titulo": "Coordenar entregas incrementais",
+          "descricao": "Garantir entregas a cada 2 semanas, não esperar 6 meses",
+          "responsavel": "João",
+          "status": "planejado",
+          "prioridade": "alta",
+          "data_prevista": "2026-06-15"
+        }
+      ]
+    },
+    {
+      "id": "fase_4",
+      "nome": "Piloto & Validação",
+      "periodo": "Junho 2026",
+      "status": "planejado",
+      "data_inicio": "2026-06-15",
+      "data_fim": "2026-06-30",
+      "tarefas": [
+        {
+          "id": "task_4_1",
+          "titulo": "Executar piloto com grupo inicial",
+          "descricao": "Testar solução com cooperativas selecionadas",
+          "responsavel": "João",
+          "status": "planejado",
+          "prioridade": "alta",
+          "data_prevista": "2026-06-20"
+        },
+        {
+          "id": "task_4_2",
+          "titulo": "Coletar feedback e iterar",
+          "descricao": "Ajustar baseado em feedback do piloto",
+          "responsavel": "João",
+          "status": "planejado",
+          "prioridade": "alta",
+          "data_prevista": "2026-06-28"
+        }
+      ]
+    },
+    {
+      "id": "fase_5",
+      "nome": "Fechamento & Upsell",
+      "periodo": "Junho-Julho 2026",
+      "status": "planejado",
+      "data_inicio": "2026-06-15",
+      "data_fim": "2026-07-15",
+      "tarefas": [
+        {
+          "id": "task_5_1",
+          "titulo": "Consolidar resultados e lições aprendidas",
+          "descricao": "Documentar o que funcionou, o que não funcionou e recomendações",
+          "responsavel": "João",
+          "status": "planejado",
+          "prioridade": "alta",
+          "data_prevista": "2026-06-15"
+        },
+        {
+          "id": "task_5_2",
+          "titulo": "Preparar proposta de upsell 3º trimestre",
+          "descricao": "Desenhar expansão e continuidade do projeto para próxima fase",
+          "responsavel": "João",
+          "status": "planejado",
+          "prioridade": "alta",
+          "data_prevista": "2026-06-20"
+        },
+        {
+          "id": "task_5_3",
+          "titulo": "Apresentar resultados e proposta",
+          "descricao": "Reunião com Gui Viegas, Renata e stakeholders do Sicredi",
+          "responsavel": "João",
+          "status": "planejado",
+          "prioridade": "alta",
+          "data_prevista": "2026-06-30"
+        }
+      ]
+    }
+  ],
+
+  "resumo_status": {
+    "total_tarefas": 15,
+    "concluidas": 1,
+    "em_progresso": 0,
+    "planejadas": 14,
+    "percentual_conclusao": 7,
+    "marcos_alinhamento": 7,
+    "checkpoints": 2,
+    "marcos_especiais": 2
+  },
+
+  "proximas_acoes": [
+    "Pesquisar custos de membros no Notion (até 14/03)",
+    "Preparar material para reunião de sexta-feira (até 14/03)",
+    "Mapear cronograma reverso de integração (até 14/03)",
+    "Validar integrações técnicas (até 20/03)",
+    "Alinhamento Quinzenal #1 (25/03)"
+  ],
+
+  "lembretes_mintzie": {
+    "frequencia": "quinzenal",
+    "dias_alinhamento": [25, 8, 22, 6, 20, 3, 17],
+    "meses": [3, 4, 5, 6],
+    "checkpoints": [
+      {
+        "data": "2026-04-11",
+        "titulo": "1 Mês de Projeto",
+        "mensagem": "Revisar progresso após 1 mês. Verificar se está no caminho certo."
+      },
+      {
+        "data": "2026-05-11",
+        "titulo": "2 Meses de Projeto",
+        "mensagem": "Revisar progresso após 2 meses. Preparar para reta final."
+      }
+    ],
+    "fechamento": {
+      "data": "2026-06-15",
+      "titulo": "Preparação Fechamento",
+      "mensagem": "Consolidar resultados, lições aprendidas e documentação final"
+    },
+    "upsell": {
+      "data": "2026-06-20",
+      "titulo": "Preparação Upsell 3º Trimestre",
+      "mensagem": "Preparar proposta de expansão e continuidade para próxima fase"
+    }
+  },
+
+  "notas": {
+    "criacao": "2026-03-11",
+    "ultima_atualizacao": "2026-03-11",
+    "atualizado_por": "João",
+    "escopo": "Tarefas da Netz apenas. Projeto completo coordenado por Gui Viegas (Pulsar)",
+    "alinhamentos": "Reuniões quinzenais para acompanhamento",
+    "checkpoints": "Revisões em 1 mês e 2 meses de projeto",
+    "fechamento": "Consolidação de resultados e preparação para upsell",
+    "proxima_atualizacao_esperada": "2026-03-25 (após primeiro alinhamento)",
+    "migracao_futura": "Notion central (quando projeto expandir para todas as equipes)"
+  }
+}
