@@ -50,6 +50,8 @@ async def on_ready():
         ronronado_surpresa.start()
     if not funcionario_da_semana.is_running():
         funcionario_da_semana.start()
+    if not verificador_de_projetos.is_running():
+        verificador_de_projetos.start()
 
 # --- REMOTE LOGGING ---
 last_error_time = 0
@@ -231,6 +233,79 @@ FRASES DA SEMANA DO {escolhido.upper()}:
     except Exception as e:
         print(f"Erro no funcionario da semana: {e}")
 
+hora_9am = datetime.time(hour=9, minute=0, tzinfo=datetime.timezone(datetime.timedelta(hours=-3)))
+@tasks.loop(time=hora_9am)
+async def verificador_de_projetos():
+    # Only run Monday to Friday (0 = Mon, 4 = Fri)
+    if datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=-3))).weekday() > 4:
+        return
+        
+    canal_gestao_tarefas_id = 1479226481782554634
+    canal = bot.get_channel(canal_gestao_tarefas_id)
+    if not canal: return
+
+    import github_client
+    projetos = github_client.get_all_tarefas()
+    if not projetos: return
+    
+    hoje = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=-3))).date()
+    amanha = hoje + datetime.timedelta(days=1)
+    
+    mensagens_para_enviar = []
+    
+    for proj in projetos:
+        nome_proj = proj.get("projeto", "Projeto Desconhecido")
+        lider = proj.get("lider", "Equipe")
+        
+        # 1. Alinhamentos (marcos_alinhamento)
+        for marco in proj.get("marcos_alinhamento", []):
+            try:
+                data_marco = datetime.datetime.strptime(marco.get("data", ""), "%Y-%m-%d").date()
+                titulo = marco.get("titulo", "")
+                if data_marco == hoje:
+                    mensagens_para_enviar.append(f"🚨 **HOJE:** {titulo} (Projeto: {nome_proj}) - Resp: {lider}")
+                elif data_marco == amanha:
+                    mensagens_para_enviar.append(f"⏰ **AMANHÃ:** {titulo} (Projeto: {nome_proj}) - Resp: {lider}")
+            except Exception: pass
+            
+        # 2. Lembretes Mintzie (checkpoints, fechamento, upsell)
+        lembretes = proj.get("lembretes_mintzie", {})
+        
+        # Checkpoints
+        for cp in lembretes.get("checkpoints", []):
+            try:
+                data_cp = datetime.datetime.strptime(cp.get("data", ""), "%Y-%m-%d").date()
+                if data_cp == hoje:
+                    mensagens_para_enviar.append(f"⚠️ **CHECKPOINT HOJE:** {cp.get('titulo')} - {cp.get('mensagem')} (Projeto: {nome_proj})")
+                elif data_cp == amanha:
+                    mensagens_para_enviar.append(f"⏰ **CHECKPOINT AMANHÃ:** {cp.get('titulo')} (Projeto: {nome_proj})")
+            except Exception: pass
+            
+        # Fechamento
+        fechamento = lembretes.get("fechamento", {})
+        try:
+            data_fech = datetime.datetime.strptime(fechamento.get("data", ""), "%Y-%m-%d").date()
+            if data_fech == hoje:
+                mensagens_para_enviar.append(f"🏁 **FECHAMENTO DO PROJETO HOJE:** {nome_proj}. {fechamento.get('mensagem')}")
+            elif data_fech == amanha:
+                mensagens_para_enviar.append(f"⏰ **FECHAMENTO DO PROJETO AMANHÃ:** {nome_proj}")
+        except Exception: pass
+        
+        # Upsell
+        upsell = lembretes.get("upsell", {})
+        try:
+            data_upsell = datetime.datetime.strptime(upsell.get("data", ""), "%Y-%m-%d").date()
+            if data_upsell == hoje:
+                mensagens_para_enviar.append(f"💰 **UPSELL HOJE:** {nome_proj}. {upsell.get('mensagem')}")
+            elif data_upsell == amanha:
+                mensagens_para_enviar.append(f"⏰ **UPSELL AMANHÃ:** Preparar proposta para {nome_proj}")
+        except Exception: pass
+        
+    if mensagens_para_enviar:
+        resumo = "🐈 *Bom dia, humanos! Aqui estão as prioridades e checkpoints absolutos dos projetos para hoje e amanhã:*\n\n> "
+        resumo += "\n> ".join(mensagens_para_enviar)
+        await canal.send(resumo)
+
 # ----------------------
 
 # Configura o horário de Brasília (UTC-3) para 19:19
@@ -349,6 +424,12 @@ async def cmd_teste_funcionario(interaction: discord.Interaction):
 @bot.tree.command(name="teste_catnip", description="[Teste] Roda a mensagem das 16:20 do Catnip")
 async def cmd_teste_catnip(interaction: discord.Interaction):
     await interaction.response.send_message("🌿 **4:20!** Pausa pro Catnip! Meu cérebro felino precisa expandir as perspectivas pro bem dessa empresa.")
+
+@bot.tree.command(name="teste_projetos_manus", description="[Teste] Vasculha os tarefas.json e alerta as datas imediatamente")
+async def cmd_teste_projetos(interaction: discord.Interaction):
+    await interaction.response.defer(thinking=False)
+    await interaction.followup.send("Lendo projetos no Github... procurando pendências para hoje ou amanhã...")
+    await verificador_de_projetos.coro()
 
 # -- CACHES DE EVENTOS DO BOT ---
 night_watch_cache = {}

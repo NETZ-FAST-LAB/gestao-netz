@@ -50,3 +50,18 @@ def get_iniciativas():
 def get_organizacao():
     data, _ = get_file_content("Operacional/organizacao.json")
     return data
+def get_all_tarefas():
+    """Busca todos os arquivos tarefas.json dentro de subpastas de Operacional/ usando a árvore do Git para não dar Rate Limit."""
+    projetos = []
+    try:
+        branch = repo.get_branch("master")
+        tree = repo.get_git_tree(branch.commit.sha, recursive=True)
+        for element in tree.tree:
+            # Procurar por Operacional/NOME_DO_PROJETO/tarefas.json
+            if element.path.startswith("Operacional/") and element.path.endswith("/tarefas.json"):
+                data, _ = get_file_content(element.path)
+                if data:
+                    projetos.append(data)
+    except Exception as e:
+        print(f"Erro buscando tarefas.json recursivos: {e}")
+    return projetos
