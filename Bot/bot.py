@@ -35,9 +35,11 @@ async def on_ready():
         except:
             pass
             
-    # Inicia a rotina de encerramento do expediente se não estiver rodando
+    # Inicia as rotinas se não estiverem rodando
     if not lembrete_fim_de_dia.is_running():
         lembrete_fim_de_dia.start()
+    if not rotina_resumo_diario.is_running():
+        rotina_resumo_diario.start()
 
 # --- REMOTE LOGGING ---
 last_error_time = 0
@@ -121,6 +123,89 @@ async def lembrete_fim_de_dia():
     else:
         print(f"ERRO: Canal de ID {canal_gestao_tarefas_id} não encontrado para enviar o lembrete.")
 
+# Configura o horário de Brasília (UTC-3) para 18:00
+hora_resumo = datetime.time(hour=18, minute=0, tzinfo=datetime.timezone(datetime.timedelta(hours=-3)))
+
+async def gerar_e_enviar_resumo(destination_channel):
+    try:
+        inicio_dia = discord.utils.utcnow() - datetime.timedelta(days=1)
+        historico_str = ""
+        
+        for guild in bot.guilds:
+            for canal in guild.text_channels:
+                try:
+                    # Verifica permissões do bot no canal
+                    perm = canal.permissions_for(guild.me)
+                    if not perm.read_message_history or not perm.read_messages:
+                        continue
+                    
+                    messages = [msg async for msg in canal.history(limit=100, after=inicio_dia) if msg.author != bot.user and msg.content.strip() and not msg.content.startswith("!")]
+                    if not messages:
+                        continue
+                        
+                    historico_str += f"\n--- Canal: #{canal.name} ---\n"
+                    # Inverte para ordem cronológica
+                    messages.reverse()
+                    for msg in messages:
+                        hora_str = msg.created_at.astimezone(datetime.timezone(datetime.timedelta(hours=-3))).strftime("%H:%M")
+                        historico_str += f"[{hora_str}] {msg.author.display_name}: {msg.content}\n"
+                        
+                except discord.errors.Forbidden:
+                    # Ignorar silenciosamente canais inacessíveis
+                    pass
+                except Exception as e:
+                    print(f"Erro ao ler canal {canal.name}: {e}")
+                    
+        if not historico_str.strip():
+             await destination_channel.send("😾 Nenhuma discussão foi encontrada nas últimas 24 horas para resumir. Vocês trabalharam hoje?")
+             return
+             
+        prompt_llm = f"""Faça um resumo das principais discussões, decisões e gargalos que aconteceram nas últimas 24 horas.
+Marque com '@' os coleguinhas envolvidos nas discussões principais.
+
+Encerre com recomendações práticas (ex: atualizar documentações corporativas ou marcar reuniões de alinhamento).
+
+Abaixo o histórico das mensagens das últimas 24 horas:
+
+{historico_str}"""
+
+        import gemini_logic
+        await destination_channel.send("🐈 *Iniciando a leitura telepática das mensagens em todos os canais... (isso pode levar um instante)*")
+        
+        # Chama o LLM via wrapper direto do cliente
+        response = gemini_logic.client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": "Você é o Mintzie, assistente da NETZ encarregado de fazer resumos executivos diários do Discord com seu tom irônico felino peculiar, mas focado profissionalmente nos alinhamentos corporativos."},
+                {"role": "user", "content": prompt_llm}
+            ]
+        )
+        resumo_texto = response.choices[0].message.content
+        
+        # Paginação para evitar limite de 2000 chars do Discord
+        chunks = [resumo_texto[i:i+1900] for i in range(0, len(resumo_texto), 1900)]
+        for chunk in chunks:
+            await destination_channel.send(chunk)
+            
+    except Exception as e:
+        error_traceback = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+        print(f"Erro ao gerar resumo: {e}")
+        await destination_channel.send("❌ Ocorreu um erro ao gerar o resumo das últimas 24 horas.")
+        await log_error_to_discord(f"Erro na Rotina de Resumo:\n{error_traceback}")
+
+@tasks.loop(time=hora_resumo)
+async def rotina_resumo_diario():
+    canal_gestao_tarefas_id = 1479226481782554634
+    canal = bot.get_channel(canal_gestao_tarefas_id)
+    if canal:
+        await gerar_e_enviar_resumo(canal)
+
+@bot.tree.command(name="rotina_resumo", description="Força a geração do resumo das conversas das últimas 24h")
+async def cmd_rotina_resumo(interaction: discord.Interaction):
+    await interaction.response.defer(thinking=False)
+    # Responde à interação deferida para não dar timeout, depois chama a função que já joga no canal
+    await interaction.followup.send("Processando o resumo do dia, humanos...")
+    await gerar_e_enviar_resumo(interaction.channel)
 
 @bot.event
 async def on_message(message: discord.Message):
