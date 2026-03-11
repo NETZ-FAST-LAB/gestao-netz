@@ -74,6 +74,275 @@
               "reminders": []
             }
           ]
+        },
+        {
+          "id": "proj-sicredi-carreiras",
+          "title": "Sicredi - Gestão de Carreiras",
+          "client": "Sicredi",
+          "owner": "Gui Viegas (Pulsar)",
+          "column": "Em Andamento",
+          "health_status": "No Prazo",
+          "tags": [
+            "RH",
+            "Integração"
+          ],
+          "artifacts": [],
+          "marcos_alinhamento": [
+            {
+              "id": "marco_1",
+              "titulo": "Alinhamento Quinzenal #1",
+              "data": "2026-03-25",
+              "descricao": "Primeira reunião de alinhamento quinzenal com equipe",
+              "responsavel": "João",
+              "prioridade": "alta"
+            },
+            {
+              "id": "marco_2",
+              "titulo": "Alinhamento Quinzenal #2",
+              "data": "2026-04-08",
+              "descricao": "Segunda reunião de alinhamento quinzenal",
+              "responsavel": "João",
+              "prioridade": "alta"
+            },
+            {
+              "id": "marco_3",
+              "titulo": "Alinhamento Quinzenal #3",
+              "data": "2026-04-22",
+              "descricao": "Terceira reunião de alinhamento quinzenal",
+              "responsavel": "João",
+              "prioridade": "alta"
+            },
+            {
+              "id": "marco_4",
+              "titulo": "Alinhamento Quinzenal #4",
+              "data": "2026-05-06",
+              "descricao": "Quarta reunião de alinhamento quinzenal",
+              "responsavel": "João",
+              "prioridade": "alta"
+            },
+            {
+              "id": "marco_5",
+              "titulo": "Alinhamento Quinzenal #5",
+              "data": "2026-05-20",
+              "descricao": "Quinta reunião de alinhamento quinzenal",
+              "responsavel": "João",
+              "prioridade": "alta"
+            },
+            {
+              "id": "marco_6",
+              "titulo": "Alinhamento Quinzenal #6",
+              "data": "2026-06-03",
+              "descricao": "Sexta reunião de alinhamento quinzenal",
+              "responsavel": "João",
+              "prioridade": "alta"
+            },
+            {
+              "id": "marco_7",
+              "titulo": "Alinhamento Quinzenal #7",
+              "data": "2026-06-17",
+              "descricao": "Sétima reunião de alinhamento quinzenal",
+              "responsavel": "João",
+              "prioridade": "alta"
+            },
+            {
+              "id": "marco_1mes",
+              "titulo": "Checkpoint 1 Mês",
+              "data": "2026-04-11",
+              "descricao": "Revisão de progresso após 1 mês de projeto",
+              "responsavel": "João",
+              "prioridade": "alta",
+              "tipo": "checkpoint"
+            },
+            {
+              "id": "marco_2mes",
+              "titulo": "Checkpoint 2 Meses",
+              "data": "2026-05-11",
+              "descricao": "Revisão de progresso após 2 meses de projeto",
+              "responsavel": "João",
+              "prioridade": "alta",
+              "tipo": "checkpoint"
+            },
+            {
+              "id": "marco_fechamento",
+              "titulo": "Preparação Fechamento do Projeto",
+              "data": "2026-06-15",
+              "descricao": "Consolidar resultados, lições aprendidas e documentação final",
+              "responsavel": "João",
+              "prioridade": "alta",
+              "tipo": "fechamento"
+            },
+            {
+              "id": "marco_upsell",
+              "titulo": "Preparação Upsell 3º Trimestre",
+              "data": "2026-06-20",
+              "descricao": "Preparar proposta de expansão e continuidade para 3º trimestre",
+              "responsavel": "João",
+              "prioridade": "alta",
+              "tipo": "upsell"
+            }
+          ],
+          "lembretes_mintzie": {
+            "frequencia": "quinzenal",
+            "dias_alinhamento": [
+              25,
+              8,
+              22,
+              6,
+              20,
+              3,
+              17
+            ],
+            "meses": [
+              3,
+              4,
+              5,
+              6
+            ],
+            "checkpoints": [
+              {
+                "data": "2026-04-11",
+                "titulo": "1 Mês de Projeto",
+                "mensagem": "Revisar progresso após 1 mês. Verificar se está no caminho certo."
+              },
+              {
+                "data": "2026-05-11",
+                "titulo": "2 Meses de Projeto",
+                "mensagem": "Revisar progresso após 2 meses. Preparar para reta final."
+              }
+            ],
+            "fechamento": {
+              "data": "2026-06-15",
+              "titulo": "Preparação Fechamento",
+              "mensagem": "Consolidar resultados, lições aprendidas e documentação final"
+            },
+            "upsell": {
+              "data": "2026-06-20",
+              "titulo": "Preparação Upsell 3º Trimestre",
+              "mensagem": "Preparar proposta de expansão e continuidade para próxima fase"
+            }
+          },
+          "tasks": [
+            {
+              "id": "task_1_1",
+              "title": "[Priorização & Planejamento] Organizar projeto no GitHub",
+              "assignee": "João",
+              "status": "completed",
+              "dueDate": "",
+              "reminders": []
+            },
+            {
+              "id": "task_1_2",
+              "title": "[Priorização & Planejamento] Pesquisar custos de membros no Notion",
+              "assignee": "João",
+              "status": "pending",
+              "dueDate": "2026-03-14",
+              "reminders": []
+            },
+            {
+              "id": "task_1_3",
+              "title": "[Priorização & Planejamento] Preparar material para reunião de sexta-feira",
+              "assignee": "João",
+              "status": "pending",
+              "dueDate": "2026-03-14",
+              "reminders": []
+            },
+            {
+              "id": "task_1_4",
+              "title": "[Priorização & Planejamento] Mapear cronograma reverso de integração",
+              "assignee": "João",
+              "status": "pending",
+              "dueDate": "2026-03-14",
+              "reminders": []
+            },
+            {
+              "id": "task_1_5",
+              "title": "[Priorização & Planejamento] Validar integrações técnicas",
+              "assignee": "João",
+              "status": "pending",
+              "dueDate": "2026-03-20",
+              "reminders": []
+            },
+            {
+              "id": "task_2_1",
+              "title": "[Co-criação com Cooperativas] Mapear agendas de escuta com cooperativas",
+              "assignee": "João",
+              "status": "pending",
+              "dueDate": "2026-04-15",
+              "reminders": []
+            },
+            {
+              "id": "task_2_2",
+              "title": "[Co-criação com Cooperativas] Desenhar modelo 70/30",
+              "assignee": "João",
+              "status": "pending",
+              "dueDate": "2026-04-30",
+              "reminders": []
+            },
+            {
+              "id": "task_2_3",
+              "title": "[Co-criação com Cooperativas] Co-criar framework integrado",
+              "assignee": "João",
+              "status": "pending",
+              "dueDate": "2026-05-15",
+              "reminders": []
+            },
+            {
+              "id": "task_3_1",
+              "title": "[Prototipagem & Entregas Incrementais] Desenvolver demonstrações com dados fora do sistema",
+              "assignee": "João",
+              "status": "pending",
+              "dueDate": "2026-05-30",
+              "reminders": []
+            },
+            {
+              "id": "task_3_2",
+              "title": "[Prototipagem & Entregas Incrementais] Coordenar entregas incrementais",
+              "assignee": "João",
+              "status": "pending",
+              "dueDate": "2026-06-15",
+              "reminders": []
+            },
+            {
+              "id": "task_4_1",
+              "title": "[Piloto & Validação] Executar piloto com grupo inicial",
+              "assignee": "João",
+              "status": "pending",
+              "dueDate": "2026-06-20",
+              "reminders": []
+            },
+            {
+              "id": "task_4_2",
+              "title": "[Piloto & Validação] Coletar feedback e iterar",
+              "assignee": "João",
+              "status": "pending",
+              "dueDate": "2026-06-28",
+              "reminders": []
+            },
+            {
+              "id": "task_5_1",
+              "title": "[Fechamento & Upsell] Consolidar resultados e lições aprendidas",
+              "assignee": "João",
+              "status": "pending",
+              "dueDate": "2026-06-15",
+              "reminders": []
+            },
+            {
+              "id": "task_5_2",
+              "title": "[Fechamento & Upsell] Preparar proposta de upsell 3º trimestre",
+              "assignee": "João",
+              "status": "pending",
+              "dueDate": "2026-06-20",
+              "reminders": []
+            },
+            {
+              "id": "task_5_3",
+              "title": "[Fechamento & Upsell] Apresentar resultados e proposta",
+              "assignee": "João",
+              "status": "pending",
+              "dueDate": "2026-06-30",
+              "reminders": []
+            }
+          ]
         }
       ]
     }

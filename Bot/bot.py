@@ -245,61 +245,62 @@ async def verificador_de_projetos():
     if not canal: return
 
     import github_client
-    projetos = github_client.get_all_tarefas()
-    if not projetos: return
+    projetos_data = github_client.get_projetos()
+    if not projetos_data: return
     
     hoje = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=-3))).date()
     amanha = hoje + datetime.timedelta(days=1)
     
     mensagens_para_enviar = []
     
-    for proj in projetos:
-        nome_proj = proj.get("projeto", "Projeto Desconhecido")
-        lider = proj.get("lider", "Equipe")
-        
-        # 1. Alinhamentos (marcos_alinhamento)
-        for marco in proj.get("marcos_alinhamento", []):
+    for board in projetos_data.get("boards", []):
+        for proj in board.get("cards", []):
+            nome_proj = proj.get("title", "Projeto Desconhecido")
+            lider = proj.get("owner", "Equipe")
+            
+            # 1. Alinhamentos (marcos_alinhamento)
+            for marco in proj.get("marcos_alinhamento", []):
+                try:
+                    data_marco = datetime.datetime.strptime(marco.get("data", ""), "%Y-%m-%d").date()
+                    titulo = marco.get("titulo", "")
+                    if data_marco == hoje:
+                        mensagens_para_enviar.append(f"🚨 **HOJE:** {titulo} (Projeto: {nome_proj}) - Resp: {lider}")
+                    elif data_marco == amanha:
+                        mensagens_para_enviar.append(f"⏰ **AMANHÃ:** {titulo} (Projeto: {nome_proj}) - Resp: {lider}")
+                except Exception: pass
+                
+            # 2. Lembretes Mintzie (checkpoints, fechamento, upsell)
+            lembretes = proj.get("lembretes_mintzie", {})
+            
+            # Checkpoints
+            for cp in lembretes.get("checkpoints", []):
+                try:
+                    data_cp = datetime.datetime.strptime(cp.get("data", ""), "%Y-%m-%d").date()
+                    if data_cp == hoje:
+                        mensagens_para_enviar.append(f"⚠️ **CHECKPOINT HOJE:** {cp.get('titulo')} - {cp.get('mensagem')} (Projeto: {nome_proj})")
+                    elif data_cp == amanha:
+                        mensagens_para_enviar.append(f"⏰ **CHECKPOINT AMANHÃ:** {cp.get('titulo')} (Projeto: {nome_proj})")
+                except Exception: pass
+                
+            # Fechamento
+            fechamento = lembretes.get("fechamento", {})
             try:
-                data_marco = datetime.datetime.strptime(marco.get("data", ""), "%Y-%m-%d").date()
-                titulo = marco.get("titulo", "")
-                if data_marco == hoje:
-                    mensagens_para_enviar.append(f"🚨 **HOJE:** {titulo} (Projeto: {nome_proj}) - Resp: {lider}")
-                elif data_marco == amanha:
-                    mensagens_para_enviar.append(f"⏰ **AMANHÃ:** {titulo} (Projeto: {nome_proj}) - Resp: {lider}")
+                data_fech = datetime.datetime.strptime(fechamento.get("data", ""), "%Y-%m-%d").date()
+                if data_fech == hoje:
+                    mensagens_para_enviar.append(f"🏁 **FECHAMENTO DO PROJETO HOJE:** {nome_proj}. {fechamento.get('mensagem')}")
+                elif data_fech == amanha:
+                    mensagens_para_enviar.append(f"⏰ **FECHAMENTO DO PROJETO AMANHÃ:** {nome_proj}")
             except Exception: pass
             
-        # 2. Lembretes Mintzie (checkpoints, fechamento, upsell)
-        lembretes = proj.get("lembretes_mintzie", {})
-        
-        # Checkpoints
-        for cp in lembretes.get("checkpoints", []):
+            # Upsell
+            upsell = lembretes.get("upsell", {})
             try:
-                data_cp = datetime.datetime.strptime(cp.get("data", ""), "%Y-%m-%d").date()
-                if data_cp == hoje:
-                    mensagens_para_enviar.append(f"⚠️ **CHECKPOINT HOJE:** {cp.get('titulo')} - {cp.get('mensagem')} (Projeto: {nome_proj})")
-                elif data_cp == amanha:
-                    mensagens_para_enviar.append(f"⏰ **CHECKPOINT AMANHÃ:** {cp.get('titulo')} (Projeto: {nome_proj})")
+                data_upsell = datetime.datetime.strptime(upsell.get("data", ""), "%Y-%m-%d").date()
+                if data_upsell == hoje:
+                    mensagens_para_enviar.append(f"💰 **UPSELL HOJE:** {nome_proj}. {upsell.get('mensagem')}")
+                elif data_upsell == amanha:
+                    mensagens_para_enviar.append(f"⏰ **UPSELL AMANHÃ:** Preparar proposta para {nome_proj}")
             except Exception: pass
-            
-        # Fechamento
-        fechamento = lembretes.get("fechamento", {})
-        try:
-            data_fech = datetime.datetime.strptime(fechamento.get("data", ""), "%Y-%m-%d").date()
-            if data_fech == hoje:
-                mensagens_para_enviar.append(f"🏁 **FECHAMENTO DO PROJETO HOJE:** {nome_proj}. {fechamento.get('mensagem')}")
-            elif data_fech == amanha:
-                mensagens_para_enviar.append(f"⏰ **FECHAMENTO DO PROJETO AMANHÃ:** {nome_proj}")
-        except Exception: pass
-        
-        # Upsell
-        upsell = lembretes.get("upsell", {})
-        try:
-            data_upsell = datetime.datetime.strptime(upsell.get("data", ""), "%Y-%m-%d").date()
-            if data_upsell == hoje:
-                mensagens_para_enviar.append(f"💰 **UPSELL HOJE:** {nome_proj}. {upsell.get('mensagem')}")
-            elif data_upsell == amanha:
-                mensagens_para_enviar.append(f"⏰ **UPSELL AMANHÃ:** Preparar proposta para {nome_proj}")
-        except Exception: pass
         
     if mensagens_para_enviar:
         resumo = "🐈 *Bom dia, humanos! Aqui estão as prioridades e checkpoints absolutos dos projetos para hoje e amanhã:*\n\n> "

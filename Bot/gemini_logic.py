@@ -88,32 +88,8 @@ def get_tasks(filtro_responsavel: str) -> str:
                         # Use id instead of title to prevent massive payload issues
                         todas_tarefas.append(f"[INICIATIVA: {card.get('title')}] ID: {task.get('id')} -> {task.get('title')} (Status: {task.get('status')} | Dono: {dono})")
 
-    # Busca em Novas Tarefas Descentralizadas (tarefas.json do Manus)
-    manus_projetos = github_client.get_all_tarefas()
-    if manus_projetos:
-        for proj in manus_projetos:
-            nome_projeto = proj.get("projeto", "Projeto Desconhecido")
-            for fase in proj.get("fases", []):
-                for task in fase.get("tarefas", []):
-                    assignee = task.get("responsavel", "").strip().lower()
-
-                    match = False
-                    if filtro_responsavel.lower() == "todas":
-                        match = True
-                    elif filtro_responsavel.lower() == "unassigned" and assignee == "":
-                        match = True
-                    elif filtro_responsavel.lower() not in ["todas", "unassigned"] and filtro_responsavel.lower() in assignee:
-                        match = True
-                        
-                    if match and task.get("status") != "concluido":
-                        dono = task.get('responsavel') or 'Sem Dono'
-                        id_tarefa = task.get('id', 'Sem ID')
-                        titulo = task.get('titulo', 'Sem titulo')
-                        status_tarefa = task.get('status', 'Sem status')
-                        todas_tarefas.append(f"[MAKER: {nome_projeto}] ID: {id_tarefa} -> {titulo} (Status: {status_tarefa} | Dono: {dono})")
-
     if not todas_tarefas:
-        return json.dumps({"status": "success", "message": f"Nenhuma tarefa in-progress corresponde ao filtro '{filtro_responsavel}'."})
+        return json.dumps({"status": "success", "message": f"Nenhuma tarefa corresponde ao filtro '{filtro_responsavel}'."})
         
     return json.dumps({"status": "success", "tarefas": todas_tarefas})
 
