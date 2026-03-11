@@ -525,8 +525,38 @@ async def on_message(message: discord.Message):
                 prompt_enriquecido = f"[Mensagem de: {message.author.display_name}] {clean_prompt}"
                 response = chat_session.send_message(prompt_enriquecido)
                 
-                # Send the final response from the cat
-                await message.reply(response.text)
+                # Send the final response from the cat, paginated if necessary
+                response_text = response.text
+                if len(response_text) <= 2000:
+                    await message.reply(response_text)
+                else:
+                    # Discord's strict limit is 2000 characters per message
+                    # Split into chunks of 1900 to be safe and avoid cutting markdown mid-word if possible
+                    chunks = []
+                    while len(response_text) > 0:
+                        if len(response_text) <= 1900:
+                            chunks.append(response_text)
+                            break
+                        
+                        # Find the last newline within the 1900 limit to break cleanly
+                        split_index = response_text.rfind('\n', 0, 1900)
+                        if split_index == -1:
+                            # If no newline, find the last space
+                            split_index = response_text.rfind(' ', 0, 1900)
+                            
+                        if split_index == -1:
+                            # If no space, just hard cut at 1900
+                            split_index = 1900
+                            
+                        chunks.append(response_text[:split_index])
+                        response_text = response_text[split_index:].lstrip()
+                        
+                    for count, chunk in enumerate(chunks):
+                        if count == 0:
+                            await message.reply(chunk)
+                        else:
+                            await message.channel.send(chunk)
+                            
             except Exception as e:
                 error_traceback = traceback.format_exc()
                 print(f"Erro na IA:\n{error_traceback}")
