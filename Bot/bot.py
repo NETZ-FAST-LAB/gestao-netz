@@ -36,6 +36,26 @@ async def on_ready():
         except:
             pass
             
+    # Announcement of new Deployment
+    canal_deploy_id = 1481644523913482472
+    canal_deploy = bot.get_channel(canal_deploy_id)
+    if canal_deploy:
+        try:
+            import subprocess
+            # Extract the last git commit message subject to know what changed
+            ultimo_commit = subprocess.check_output(['git', 'log', '-1', '--pretty=%s']).decode('utf-8').strip()
+            
+            mensagem_deploy = (
+                "🐈 **Vidas Infinitas Restauradas! (Novo Deploy)**\n\n"
+                f"Meus miolos de silício acabaram de ser reiniciados pelos humanos. O que eu aprendi dessa vez:\n"
+                f"> `{ultimo_commit}`\n\n"
+                "Estou pronto para julgar as tarefas de vocês de novo."
+            )
+            await canal_deploy.send(mensagem_deploy)
+        except Exception as e:
+            print(f"Erro ao buscar commit para aviso de deploy: {e}")
+            await canal_deploy.send("🐈 **Vidas Infinitas Restauradas!** Acordei cego e não consegui ler meu próprio chip de memória para ver a novidade, mas estou online e julgando vocês.")
+            
     # Inicia as rotinas se não estiverem rodando
     if not lembrete_fim_de_dia.is_running():
         lembrete_fim_de_dia.start()
