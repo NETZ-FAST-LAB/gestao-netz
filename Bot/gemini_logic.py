@@ -61,8 +61,11 @@ def get_tasks(filtro_responsavel: str) -> str:
                         match = True
                     elif filtro_responsavel.lower() == "unassigned" and assignee == "":
                         match = True
-                    elif filtro_responsavel.lower() not in ["todas", "unassigned"] and filtro_responsavel.lower() in assignee:
-                        match = True
+                    elif filtro_responsavel.lower() not in ["todas", "unassigned"]:
+                        # Exemplo: "Joãozíssimo" in "João" ou "João" in "Joãozíssimo" (com tamanho mínimo)
+                        filtro = filtro_responsavel.lower()
+                        if filtro in assignee or (len(assignee) > 3 and assignee in filtro):
+                            match = True
                         
                     if match:
                         dono = task.get('assignee') or 'Sem Dono'
@@ -82,8 +85,10 @@ def get_tasks(filtro_responsavel: str) -> str:
                         match = True
                     elif filtro_responsavel.lower() == "unassigned" and assignee == "":
                         match = True
-                    elif filtro_responsavel.lower() not in ["todas", "unassigned"] and filtro_responsavel.lower() in assignee:
-                        match = True
+                    elif filtro_responsavel.lower() not in ["todas", "unassigned"]:
+                        filtro = filtro_responsavel.lower()
+                        if filtro in assignee or (len(assignee) > 3 and assignee in filtro):
+                            match = True
                         
                     if match:
                         dono = task.get('assignee') or 'Sem Dono'
