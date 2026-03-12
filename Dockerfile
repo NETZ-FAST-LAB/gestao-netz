@@ -1,6 +1,9 @@
 # Usar uma imagem oficial leve do Python
 FROM python:3.13-slim
 
+# Instalar o git para leitura dos logs do repositório
+RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
+
 # Definir o diretório de trabalho dentro do contêiner
 WORKDIR /app
 
