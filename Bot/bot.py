@@ -1,4 +1,5 @@
-﻿import datetime
+﻿import asyncio
+import datetime
 import random
 import sys
 import time
@@ -43,6 +44,7 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 night_watch_cache = {}
 gossip_tracker = {}
 gossip_cooldown = {}
+deploy_announcement_sent = False
 last_error_time = 0
 error_spam_count = 0
 MAX_ERRORS_PER_MINUTE = 3
@@ -61,18 +63,41 @@ def management_channel():
 
 
 async def send_deploy_message():
+    global deploy_announcement_sent
+
+    if deploy_announcement_sent:
+        return True
+
     try:
         channel = await bot.fetch_channel(settings.deploy_channel_id)
     except Exception as error:
         print(f"Nao encontrei o canal de deploy: {error}")
-        return
+        return False
 
     try:
         recent_commits = github_client.get_recent_commit_subjects(limit=3)
+        print(f"Commits recentes para aviso de deploy: {recent_commits}")
         await channel.send(build_deploy_message(recent_commits))
+        deploy_announcement_sent = True
+        return True
     except Exception as error:
         print(f"Erro ao buscar commit para aviso de deploy: {error}")
-        await channel.send(build_deploy_fallback_message())
+        try:
+            await channel.send(build_deploy_fallback_message())
+            deploy_announcement_sent = True
+            return True
+        except Exception as send_error:
+            print(f"Erro ao enviar fallback de deploy: {send_error}")
+            return False
+
+
+async def ensure_deploy_announcement():
+    for delay_seconds in (0, 5, 15):
+        if delay_seconds:
+            await asyncio.sleep(delay_seconds)
+        if await send_deploy_message():
+            return
+    print("Falha final ao enviar aviso de deploy apos retries.")
 
 
 async def ensure_background_tasks():
@@ -107,7 +132,7 @@ async def on_ready():
         except Exception:
             pass
 
-    await send_deploy_message()
+    bot.loop.create_task(ensure_deploy_announcement())
     await ensure_background_tasks()
 
 
@@ -475,6 +500,19 @@ async def cmd_teste_projetos(interaction: discord.Interaction):
     await interaction.response.defer(thinking=False)
     await interaction.followup.send("Lendo projetos no Github... procurando pendencias para hoje ou amanha...")
     await verificador_de_projetos.coro()
+
+
+@bot.tree.command(name="teste_deploy_msg", description="[Teste] Envia agora a mensagem de deploy no canal configurado")
+async def cmd_teste_deploy_msg(interaction: discord.Interaction):
+    global deploy_announcement_sent
+
+    deploy_announcement_sent = False
+    await interaction.response.defer(thinking=False, ephemeral=True)
+    success = await send_deploy_message()
+    if success:
+        await interaction.followup.send("Mensagem de deploy enviada para o canal configurado.", ephemeral=True)
+    else:
+        await interaction.followup.send("Falhei em enviar a mensagem de deploy. Vale olhar os logs.", ephemeral=True)
 
 
 @bot.event
