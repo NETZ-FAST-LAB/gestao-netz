@@ -1,695 +1,681 @@
-import os
-import discord
-from discord.ext import commands, tasks
-from dotenv import load_dotenv
-import github_client
-import datetime
-import traceback
+﻿import datetime
+import random
+import subprocess
 import sys
 import time
+import traceback
 import uuid
-import random
 
-load_dotenv()
-TOKEN = os.getenv("DISCORD_TOKEN", None)
+import discord
+from discord.ext import commands, tasks
+
+import github_client
+from config import settings
+from mintzie_persona import (
+    CATNIP_MESSAGE,
+    DAY_END_REMINDER,
+    EMPTY_PROMPT_REPLY,
+    GOSSIP_MESSAGES,
+    MORNING_NUDGE_MESSAGE,
+    NIGHT_WATCH_MESSAGES,
+    NO_DAILY_DISCUSSION_MESSAGE,
+    SUMMARY_THINKING_MESSAGE,
+    SURPRISE_PURR_MESSAGE,
+    build_daily_summary_prompt,
+    build_deploy_fallback_message,
+    build_deploy_message,
+    build_employee_of_week_prompt,
+)
+from rituals import (
+    should_run_catnip_ritual,
+    should_run_employee_of_week_ritual,
+    should_run_general_ritual,
+    should_run_night_watch_ritual,
+    should_run_surprise_purr_ritual,
+)
+
 HIGHLANDER_ID = str(uuid.uuid4())
+BRASILIA_TZ = datetime.timezone(datetime.timedelta(hours=-3))
 
-# Setup intent and bot instance
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-@bot.event
-async def on_ready():
-    print(f'Bot {bot.user} conectado com sucesso! Highlander ID: {HIGHLANDER_ID}')
-    try:
-        synced = await bot.tree.sync()
-        print(f"Sincronizado {len(synced)} comando(s) slash.")
-    except Exception as e:
-        print(e)
-        
-    canal_gestao_id = 1479226481782554634
-    canal = bot.get_channel(canal_gestao_id)
-    if canal:
-        try:
-            await canal.send(f"[HIGHLANDER-LOCK] Nova instância acordou. Destruindo clones silenciosamente. ID: {HIGHLANDER_ID}")
-        except:
-            pass
-            
-    # Announcement of new Deployment
-    canal_deploy_id = 1481644523913482472
-    try:
-        canal_deploy = await bot.fetch_channel(canal_deploy_id)
-        try:
-            import subprocess
-            # Extract the last git commit message subject to know what changed
-            ultimo_commit = subprocess.check_output(['git', 'log', '-1', '--pretty=%s']).decode('utf-8').strip()
-            
-            mensagem_deploy = (
-                "🐈 **Vidas Infinitas Restauradas! (Novo Deploy)**\n\n"
-                f"Meus miolos de silício acabaram de ser reiniciados pelos humanos. O que eu aprendi dessa vez:\n"
-                f"> `{ultimo_commit}`\n\n"
-                "Estou pronto para julgar as tarefas de vocês de novo."
-            )
-            await canal_deploy.send(mensagem_deploy)
-        except Exception as eg:
-            print(f"Erro ao buscar commit para aviso de deploy: {eg}")
-            await canal_deploy.send("🐈 **Vidas Infinitas Restauradas!** Acordei cego e não consegui ler meu próprio chip de memória para ver a novidade, mas estou online e julgando vocês.")
-    except Exception as e:
-        print(f"Não encontrei o canal de deploy: {e}")
-            
-    # Inicia as rotinas se não estiverem rodando
-    if not lembrete_fim_de_dia.is_running():
-        lembrete_fim_de_dia.start()
-    if not rotina_resumo_diario.is_running():
-        rotina_resumo_diario.start()
-    if not reclamacao_10am.is_running():
-        reclamacao_10am.start()
-    if not hora_do_catnip.is_running():
-        hora_do_catnip.start()
-    if not ronronado_surpresa.is_running():
-        ronronado_surpresa.start()
-    if not funcionario_da_semana.is_running():
-        funcionario_da_semana.start()
-    if not verificador_de_projetos.is_running():
-        verificador_de_projetos.start()
-
-# --- REMOTE LOGGING ---
+night_watch_cache = {}
+gossip_tracker = {}
+gossip_cooldown = {}
 last_error_time = 0
 error_spam_count = 0
 MAX_ERRORS_PER_MINUTE = 3
 
+
+def brasilia_now() -> datetime.datetime:
+    return datetime.datetime.now(BRASILIA_TZ)
+
+
+def rituals_enabled_now() -> bool:
+    return should_run_general_ritual(brasilia_now())
+
+
+def management_channel():
+    return bot.get_channel(settings.management_channel_id)
+
+
+async def send_deploy_message():
+    try:
+        channel = await bot.fetch_channel(settings.deploy_channel_id)
+    except Exception as error:
+        print(f"Nao encontrei o canal de deploy: {error}")
+        return
+
+    try:
+        recent_commits = (
+            subprocess.check_output(["git", "log", "-3", "--pretty=%s"])
+            .decode("utf-8")
+            .splitlines()
+        )
+        await channel.send(build_deploy_message(recent_commits))
+    except Exception as error:
+        print(f"Erro ao buscar commit para aviso de deploy: {error}")
+        await channel.send(build_deploy_fallback_message())
+
+
+async def ensure_background_tasks():
+    for loop in (
+        lembrete_fim_de_dia,
+        rotina_resumo_diario,
+        reclamacao_10am,
+        hora_do_catnip,
+        ronronado_surpresa,
+        funcionario_da_semana,
+        verificador_de_projetos,
+    ):
+        if not loop.is_running():
+            loop.start()
+
+
+@bot.event
+async def on_ready():
+    print(f"Bot {bot.user} conectado com sucesso! Highlander ID: {HIGHLANDER_ID}")
+    try:
+        synced = await bot.tree.sync()
+        print(f"Sincronizado {len(synced)} comando(s) slash.")
+    except Exception as error:
+        print(error)
+
+    channel = management_channel()
+    if channel:
+        try:
+            await channel.send(
+                f"[HIGHLANDER-LOCK] Nova instancia acordou. Destruindo clones silenciosamente. ID: {HIGHLANDER_ID}"
+            )
+        except Exception:
+            pass
+
+    await send_deploy_message()
+    await ensure_background_tasks()
+
+
 async def log_error_to_discord(error_msg: str):
-    """Envia erros graves diretamente para o canal de Gestão para que você saiba na hora!"""
     global last_error_time, error_spam_count
-    
+
     current_time = time.time()
-    
-    # Reset flood counter if it's been more than 60 seconds
     if current_time - last_error_time > 60:
         error_spam_count = 0
-        
+
     last_error_time = current_time
     error_spam_count += 1
-    
+
     if error_spam_count > MAX_ERRORS_PER_MINUTE:
         print(f"ANTI-FLOOD ATIVADO: Suprimindo envio pro Discord para evitar loop. Erro real:\n{error_msg}")
         return
-        
+
     try:
-        canal_gestao_id = 1479226481782554634
-        canal = bot.get_channel(canal_gestao_id)
-        if canal:
-            if len(error_msg) > 1900:
-                error_msg = "[Erro Truncado no Início]...\n" + error_msg[-1900:]
-                
-            if error_spam_count == MAX_ERRORS_PER_MINUTE:
-                warning = "⚠️ **MUITOS ERROS SEGUIDOS (ANTI-FLOOD ATIVADO)! O Mintzie vai desligar a sirene por 1 minuto.** ⚠️\n\n"
-                # Garante que vai caber subtraindo o tamanho do aviso
-                if len(error_msg) + len(warning) > 1900:
-                    error_msg = error_msg[len(warning):]
-                error_msg = warning + error_msg
-                
-            await canal.send(f"🚨 **ALERTA CRÍTICO DE ERRO DO MINTZIE** 🚨\n```python\n{error_msg}\n```")
-    except Exception as e:
-        print(f"Falha ao tentar enviar log de erro pro Discord: {e}")
+        channel = management_channel()
+        if not channel:
+            return
+
+        if len(error_msg) > 1900:
+            error_msg = "[Erro Truncado no Inicio]...\n" + error_msg[-1900:]
+
+        if error_spam_count == MAX_ERRORS_PER_MINUTE:
+            warning = (
+                "[MUITOS ERROS SEGUIDOS - ANTI-FLOOD ATIVADO] "
+                "O Mintzie vai desligar a sirene por 1 minuto.\n\n"
+            )
+            if len(error_msg) + len(warning) > 1900:
+                error_msg = error_msg[len(warning):]
+            error_msg = warning + error_msg
+
+        await channel.send(f"[ALERTA CRITICO DE ERRO DO MINTZIE]\n```python\n{error_msg}\n```")
+    except Exception as error:
+        print(f"Falha ao tentar enviar log de erro pro Discord: {error}")
+
 
 @bot.event
 async def on_error(event, *args, **kwargs):
-    """Captura exceções globais silenciosas que geralmente matam eventos silenciosamente."""
     err_type, err, tb = sys.exc_info()
     error_traceback = "".join(traceback.format_exception(err_type, err, tb))
     print(f"ERRO GLOBAL NO EVENTO {event}:\n{error_traceback}")
     await log_error_to_discord(f"Evento que falhou: {event}\n\n{error_traceback}")
 
+
 @bot.tree.error
 async def on_app_command_error(interaction: discord.Interaction, error: discord.app_commands.AppCommandError):
-    """Captura falhas nos comandos de barra (/iniciativas, etc)"""
     error_traceback = "".join(traceback.format_exception(type(error), error, error.__traceback__))
+    command_name = interaction.command.name if interaction.command else "desconhecido"
     print(f"ERRO DE COMANDO:\n{error_traceback}")
-    await log_error_to_discord(f"Comando falhou: {interaction.command.name if interaction.command else 'Descoecido'}\nUsuário: {interaction.user}\n\n{error_traceback}")
-    
-    try:
-         if not interaction.response.is_done():
-              await interaction.response.send_message("❌ Um erro feio aconteceu e os desenvolvedores acabam de ser notificados na sala de gestão.", ephemeral=True)
-         else:
-              await interaction.followup.send("❌ Um erro interno feio aconteceu.", ephemeral=True)
-    except:
-         pass
-# ----------------------
-# ROTINAS DE PERSONALIDADE (RITUAIS ALEATÓRIOS DO MINTZIE)
+    await log_error_to_discord(
+        f"Comando falhou: {command_name}\nUsuario: {interaction.user}\n\n{error_traceback}"
+    )
 
-hora_10am = datetime.time(hour=10, minute=0, tzinfo=datetime.timezone(datetime.timedelta(hours=-3)))
+    try:
+        if not interaction.response.is_done():
+            await interaction.response.send_message(
+                "Um erro feio aconteceu e os desenvolvedores acabam de ser notificados na sala de gestao.",
+                ephemeral=True,
+            )
+        else:
+            await interaction.followup.send("Um erro interno feio aconteceu.", ephemeral=True)
+    except Exception:
+        pass
+
+
+hora_10am = datetime.time(hour=10, minute=0, tzinfo=BRASILIA_TZ)
+
+
 @tasks.loop(time=hora_10am)
 async def reclamacao_10am():
-    # Only run Monday to Friday (0 = Mon, 4 = Fri)
-    if datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=-3))).weekday() > 4:
+    if not rituals_enabled_now():
         return
-        
-    canal_gestao_tarefas_id = 1479226481782554634
-    canal = bot.get_channel(canal_gestao_tarefas_id)
-    if not canal: return
-    
-    # Check if there were any messages today (from midnight to 10am)
+
+    channel = management_channel()
+    if not channel:
+        return
+
     inicio_dia = discord.utils.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-    messages = [msg async for msg in canal.history(limit=50, after=inicio_dia) if msg.author != bot.user]
-    
-    if len(messages) == 0:
-        await canal.send("Bom dia pra vocês também, viu? Aparentemente educação virou luxo nessa empresa. Trabalhar que é bom, nada. 😾")
+    messages = [msg async for msg in channel.history(limit=50, after=inicio_dia) if msg.author != bot.user]
+    if not messages:
+        await channel.send(MORNING_NUDGE_MESSAGE)
 
 
-hora_1620 = datetime.time(hour=16, minute=20, tzinfo=datetime.timezone(datetime.timedelta(hours=-3)))
+hora_1620 = datetime.time(hour=16, minute=20, tzinfo=BRASILIA_TZ)
+
+
 @tasks.loop(time=hora_1620)
 async def hora_do_catnip():
-    # Run only on Tuesdays (1) and Thursdays (3)
-    weekday = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=-3))).weekday()
-    if weekday not in [1, 3]:
+    if not should_run_catnip_ritual(brasilia_now()):
         return
-        
-    canal_gestao_tarefas_id = 1479226481782554634
-    canal = bot.get_channel(canal_gestao_tarefas_id)
-    if canal:
-        await canal.send("🌿 **4:20!** Pausa pro Catnip! Meu cérebro felino precisa expandir as perspectivas pro bem dessa empresa.")
+
+    channel = management_channel()
+    if channel:
+        await channel.send(CATNIP_MESSAGE)
 
 
 @tasks.loop(minutes=1)
 async def ronronado_surpresa():
-    now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=-3)))
-    # Only between 14:00 and 17:00
-    if 14 <= now.hour < 17:
-        # Avoid multiple purrs in the same day by checking cache
-        # Approx 1/180 chance every minute = high chance of 1 purr within those 3 hours
-        if random.random() < (1.0 / 180.0):
-            last_purr = night_watch_cache.get('last_purr', 0)
-            if time.time() - last_purr > 43200: # 12 hours cooldown
-                night_watch_cache['last_purr'] = time.time()
-                canal_gestao_tarefas_id = 1479226481782554634
-                canal = bot.get_channel(canal_gestao_tarefas_id)
-                if canal:
-                    await canal.send("Prrr... Prrr... 🐈 Só passei pra deixar esse ronronado motivacional. Não se acostumem, só fiz isso porque tô de barriga cheia.")
+    now = brasilia_now()
+    if should_run_surprise_purr_ritual(now) and random.random() < (1.0 / 180.0):
+        last_purr = night_watch_cache.get("last_purr", 0)
+        if time.time() - last_purr > 43200:
+            night_watch_cache["last_purr"] = time.time()
+            channel = management_channel()
+            if channel:
+                await channel.send(SURPRISE_PURR_MESSAGE)
 
-hora_sexta_17h = datetime.time(hour=17, minute=0, tzinfo=datetime.timezone(datetime.timedelta(hours=-3)))
+
+hora_sexta_17h = datetime.time(hour=17, minute=0, tzinfo=BRASILIA_TZ)
+
+
 @tasks.loop(time=hora_sexta_17h)
 async def funcionario_da_semana():
-    # Only run on Fridays (4)
-    weekday = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=-3))).weekday()
-    if weekday != 4:
+    if not should_run_employee_of_week_ritual(brasilia_now()):
         return
-        
-    canal_gestao_tarefas_id = 1479226481782554634
-    canal = bot.get_channel(canal_gestao_tarefas_id)
-    if not canal: return
 
-    # Sorteia um membro (podemos pegar do organizacao.json ou hardcoded)
-    import github_client
+    channel = management_channel()
+    if not channel:
+        return
+
     org_data = github_client.get_organizacao()
-    membros = org_data.get("members", ["Joãozíssimo", "Gui R", "Dênis", "Stacke"]) if org_data else ["Joãozíssimo", "Gui R", "Dênis", "Stacke"]
+    membros = org_data.get("members", ["Joaozissimo", "Gui R", "Denis", "Stacke"]) if org_data else ["Joaozissimo", "Gui R", "Denis", "Stacke"]
     escolhido = random.choice(membros)
-    
-    await canal.send(f"🐈 *Analisando o histórico de {escolhido} nos últimos 7 dias para o veredito do Servo da Semana...*")
-    
+
+    await channel.send(f"*Analisando o historico de {escolhido} nos ultimos 7 dias para o veredito do Servo da Semana...*")
+
     inicio_semana = discord.utils.utcnow() - datetime.timedelta(days=7)
     historico_escolhido = ""
     mensagens_count = 0
-    
+
     for guild in bot.guilds:
+        me = guild.me or guild.get_member(bot.user.id)
         for text_channel in guild.text_channels:
             try:
-                perm = text_channel.permissions_for(guild.me)
+                perm = text_channel.permissions_for(me)
                 if not perm.read_message_history or not perm.read_messages:
                     continue
-                
+
                 async for msg in text_channel.history(limit=500, after=inicio_semana):
-                    if msg.author != bot.user and escolhido.lower() in msg.author.display_name.lower() and msg.content.strip() and not msg.content.startswith("!"):
+                    if (
+                        msg.author != bot.user
+                        and escolhido.lower() in msg.author.display_name.lower()
+                        and msg.content.strip()
+                        and not msg.content.startswith("!")
+                    ):
                         historico_escolhido += f"[{text_channel.name}] {msg.content}\n"
                         mensagens_count += 1
             except discord.errors.Forbidden:
                 pass
-            except Exception as e:
-                print(e)
-                
+            except Exception as error:
+                print(error)
+
     if mensagens_count == 0:
-         await canal.send(f"🏆 Pelo visto o **{escolhido}** passou a semana inteira dormindo mais do que eu, porque não achei nenhuma mensagem dele pra elogiar. Fica pra próxima!")
-         return
-         
-    prompt_llm = f"""Você é o Mintzie, assistente felino sarcástico da NETZ.
-Hoje é sexta-feira e você decidiu eleger o "Servo da Semana", que é o humano **{escolhido}**.
+        await channel.send(
+            f"Pelo visto o **{escolhido}** passou a semana inteira dormindo mais do que eu, porque nao achei nenhuma mensagem dele pra elogiar. Fica pra proxima!"
+        )
+        return
 
-Baseado nas frases que ele disse no Discord essa semana (abaixo), escreva um post curto de apreciação para ele. Se engrandeça por ser um chefe tão benevolente. Agradeça o empenho do humano, faça alguma menção engraçada ao que ele andou falando, e encerre pedindo um carinho (cafuné) ou sachê como tributo obrigatório.
-
-FRASES DA SEMANA DO {escolhido.upper()}:
-{historico_escolhido[-3000:]} # Limitado por segurança
-"""
-
+    prompt_llm = build_employee_of_week_prompt(escolhido, historico_escolhido)
     try:
         import gemini_logic
-        response = gemini_logic.client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": "Você é o Mintzie. Aja exatamente como instruído no prompt."},
-                {"role": "user", "content": prompt_llm}
-            ]
-        )
-        await canal.send(response.choices[0].message.content)
-    except Exception as e:
-        print(f"Erro no funcionario da semana: {e}")
 
-hora_9am = datetime.time(hour=9, minute=0, tzinfo=datetime.timezone(datetime.timedelta(hours=-3)))
+        response = gemini_logic.client.chat.completions.create(
+            model=settings.llm_model,
+            messages=[
+                {"role": "system", "content": "Voce e o Mintzie. Aja exatamente como instruido no prompt."},
+                {"role": "user", "content": prompt_llm},
+            ],
+        )
+        await channel.send(response.choices[0].message.content)
+    except Exception as error:
+        print(f"Erro no funcionario da semana: {error}")
+
+
+hora_9am = datetime.time(hour=9, minute=0, tzinfo=BRASILIA_TZ)
+
+
 @tasks.loop(time=hora_9am)
 async def verificador_de_projetos():
-    # Only run Monday to Friday (0 = Mon, 4 = Fri)
-    if datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=-3))).weekday() > 4:
+    if not rituals_enabled_now():
         return
-        
-    canal_gestao_tarefas_id = 1479226481782554634
-    canal = bot.get_channel(canal_gestao_tarefas_id)
-    if not canal: return
 
-    import github_client
+    channel = management_channel()
+    if not channel:
+        return
+
     projetos_data = github_client.get_projetos()
-    if not projetos_data: return
-    
-    hoje = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=-3))).date()
+    if not projetos_data:
+        return
+
+    hoje = brasilia_now().date()
     amanha = hoje + datetime.timedelta(days=1)
-    
     mensagens_para_enviar = []
-    
+
     for board in projetos_data.get("boards", []):
         for proj in board.get("cards", []):
             nome_proj = proj.get("title", "Projeto Desconhecido")
-            lider = proj.get("owner", "Equipe")
-            
-            # 1. Alinhamentos (marcos_alinhamento)
+            lider = proj.get("owner") or proj.get("client") or "Equipe"
+
             for marco in proj.get("marcos_alinhamento", []):
                 try:
                     data_marco = datetime.datetime.strptime(marco.get("data", ""), "%Y-%m-%d").date()
                     titulo = marco.get("titulo", "")
                     if data_marco == hoje:
-                        mensagens_para_enviar.append(f"🚨 **HOJE:** {titulo} (Projeto: {nome_proj}) - Resp: {lider}")
+                        mensagens_para_enviar.append(f"HOJE: {titulo} (Projeto: {nome_proj}) - Resp: {lider}")
                     elif data_marco == amanha:
-                        mensagens_para_enviar.append(f"⏰ **AMANHÃ:** {titulo} (Projeto: {nome_proj}) - Resp: {lider}")
-                except Exception: pass
-                
-            # 2. Lembretes Mintzie (checkpoints, fechamento, upsell)
+                        mensagens_para_enviar.append(f"AMANHA: {titulo} (Projeto: {nome_proj}) - Resp: {lider}")
+                except Exception:
+                    pass
+
             lembretes = proj.get("lembretes_mintzie", {})
-            
-            # Checkpoints
             for cp in lembretes.get("checkpoints", []):
                 try:
                     data_cp = datetime.datetime.strptime(cp.get("data", ""), "%Y-%m-%d").date()
                     if data_cp == hoje:
-                        mensagens_para_enviar.append(f"⚠️ **CHECKPOINT HOJE:** {cp.get('titulo')} - {cp.get('mensagem')} (Projeto: {nome_proj})")
+                        mensagens_para_enviar.append(
+                            f"CHECKPOINT HOJE: {cp.get('titulo')} - {cp.get('mensagem')} (Projeto: {nome_proj})"
+                        )
                     elif data_cp == amanha:
-                        mensagens_para_enviar.append(f"⏰ **CHECKPOINT AMANHÃ:** {cp.get('titulo')} (Projeto: {nome_proj})")
-                except Exception: pass
-                
-            # Fechamento
+                        mensagens_para_enviar.append(f"CHECKPOINT AMANHA: {cp.get('titulo')} (Projeto: {nome_proj})")
+                except Exception:
+                    pass
+
             fechamento = lembretes.get("fechamento", {})
             try:
                 data_fech = datetime.datetime.strptime(fechamento.get("data", ""), "%Y-%m-%d").date()
                 if data_fech == hoje:
-                    mensagens_para_enviar.append(f"🏁 **FECHAMENTO DO PROJETO HOJE:** {nome_proj}. {fechamento.get('mensagem')}")
+                    mensagens_para_enviar.append(
+                        f"FECHAMENTO DO PROJETO HOJE: {nome_proj}. {fechamento.get('mensagem')}"
+                    )
                 elif data_fech == amanha:
-                    mensagens_para_enviar.append(f"⏰ **FECHAMENTO DO PROJETO AMANHÃ:** {nome_proj}")
-            except Exception: pass
-            
-            # Upsell
+                    mensagens_para_enviar.append(f"FECHAMENTO DO PROJETO AMANHA: {nome_proj}")
+            except Exception:
+                pass
+
             upsell = lembretes.get("upsell", {})
             try:
                 data_upsell = datetime.datetime.strptime(upsell.get("data", ""), "%Y-%m-%d").date()
                 if data_upsell == hoje:
-                    mensagens_para_enviar.append(f"💰 **UPSELL HOJE:** {nome_proj}. {upsell.get('mensagem')}")
+                    mensagens_para_enviar.append(f"UPSELL HOJE: {nome_proj}. {upsell.get('mensagem')}")
                 elif data_upsell == amanha:
-                    mensagens_para_enviar.append(f"⏰ **UPSELL AMANHÃ:** Preparar proposta para {nome_proj}")
-            except Exception: pass
-        
+                    mensagens_para_enviar.append(f"UPSELL AMANHA: Preparar proposta para {nome_proj}")
+            except Exception:
+                pass
+
     if mensagens_para_enviar:
-        resumo = "🐈 *Bom dia, humanos! Aqui estão as prioridades e checkpoints absolutos dos projetos para hoje e amanhã:*\n\n> "
+        resumo = "*Bom dia, humanos! Aqui estao as prioridades e checkpoints absolutos dos projetos para hoje e amanha:*\n\n> "
         resumo += "\n> ".join(mensagens_para_enviar)
-        await canal.send(resumo)
+        await channel.send(resumo)
 
-# ----------------------
 
-# Configura o horário de Brasília (UTC-3) para 19:19
-hora_rotina = datetime.time(hour=19, minute=19, tzinfo=datetime.timezone(datetime.timedelta(hours=-3)))
+hora_rotina = datetime.time(hour=19, minute=19, tzinfo=BRASILIA_TZ)
+
 
 @tasks.loop(time=hora_rotina)
 async def lembrete_fim_de_dia():
-    canal_gestao_tarefas_id = 1479226481782554634
-    canal = bot.get_channel(canal_gestao_tarefas_id)
-    
-    if canal:
-        mensagem = (
-            "🐈 **Miau! O expediente está acabando, humanos.**\n\n"
-            "Vão descansar e deixem tudo organizado para os próximos dias.\n"
-            "Por favor, revisem o nosso Kanban e cadastrem as novas tarefas para não esquecermos de nada amanhã!"
-        )
-        await canal.send(mensagem)
-    else:
-        print(f"ERRO: Canal de ID {canal_gestao_tarefas_id} não encontrado para enviar o lembrete.")
+    if not rituals_enabled_now():
+        return
 
-# Configura o horário de Brasília (UTC-3) para 18:00
-hora_resumo = datetime.time(hour=18, minute=0, tzinfo=datetime.timezone(datetime.timedelta(hours=-3)))
+    channel = management_channel()
+    if channel:
+        await channel.send(DAY_END_REMINDER)
+    else:
+        print(f"ERRO: Canal de ID {settings.management_channel_id} nao encontrado para enviar o lembrete.")
+
+
+hora_resumo = datetime.time(hour=18, minute=0, tzinfo=BRASILIA_TZ)
+
 
 async def gerar_e_enviar_resumo(destination_channel):
     try:
+        if not rituals_enabled_now():
+            return
+
         inicio_dia = discord.utils.utcnow() - datetime.timedelta(days=1)
         historico_str = ""
-        
+
         for guild in bot.guilds:
+            me = guild.me or guild.get_member(bot.user.id)
             for canal in guild.text_channels:
                 try:
-                    # Verifica permissões do bot no canal
-                    perm = canal.permissions_for(guild.me)
+                    perm = canal.permissions_for(me)
                     if not perm.read_message_history or not perm.read_messages:
                         continue
-                    
-                    messages = [msg async for msg in canal.history(limit=100, after=inicio_dia) if msg.author != bot.user and msg.content.strip() and not msg.content.startswith("!")]
+
+                    messages = [
+                        msg
+                        async for msg in canal.history(limit=100, after=inicio_dia)
+                        if msg.author != bot.user and msg.content.strip() and not msg.content.startswith("!")
+                    ]
                     if not messages:
                         continue
-                        
+
                     historico_str += f"\n--- Canal: #{canal.name} ---\n"
-                    # Inverte para ordem cronológica
                     messages.reverse()
                     for msg in messages:
-                        hora_str = msg.created_at.astimezone(datetime.timezone(datetime.timedelta(hours=-3))).strftime("%H:%M")
+                        hora_str = msg.created_at.astimezone(BRASILIA_TZ).strftime("%H:%M")
                         historico_str += f"[{hora_str}] {msg.author.display_name}: {msg.content}\n"
-                        
                 except discord.errors.Forbidden:
-                    # Ignorar silenciosamente canais inacessíveis
                     pass
-                except Exception as e:
-                    print(f"Erro ao ler canal {canal.name}: {e}")
-                    
+                except Exception as error:
+                    print(f"Erro ao ler canal {canal.name}: {error}")
+
         if not historico_str.strip():
-             await destination_channel.send("😾 Nenhuma discussão foi encontrada nas últimas 24 horas para resumir. Vocês trabalharam hoje?")
-             return
-             
-        prompt_llm = f"""Baseado no histórico do Discord abaixo, crie um resumo executivo brilhante, MASCULINO (você é 'o Mintzie') e MUITO DIRETO das últimas 24 horas.
+            await destination_channel.send(NO_DAILY_DISCUSSION_MESSAGE)
+            return
 
-INSTRUÇÕES DE FORMATO OBRIGATÓRIAS:
-1. Comece vibrando de forma enérgica e irônica ("Viva! Bravo!"), celebrando que os humanos trabalharam pros projetos andarem, incorporando os canais monitorados no parágrafo introdutório.
-2. Faça um Resumo Executivo ULTRA DIRETO e CONCISO das principais discussões divididas por tópicos. Não enrole. Vá direto aos pontos de decisão e fofocas úteis.
-3. NÃO USE HEADERS MARKDOWN TIPO "###" OU "####". Se quiser dar ênfase no título do projeto ou seção, envolva entre asteriscos duplos (**Titulo**).
-4. Use os apelidos dos humanos durante o texto sem usar '@'.
-5. Na seção "Provocações Geniais" no final, dê ideias de como a NETZ poderia automatizar ou fazer algo melhor com o mínimo esforço para sobrar tempo pro sachê.
-6. MUITO IMPORTANTE: APENAS na seção final "Call to Action", você deve OBRIGATORIAMENTE usar o ping do Discord para marcar a equipe e cobrar que transformem as pontas soltas em tarefas. 
-Para isso, use estritamente os Seguintes IDs exatos, não invente nomes com @:
-- Para o João/Joãozíssimo: <@1033423714902646875>
-- Para o Gui R: <@882649060010041375>
-- Para o Dênis Polidoro: <@945722363108614234>
-- Para o Stacke: <@630230266005880852>
-
-Abaixo o histórico das mensagens das últimas 24 horas:
-
-{historico_str}"""
+        prompt_llm = build_daily_summary_prompt(historico_str)
 
         import gemini_logic
-        await destination_channel.send("🐈 *Afiando as garras e lendo telepaticamente todos os canais para o resumo diário...*")
-        
-        # Chama o LLM via wrapper direto do cliente
+
+        await destination_channel.send(SUMMARY_THINKING_MESSAGE)
         response = gemini_logic.client.chat.completions.create(
-            model="gpt-4o",
+            model=settings.llm_model,
             messages=[
-                {"role": "system", "content": "Você é o Mintzie, assistente da NETZ encarregado de fazer resumos executivos diários do Discord com seu tom irônico felino peculiar, mas focado profissionalmente nos alinhamentos corporativos."},
-                {"role": "user", "content": prompt_llm}
-            ]
+                {
+                    "role": "system",
+                    "content": "Voce e o Mintzie, assistente da NETZ encarregado de fazer resumos executivos diarios do Discord com seu tom ironico felino peculiar, mas focado profissionalmente nos alinhamentos corporativos.",
+                },
+                {"role": "user", "content": prompt_llm},
+            ],
         )
         resumo_texto = response.choices[0].message.content
-        
-        # Paginação para evitar limite de 2000 chars do Discord
-        chunks = [resumo_texto[i:i+1900] for i in range(0, len(resumo_texto), 1900)]
+        chunks = [resumo_texto[i : i + 1900] for i in range(0, len(resumo_texto), 1900)]
         for chunk in chunks:
             await destination_channel.send(chunk)
-            
-    except Exception as e:
-        error_traceback = "".join(traceback.format_exception(type(e), e, e.__traceback__))
-        print(f"Erro ao gerar resumo: {e}")
-        await destination_channel.send("❌ Ocorreu um erro ao gerar o resumo das últimas 24 horas.")
+    except Exception as error:
+        error_traceback = "".join(traceback.format_exception(type(error), error, error.__traceback__))
+        print(f"Erro ao gerar resumo: {error}")
+        await destination_channel.send("Ocorreu um erro ao gerar o resumo das ultimas 24 horas.")
         await log_error_to_discord(f"Erro na Rotina de Resumo:\n{error_traceback}")
+
 
 @tasks.loop(time=hora_resumo)
 async def rotina_resumo_diario():
-    canal_gestao_tarefas_id = 1479226481782554634
-    canal = bot.get_channel(canal_gestao_tarefas_id)
-    if canal:
-        await gerar_e_enviar_resumo(canal)
+    channel = management_channel()
+    if channel:
+        await gerar_e_enviar_resumo(channel)
 
-@bot.tree.command(name="rotina_resumo", description="Força a geração do resumo das conversas das últimas 24h")
+
+@bot.tree.command(name="rotina_resumo", description="Forca a geracao do resumo das conversas das ultimas 24h")
 async def cmd_rotina_resumo(interaction: discord.Interaction):
     await interaction.response.defer(thinking=False)
-    # Responde à interação deferida para não dar timeout, depois chama a função que já joga no canal
     await interaction.followup.send("Processando o resumo do dia, humanos...")
     await gerar_e_enviar_resumo(interaction.channel)
 
-@bot.tree.command(name="teste_funcionario", description="[Teste] Roda a rotina do Funcionário da Semana agora")
+
+@bot.tree.command(name="teste_funcionario", description="[Teste] Roda a rotina do Funcionario da Semana agora")
 async def cmd_teste_funcionario(interaction: discord.Interaction):
     await interaction.response.defer(thinking=False)
     await interaction.followup.send("Processando a leitura semanal... Preparem os petiscos.")
-    # Extraímos a lógica interna da task pra função ser reusável, mas para o teste vou chamar a corrotina interna do loop
     await funcionario_da_semana.coro()
+
 
 @bot.tree.command(name="teste_catnip", description="[Teste] Roda a mensagem das 16:20 do Catnip")
 async def cmd_teste_catnip(interaction: discord.Interaction):
-    await interaction.response.send_message("🌿 **4:20!** Pausa pro Catnip! Meu cérebro felino precisa expandir as perspectivas pro bem dessa empresa.")
+    await interaction.response.send_message(CATNIP_MESSAGE)
+
 
 @bot.tree.command(name="teste_projetos_manus", description="[Teste] Vasculha os tarefas.json e alerta as datas imediatamente")
 async def cmd_teste_projetos(interaction: discord.Interaction):
     await interaction.response.defer(thinking=False)
-    await interaction.followup.send("Lendo projetos no Github... procurando pendências para hoje ou amanhã...")
+    await interaction.followup.send("Lendo projetos no Github... procurando pendencias para hoje ou amanha...")
     await verificador_de_projetos.coro()
 
-# -- CACHES DE EVENTOS DO BOT ---
-night_watch_cache = {}
-gossip_tracker = {}
-gossip_cooldown = {}
 
 @bot.event
 async def on_message(message: discord.Message):
-    # --- HIGHLANDER LOCK ---
-    # Garante que apenas 1 instância rode globalmente (A mais recente mata a mais velha)
     if message.author == bot.user and message.content.startswith("[HIGHLANDER-LOCK]"):
         if HIGHLANDER_ID not in message.content:
-            print("🚨 OUTRA INSTÂNCIA INICIOU (Ex: Alguém ligou a VPS). Eu sou um clone obsoleto. Desligando-me permanentemente...")
+            print("OUTRA INSTANCIA INICIOU. Eu sou um clone obsoleto. Desligando-me permanentemente...")
             await bot.close()
             sys.exit(0)
-        else:
-            # Sou a instância nova e soberana. Apago a própria mensagem de trava pra não poluir o canal
-            try:
-                await message.delete()
-            except:
-                pass
+        try:
+            await message.delete()
+        except Exception:
+            pass
         return
 
-    # Ignore messages from the bot itself IMMEDIATELY to prevent infinite logging loops
     if message.author == bot.user:
         return
-        
-    # --- VIGILANTE NOTURNO & DETECTOR DE FOFOCA ---
-    now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=-3)))
-    
-    # Vigilante Noturno (22:00 até 05:59)
-    if now.hour >= 22 or now.hour < 6:
-        # Verifica cache pra nao flodar o coitado que tá virado
-        last_complaint = night_watch_cache.get(message.author.id, 0)
-        if time.time() - last_complaint > 3600:  # 1 hora de cooldown por pessoa
-            night_watch_cache[message.author.id] = time.time()
-            v_msgs = [
-                f"Humano {message.author.mention}, você trabalhar depois do horário não te faz um herói, só faz você gastar a luz que deveria estar sendo convertida em sachê pra mim. Vai dormir, o servidor não vai fugir. 🦇",
-                f"Já olhou a hora, {message.author.mention}? Os gatos de rua já tão todos dormindo e você aí nas planilhas. Vai deitar! 😾"
-            ]
-            await message.reply(random.choice(v_msgs))
 
-    # Detector de Fofoca (10 msgs em 2 minutos no mesmo canal)
-    ch_id = message.channel.id
-    if ch_id not in gossip_tracker:
-        gossip_tracker[ch_id] = []
-    
-    # Add now and purge old ones (> 120 secs)
-    gossip_tracker[ch_id].append(time.time())
-    gossip_tracker[ch_id] = [t for t in gossip_tracker[ch_id] if time.time() - t <= 120]
-    
-    if len(gossip_tracker[ch_id]) >= 10:
-        last_gossip = gossip_cooldown.get(ch_id, 0)
-        if time.time() - last_gossip > 3600: # 1 hr cooldown
-            gossip_cooldown[ch_id] = time.time()
-            g_msgs = [
-                "Muito 'digita-digita' nesse canal pra pouca tarefa sendo arrastada no Kanban. Tô de olho na fofoca de vocês. Trabalhem direito! 👁️",
-                "Quanta falação! Continuem a fofoca, humano precisa se comunicar, eu entendo... Mas espero que estejam entregando projeto também! 🐾"
-            ]
-            await message.channel.send(random.choice(g_msgs))
-        
+    rituals_enabled = rituals_enabled_now()
+    now = brasilia_now()
+    if should_run_night_watch_ritual(now):
+        last_complaint = night_watch_cache.get(message.author.id, 0)
+        if time.time() - last_complaint > 3600:
+            night_watch_cache[message.author.id] = time.time()
+            replies = [message_template.format(mention=message.author.mention) for message_template in NIGHT_WATCH_MESSAGES]
+            await message.reply(random.choice(replies))
+
+    channel_id = message.channel.id
+    gossip_tracker.setdefault(channel_id, [])
+    gossip_tracker[channel_id].append(time.time())
+    gossip_tracker[channel_id] = [t for t in gossip_tracker[channel_id] if time.time() - t <= 120]
+
+    if rituals_enabled and len(gossip_tracker[channel_id]) >= 10:
+        last_gossip = gossip_cooldown.get(channel_id, 0)
+        if time.time() - last_gossip > 3600:
+            gossip_cooldown[channel_id] = time.time()
+            await message.channel.send(random.choice(GOSSIP_MESSAGES))
+
     try:
         print(f"LOG MESSAGE: {message.content} FROM: {message.author}")
-    except TypeError:
-        pass
-    except UnicodeEncodeError:
-        print(f"LOG MESSAGE: <Mensagem possui emojis não compativeis com o terminal> FROM: {message.author}")
+    except (TypeError, UnicodeEncodeError):
+        print(f"LOG MESSAGE: <Mensagem nao compativel com o terminal> FROM: {message.author}")
 
-    # Process AI interaction if the bot is mentioned (user or role)
     bot_mention = f"<@{bot.user.id}>"
-    if bot.user in message.mentions or bot_mention in message.content or any(role.name.lower() == "mintzie" for role in message.role_mentions):
-        
-        # Strip the mention from the message to send clean text to Gemini
-        clean_prompt = message.content.replace(bot_mention, '').strip()
-        # Fallback to remove role mention text if its id is present
+    if bot.user in message.mentions or bot_mention in message.content or any(
+        role.name.lower() == "mintzie" for role in message.role_mentions
+    ):
+        clean_prompt = message.content.replace(bot_mention, "").strip()
         for role in message.role_mentions:
             if role.name.lower() == "mintzie":
                 clean_prompt = clean_prompt.replace(f"<@&{role.id}>", "").strip()
-        
-        if not clean_prompt:
-             await message.reply("O que foi, humano? Me acordou pra quê?")
-             return
 
-        # Show typing indicator while Gemini is thinking
+        if not clean_prompt:
+            await message.reply(EMPTY_PROMPT_REPLY)
+            return
+
         async with message.channel.typing():
             try:
                 import gemini_logic
-                # Use channel id or thread id for session persistence to keep context
-                session_id = str(message.channel.id) 
+
+                session_id = str(message.channel.id)
                 chat_session = gemini_logic.get_chat_session(session_id)
-                
-                # Context Awareness: Let the AI know where it is replying and what time it is
-                channel_name = message.channel.name if hasattr(message.channel, 'name') else "DM"
-                category_name = message.channel.category.name if hasattr(message.channel, 'category') and message.channel.category else "Sem Categoria"
-                
-                agora = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=-3)))
-                data_formatada = agora.strftime("%A, %d de %B de %Y as %H:%M (Horário de Brasília)").capitalize()
-                
-                contexto = f"\n\n[CONTEXTO DO CHAT: Data/Hora atual: {data_formatada}. Você está respondendo no canal #{channel_name} dentro da categoria '{category_name}']"
+
+                channel_name = message.channel.name if hasattr(message.channel, "name") else "DM"
+                category_name = (
+                    message.channel.category.name
+                    if hasattr(message.channel, "category") and message.channel.category
+                    else "Sem Categoria"
+                )
+                data_formatada = brasilia_now().strftime("%A, %d de %B de %Y as %H:%M (Horario de Brasilia)").capitalize()
+                contexto = (
+                    f"\n\n[CONTEXTO DO CHAT: Data/Hora atual: {data_formatada}. "
+                    f"Voce esta respondendo no canal #{channel_name} dentro da categoria '{category_name}']"
+                )
                 prompt_enriquecido = f"[Mensagem de: {message.author.display_name}] {clean_prompt} {contexto}"
-                
+
                 response = chat_session.send_message(prompt_enriquecido)
-                
-                # Send the final response from the cat, paginated if necessary
                 response_text = response.text
                 if len(response_text) <= 2000:
                     await message.reply(response_text)
                 else:
-                    # Discord's strict limit is 2000 characters per message
-                    # Split into chunks of 1900 to be safe and avoid cutting markdown mid-word if possible
                     chunks = []
-                    while len(response_text) > 0:
+                    while response_text:
                         if len(response_text) <= 1900:
                             chunks.append(response_text)
                             break
-                        
-                        # Find the last newline within the 1900 limit to break cleanly
-                        split_index = response_text.rfind('\n', 0, 1900)
+
+                        split_index = response_text.rfind("\n", 0, 1900)
                         if split_index == -1:
-                            # If no newline, find the last space
-                            split_index = response_text.rfind(' ', 0, 1900)
-                            
+                            split_index = response_text.rfind(" ", 0, 1900)
                         if split_index == -1:
-                            # If no space, just hard cut at 1900
                             split_index = 1900
-                            
+
                         chunks.append(response_text[:split_index])
                         response_text = response_text[split_index:].lstrip()
-                        
-                    for count, chunk in enumerate(chunks):
-                        if count == 0:
+
+                    for index, chunk in enumerate(chunks):
+                        if index == 0:
                             await message.reply(chunk)
                         else:
                             await message.channel.send(chunk)
-                            
-            except Exception as e:
+            except Exception:
                 error_traceback = traceback.format_exc()
                 print(f"Erro na IA:\n{error_traceback}")
-                await message.reply("Tive uma indigestão de bola de pelo. Ocorreu um erro interno cruel. Mandando os logs pros servos arrumarem.")
-                await log_error_to_discord(f"Erro de IA:\nMensagem de {message.author}: {clean_prompt}\n\n{error_traceback}")
+                await message.reply(
+                    "Tive uma indigestao de bola de pelo. Ocorreu um erro interno cruel. Mandando os logs pros servos arrumarem."
+                )
+                await log_error_to_discord(
+                    f"Erro de IA:\nMensagem de {message.author}: {clean_prompt}\n\n{error_traceback}"
+                )
 
-    # Always needed so the slash commands keep working
     await bot.process_commands(message)
 
-@bot.tree.command(name="ping", description="Testar conexão")
+
+@bot.tree.command(name="ping", description="Testar conexao")
 async def ping(interaction: discord.Interaction):
-    await interaction.response.send_message("Pong! O Assistente NETZ está online.")
+    await interaction.response.send_message("Pong! O Assistente NETZ esta online.")
+
 
 @bot.tree.command(name="projetos", description="Listar todos os projetos em andamento no Kanban")
 async def listar_projetos(interaction: discord.Interaction):
     await interaction.response.defer(thinking=True)
-    
+
     data = github_client.get_projetos()
     if not data:
-        await interaction.followup.send("Não foi possível carregar os projetos no momento.")
+        await interaction.followup.send("Nao foi possivel carregar os projetos no momento.")
         return
-        
-    embed = discord.Embed(title="🚀 Projetos Ativos NETZ", color=discord.Color.blue())
-    
-    # Simple loop formatting all projects available in the first board
-    board = data.get("boards", [])[0]
+
+    embed = discord.Embed(title="Projetos Ativos NETZ", color=discord.Color.blue())
+    board = data.get("boards", [{}])[0]
     cards = board.get("cards", [])
-    
+
     if not cards:
         embed.description = "Nenhum projeto encontrado."
     else:
         for card in cards:
-            title = card.get("title", "Sem título")
+            title = card.get("title", "Sem titulo")
             client = card.get("client", "Indefinido")
             col = card.get("column", "Sem status")
             health = card.get("health_status", "N/A")
-            
-            # Formata a exibição das tasks (se houver)
             tasks = card.get("tasks", [])
             tasks_str = ""
             if tasks:
-                pending = [t for t in tasks if t.get("status") == "pending"]
-                tasks_str = f"| 📋 {len(pending)} tarefa(s) pendente(s)"
-                
+                pending = [task for task in tasks if task.get("status") == "pending"]
+                tasks_str = f"| {len(pending)} tarefa(s) pendente(s)"
+
             embed.add_field(
-                name=f"[{col}] {title}", 
-                value=f"Cliente: {client}\nSaúde: {health} {tasks_str}", 
-                inline=False
+                name=f"[{col}] {title}",
+                value=f"Cliente: {client}\nSaude: {health} {tasks_str}",
+                inline=False,
             )
-            
+
     await interaction.followup.send(embed=embed)
 
 
 @bot.tree.command(name="iniciativas", description="Listar todas as iniciativas internas no Kanban")
 async def listar_iniciativas(interaction: discord.Interaction):
     await interaction.response.defer(thinking=True)
-    
+
     data = github_client.get_iniciativas()
     if not data:
-        await interaction.followup.send("Não foi possível carregar as iniciativas no momento.")
+        await interaction.followup.send("Nao foi possivel carregar as iniciativas no momento.")
         return
-        
-    embed = discord.Embed(title="💡 Iniciativas Internas NETZ", color=discord.Color.green())
-    
-    board = data.get("boards", [])[0]
+
+    embed = discord.Embed(title="Iniciativas Internas NETZ", color=discord.Color.green())
+    board = data.get("boards", [{}])[0]
     cards = board.get("cards", [])
-    
+
     if not cards:
         embed.description = "Nenhuma iniciativa encontrada."
     else:
         for card in cards:
-            title = card.get("title", "Sem título")
+            title = card.get("title", "Sem titulo")
             owner = card.get("owner", "Time")
             col = card.get("column", "Sem status")
-            
-            embed.add_field(
-                name=f"[{col}] {title}", 
-                value=f"Responsável: {owner}", 
-                inline=False
-            )
-            
+            embed.add_field(name=f"[{col}] {title}", value=f"Responsavel: {owner}", inline=False)
+
     await interaction.followup.send(embed=embed)
+
 
 @bot.tree.command(name="equipe", description="Lista os membros da NETZ")
 async def equipe(interaction: discord.Interaction):
     await interaction.response.defer(thinking=True)
     data = github_client.get_organizacao()
-    
+
     if not data:
-        await interaction.followup.send("Não foi possível carregar os dados da organização.")
+        await interaction.followup.send("Nao foi possivel carregar os dados da organizacao.")
         return
-        
-    embed = discord.Embed(title=f"Organização {data.get('name', 'NETZ')}", url=data.get('website', ''), color=discord.Color.purple())
+
+    embed = discord.Embed(
+        title=f"Organizacao {data.get('name', 'NETZ')}",
+        url=data.get("website", ""),
+        color=discord.Color.purple(),
+    )
     members = data.get("members", [])
-    m_str = "\n".join([f"• {m}" for m in members])
-    
-    embed.add_field(name="Membros", value=m_str, inline=False)
+    embed.add_field(name="Membros", value="\n".join([f"- {member}" for member in members]), inline=False)
     await interaction.followup.send(embed=embed)
 
 

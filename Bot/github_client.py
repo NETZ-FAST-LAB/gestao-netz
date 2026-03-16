@@ -1,63 +1,86 @@
-import os
 import json
+import time
+
 from github import Github
-from dotenv import load_dotenv
+from github.GithubException import GithubException
 
-load_dotenv()
+from config import settings
 
-GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
-REPO_NAME = os.getenv("GITHUB_REPO")
+MAX_RETRIES = 3
 
-if not GITHUB_TOKEN or not REPO_NAME:
-    raise ValueError("Missing GITHUB_TOKEN or GITHUB_REPO in environment variables.")
+g = Github(settings.github_token)
+repo = g.get_repo(settings.github_repo)
 
-g = Github(GITHUB_TOKEN)
-repo = g.get_repo(REPO_NAME)
 
 def get_file_content(filepath: str) -> dict:
     """Reads a JSON file from the GitHub repository."""
-    try:
-        file_content = repo.get_contents(filepath)
-        decoded_content = file_content.decoded_content.decode('utf-8')
-        return json.loads(decoded_content), file_content.sha
-    except Exception as e:
-        print(f"Error reading {filepath}: {e}")
-        return None, None
+    last_error = None
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            file_content = repo.get_contents(filepath, ref=settings.github_branch or repo.default_branch)
+            decoded_content = file_content.decoded_content.decode("utf-8")
+            return json.loads(decoded_content), file_content.sha
+        except Exception as e:
+            last_error = e
+            print(f"Error reading {filepath} (attempt {attempt}/{MAX_RETRIES}): {e}")
+            time.sleep(0.5 * attempt)
+
+    print(f"Giving up reading {filepath}: {last_error}")
+    return None, None
+
 
 def update_file_content(filepath: str, data: dict, sha: str, commit_message: str):
     """Updates a JSON file in the GitHub repository."""
-    try:
-        new_content = json.dumps(data, indent=2, ensure_ascii=False)
-        repo.update_file(
-            path=filepath,
-            message=commit_message,
-            content=new_content,
-            sha=sha
-        )
-        return True
-    except Exception as e:
-        print(f"Error updating {filepath}: {e}")
-        return False
+    new_content = json.dumps(data, indent=2, ensure_ascii=False)
+    current_sha = sha
+
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            repo.update_file(
+                path=filepath,
+                message=commit_message,
+                content=new_content,
+                sha=current_sha,
+                branch=settings.github_branch or repo.default_branch,
+            )
+            return True
+        except GithubException as e:
+            print(f"Error updating {filepath} (attempt {attempt}/{MAX_RETRIES}): {e}")
+            if e.status == 409 and attempt < MAX_RETRIES:
+                _, refreshed_sha = get_file_content(filepath)
+                if refreshed_sha:
+                    current_sha = refreshed_sha
+                    continue
+            time.sleep(0.5 * attempt)
+        except Exception as e:
+            print(f"Error updating {filepath} (attempt {attempt}/{MAX_RETRIES}): {e}")
+            time.sleep(0.5 * attempt)
+
+    return False
+
 
 def get_projetos():
     data, _ = get_file_content("Operacional/Kanban/projetos.json")
     return data
 
+
 def get_iniciativas():
     data, _ = get_file_content("Operacional/Kanban/iniciativas.json")
     return data
 
+
 def get_organizacao():
     data, _ = get_file_content("Operacional/organizacao.json")
     return data
+
+
 def get_all_tarefas():
-    """Busca todos os arquivos tarefas.json dentro de subpastas de Operacional/ usando a árvore do Git para não dar Rate Limit."""
+    """Busca todos os arquivos tarefas.json dentro de subpastas de Operacional/."""
     projetos = []
     try:
-        branch = repo.get_branch("master")
+        branch = repo.get_branch(settings.github_branch or repo.default_branch)
         tree = repo.get_git_tree(branch.commit.sha, recursive=True)
         for element in tree.tree:
-            # Procurar por Operacional/NOME_DO_PROJETO/tarefas.json
             if element.path.startswith("Operacional/") and element.path.endswith("/tarefas.json"):
                 data, _ = get_file_content(element.path)
                 if data:
