@@ -49,7 +49,7 @@ def build_deploy_message(commit_subjects: list[str]) -> str:
 
     return (
         "[Novo Deploy]\n"
-        "Voltei do centro cirurgico e estas sao as novidades em producao:\n"
+        "Voltei do centro cirúrgico, e estas são as novidades em produção:\n"
         f"{novidades}\n"
         "Se quebrar, finjam surpresa."
     )
@@ -58,8 +58,8 @@ def build_deploy_message(commit_subjects: list[str]) -> str:
 def build_deploy_fallback_message() -> str:
     return (
         "[Novo Deploy]\n"
-        "Acordei sem conseguir ler meu proprio historico de memoria, "
-        "mas estou online e julgando voces."
+        "Acordei sem conseguir ler meu próprio histórico de memória, "
+        "mas estou online e julgando vocês."
     )
 
 
@@ -98,40 +98,40 @@ Abaixo o historico das mensagens das ultimas 24 horas:
 
 EMPTY_PROMPT_REPLY = "O que foi, humano? Me acordou pra que?"
 CATNIP_MESSAGE = (
-    "**4:20!** Pausa pro Catnip! Meu cerebro felino precisa expandir as perspectivas pro bem dessa empresa."
+    "**4:20!** Pausa pro Catnip! Meu cérebro felino precisa expandir as perspectivas para o bem desta empresa."
 )
 DAY_END_REMINDER = (
-    "**Miau! O expediente esta acabando, humanos.**\n\n"
-    "Vao descansar e deixem tudo organizado para os proximos dias.\n"
-    "Por favor, revisem o nosso Kanban e cadastrem as novas tarefas para nao esquecermos de nada amanha!"
+    "**Miau! O expediente está acabando, humanos.**\n\n"
+    "Vão descansar e deixem tudo organizado para os próximos dias.\n"
+    "Por favor, revisem o nosso Kanban e cadastrem as novas tarefas para não esquecermos de nada amanhã!"
 )
 NO_DAILY_DISCUSSION_MESSAGE = (
-    "Nenhuma discussao foi encontrada nas ultimas 24 horas para resumir. Voces trabalharam hoje?"
+    "Nenhuma discussão foi encontrada nas últimas 24 horas para resumir. Vocês trabalharam hoje?"
 )
 SUMMARY_THINKING_MESSAGE = (
-    "*Afiando as garras e lendo telepaticamente todos os canais para o resumo diario...*"
+    "*Afiando as garras e lendo telepaticamente todos os canais para o resumo diário...*"
 )
 
 MORNING_NUDGE_MESSAGE = (
-    "Bom dia pra voces tambem, viu? Se ninguem falou nada ate agora, vou assumir que "
-    "ou estao concentrados ou esqueceram que projeto nao anda por telepatia. Organizem o dia."
+    "Bom dia para vocês também, viu? Se ninguém falou nada até agora, vou assumir que "
+    "ou estão concentrados, ou esqueceram que projeto não anda por telepatia. Organizem o dia."
 )
 
 SURPRISE_PURR_MESSAGE = (
-    "Prrr... Prrr... So passei pra deixar um ronronado motivacional de expediente. "
+    "Prrr... Prrr... Só passei para deixar um ronronado motivacional de expediente. "
     "Aproveitem a boa vontade rara e destravem alguma frente importante."
 )
 
 NIGHT_WATCH_MESSAGES = [
-    "Humano {mention}, voce trabalhar depois do horario nao te faz um heroi. "
-    "So me faz suspeitar de planejamento ruim. Vai dormir, o servidor nao vai fugir.",
-    "Ja olhou a hora, {mention}? Os gatos de rua ja tao todos dormindo e voce ai nas planilhas. "
-    "Fecha isso e volta amanha com cerebro funcional.",
+    "Humano {mention}, você trabalhar depois do horário não te faz um herói. "
+    "Só me faz suspeitar de planejamento ruim. Vai dormir; o servidor não vai fugir.",
+    "Já olhou a hora, {mention}? Os gatos de rua já estão todos dormindo, e você aí nas planilhas. "
+    "Fecha isso e volta amanhã com cérebro funcional.",
 ]
 
 GOSSIP_MESSAGES = [
-    "Muito digita-digita nesse canal pra pouca tarefa sendo arrastada no Kanban. "
+    "Muito digita-digita neste canal para pouca tarefa sendo arrastada no Kanban. "
     "Conversem, sim, mas fechem um encaminhamento decente.",
-    "Quanta falacao. Comunicacao e importante, eu sei, mas espero ver isso virar entrega "
-    "ou pelo menos uma tarefa bem definida.",
+    "Quanta falação. Comunicação é importante, eu sei, mas espero ver isso virar entrega "
+    "ou, pelo menos, uma tarefa bem definida.",
 ]
