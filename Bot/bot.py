@@ -10,6 +10,7 @@ import discord
 from discord.ext import commands, tasks
 
 import github_client
+import kanban_service
 from config import settings
 from mintzie_persona import (
     CATNIP_MESSAGE,
@@ -19,19 +20,27 @@ from mintzie_persona import (
     MORNING_NUDGE_MESSAGE,
     NIGHT_WATCH_MESSAGES,
     NO_DAILY_DISCUSSION_MESSAGE,
+    build_operational_provocation_message,
     SUMMARY_THINKING_MESSAGE,
     SURPRISE_PURR_MESSAGE,
     build_daily_summary_prompt,
     build_deploy_fallback_message,
     build_deploy_message,
     build_employee_of_week_prompt,
+    build_low_workload_nudge_message,
+    build_open_tasks_checkin_message,
+    build_weekly_bottleneck_message,
 )
 from rituals import (
     should_run_catnip_ritual,
     should_run_employee_of_week_ritual,
     should_run_general_ritual,
     should_run_night_watch_ritual,
+    should_run_partner_open_tasks_checkin_ritual,
+    should_run_partner_workload_nudge_ritual,
     should_run_surprise_purr_ritual,
+    should_run_weekly_bottleneck_ritual,
+    should_run_weekly_provocation_ritual,
 )
 
 HIGHLANDER_ID = str(uuid.uuid4())
@@ -49,6 +58,27 @@ deploy_announcement_sent = False
 last_error_time = 0
 error_spam_count = 0
 MAX_ERRORS_PER_MINUTE = 3
+PARTNER_WORKLOAD_TARGETS = [
+    {
+        "key": "joao",
+        "display_name": "Joaozissimo",
+        "mention": settings.member_mentions["joao"],
+        "aliases": ["Joao", "Joaozissimo", "João", "Joãozíssimo"],
+    },
+    {
+        "key": "gui_r",
+        "display_name": "Gui R",
+        "mention": settings.member_mentions["gui_r"],
+        "aliases": ["Gui", "Gui R", "Guilherme Roennau"],
+    },
+    {
+        "key": "denis",
+        "display_name": "Denis",
+        "mention": settings.member_mentions["denis"],
+        "aliases": ["Denis", "Denis Polidoro", "Denis P", "Denis P."],
+    },
+]
+LOW_WORKLOAD_THRESHOLD = 3
 
 
 def brasilia_now() -> datetime.datetime:
@@ -61,6 +91,56 @@ def rituals_enabled_now() -> bool:
 
 def management_channel():
     return bot.get_channel(settings.management_channel_id)
+
+
+async def send_low_workload_nudges(channel):
+    workload = kanban_service.get_partner_workload_snapshot(
+        PARTNER_WORKLOAD_TARGETS,
+        threshold=LOW_WORKLOAD_THRESHOLD,
+    )
+    for partner in workload["low_workload_partners"]:
+        await channel.send(build_low_workload_nudge_message(partner, LOW_WORKLOAD_THRESHOLD))
+
+
+async def send_open_tasks_checkins(channel):
+    workload = kanban_service.get_partner_workload_snapshot(
+        PARTNER_WORKLOAD_TARGETS,
+        threshold=LOW_WORKLOAD_THRESHOLD,
+    )
+    for partner in workload["partners"]:
+        await channel.send(build_open_tasks_checkin_message(partner))
+
+
+def chunk_message(text: str, max_size: int = 1900) -> list[str]:
+    if len(text) <= max_size:
+        return [text]
+
+    chunks = []
+    remaining = text
+    while remaining:
+        if len(remaining) <= max_size:
+            chunks.append(remaining)
+            break
+
+        split_index = remaining.rfind("\n", 0, max_size)
+        if split_index == -1:
+            split_index = remaining.rfind(" ", 0, max_size)
+        if split_index == -1:
+            split_index = max_size
+
+        chunks.append(remaining[:split_index])
+        remaining = remaining[split_index:].lstrip()
+
+    return chunks
+
+
+async def send_chunked(channel, text: str, reply_to=None):
+    chunks = chunk_message(text)
+    for index, chunk in enumerate(chunks):
+        if index == 0 and reply_to is not None:
+            await reply_to.reply(chunk)
+        else:
+            await channel.send(chunk)
 
 
 async def send_deploy_message():
@@ -110,6 +190,10 @@ async def ensure_background_tasks():
         ronronado_surpresa,
         funcionario_da_semana,
         verificador_de_projetos,
+        provocacao_operacional_semana,
+        gargalo_da_semana,
+        socios_sem_tarefa,
+        checkin_tarefas_abertas_semana,
     ):
         if not loop.is_running():
             loop.start()
@@ -403,6 +487,72 @@ async def lembrete_fim_de_dia():
         print(f"ERRO: Canal de ID {settings.management_channel_id} nao encontrado para enviar o lembrete.")
 
 
+hora_provocacao_semana = datetime.time(hour=11, minute=11, tzinfo=BRASILIA_TZ)
+
+
+@tasks.loop(time=hora_provocacao_semana)
+async def provocacao_operacional_semana():
+    now = brasilia_now()
+    if not should_run_weekly_provocation_ritual(now):
+        return
+
+    channel = management_channel()
+    if not channel:
+        return
+
+    snapshot = kanban_service.get_operational_snapshot(reference_date=now.date())
+    await channel.send(build_operational_provocation_message(snapshot))
+
+
+hora_gargalo_semana = datetime.time(hour=15, minute=30, tzinfo=BRASILIA_TZ)
+
+
+@tasks.loop(time=hora_gargalo_semana)
+async def gargalo_da_semana():
+    now = brasilia_now()
+    if not should_run_weekly_bottleneck_ritual(now):
+        return
+
+    channel = management_channel()
+    if not channel:
+        return
+
+    snapshot = kanban_service.get_operational_snapshot(reference_date=now.date())
+    await channel.send(build_weekly_bottleneck_message(snapshot))
+
+
+hora_socios_sem_tarefa = datetime.time(hour=9, minute=30, tzinfo=BRASILIA_TZ)
+
+
+@tasks.loop(time=hora_socios_sem_tarefa)
+async def socios_sem_tarefa():
+    now = brasilia_now()
+    if not should_run_partner_workload_nudge_ritual(now):
+        return
+
+    channel = management_channel()
+    if not channel:
+        return
+
+    await send_low_workload_nudges(channel)
+
+
+hora_checkin_tarefas_abertas = datetime.time(hour=15, minute=45, tzinfo=BRASILIA_TZ)
+
+
+@tasks.loop(time=hora_checkin_tarefas_abertas)
+async def checkin_tarefas_abertas_semana():
+    now = brasilia_now()
+    if not should_run_partner_open_tasks_checkin_ritual(now):
+        return
+
+    channel = management_channel()
+    if not channel:
+        return
+
+    await send_open_tasks_checkins(channel)
+
+
 hora_resumo = datetime.time(hour=18, minute=0, tzinfo=BRASILIA_TZ)
 
 
@@ -460,9 +610,7 @@ async def gerar_e_enviar_resumo(destination_channel):
             ],
         )
         resumo_texto = response.choices[0].message.content
-        chunks = [resumo_texto[i : i + 1900] for i in range(0, len(resumo_texto), 1900)]
-        for chunk in chunks:
-            await destination_channel.send(chunk)
+        await send_chunked(destination_channel, resumo_texto)
     except Exception as error:
         error_traceback = "".join(traceback.format_exception(type(error), error, error.__traceback__))
         print(f"Erro ao gerar resumo: {error}")
@@ -514,6 +662,47 @@ async def cmd_teste_deploy_msg(interaction: discord.Interaction):
         await interaction.followup.send("Mensagem de deploy enviada para o canal configurado.", ephemeral=True)
     else:
         await interaction.followup.send("Falhei em enviar a mensagem de deploy. Vale olhar os logs.", ephemeral=True)
+
+
+@bot.tree.command(name="teste_provocacao_semana", description="[Teste] Envia agora a provocacao operacional da semana")
+async def cmd_teste_provocacao_semana(interaction: discord.Interaction):
+    snapshot = kanban_service.get_operational_snapshot(reference_date=brasilia_now().date())
+    await interaction.response.send_message(build_operational_provocation_message(snapshot))
+
+
+@bot.tree.command(name="teste_gargalo_semana", description="[Teste] Envia agora a mensagem de gargalo da semana")
+async def cmd_teste_gargalo_semana(interaction: discord.Interaction):
+    snapshot = kanban_service.get_operational_snapshot(reference_date=brasilia_now().date())
+    await interaction.response.send_message(build_weekly_bottleneck_message(snapshot))
+
+
+@bot.tree.command(name="teste_socios_sem_tarefa", description="[Teste] Cutuca socios com menos de 3 tarefas ativas")
+async def cmd_teste_socios_sem_tarefa(interaction: discord.Interaction):
+    workload = kanban_service.get_partner_workload_snapshot(
+        PARTNER_WORKLOAD_TARGETS,
+        threshold=LOW_WORKLOAD_THRESHOLD,
+    )
+    nudges = [
+        build_low_workload_nudge_message(partner, LOW_WORKLOAD_THRESHOLD)
+        for partner in workload["low_workload_partners"]
+    ]
+    if not nudges:
+        await interaction.response.send_message(
+            "Inacreditavelmente, os socios estao com carga suficiente hoje. Vou observar em silencio por enquanto."
+        )
+        return
+
+    await interaction.response.send_message("\n\n".join(nudges))
+
+
+@bot.tree.command(name="teste_checkin_tarefas_abertas", description="[Teste] Envia o check-in de quinta das tarefas em aberto")
+async def cmd_teste_checkin_tarefas_abertas(interaction: discord.Interaction):
+    workload = kanban_service.get_partner_workload_snapshot(
+        PARTNER_WORKLOAD_TARGETS,
+        threshold=LOW_WORKLOAD_THRESHOLD,
+    )
+    messages = [build_open_tasks_checkin_message(partner) for partner in workload["partners"]]
+    await interaction.response.send_message("\n\n".join(messages))
 
 
 @bot.event
@@ -592,29 +781,7 @@ async def on_message(message: discord.Message):
 
                 response = chat_session.send_message(prompt_enriquecido)
                 response_text = response.text
-                if len(response_text) <= 2000:
-                    await message.reply(response_text)
-                else:
-                    chunks = []
-                    while response_text:
-                        if len(response_text) <= 1900:
-                            chunks.append(response_text)
-                            break
-
-                        split_index = response_text.rfind("\n", 0, 1900)
-                        if split_index == -1:
-                            split_index = response_text.rfind(" ", 0, 1900)
-                        if split_index == -1:
-                            split_index = 1900
-
-                        chunks.append(response_text[:split_index])
-                        response_text = response_text[split_index:].lstrip()
-
-                    for index, chunk in enumerate(chunks):
-                        if index == 0:
-                            await message.reply(chunk)
-                        else:
-                            await message.channel.send(chunk)
+                await send_chunked(message.channel, response_text, reply_to=message)
             except Exception:
                 error_traceback = traceback.format_exc()
                 print(f"Erro na IA:\n{error_traceback}")

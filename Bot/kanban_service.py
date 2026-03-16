@@ -2,6 +2,7 @@ import json
 import re
 import unicodedata
 import uuid
+from datetime import date
 
 import github_client
 
@@ -13,6 +14,11 @@ def _slugify(value: str) -> str:
     normalized = unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode("ascii")
     slug = re.sub(r"[^a-zA-Z0-9]+", "-", normalized.lower()).strip("-")
     return slug or "item"
+
+
+def _normalize_person_name(value: str) -> str:
+    normalized = unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode("ascii")
+    return re.sub(r"\s+", " ", normalized.lower()).strip()
 
 
 def _file_for_tipo(tipo: str) -> str:
@@ -53,12 +59,118 @@ def _build_unique_task_id(card: dict) -> str:
             return candidate
 
 
+def _task_assignee(task: dict) -> str:
+    return (task.get("assignee") or task.get("responsavel") or "").strip()
+
+
 def _format_task(card_type: str, card_title: str, task: dict) -> str:
-    owner = task.get("assignee") or "Sem Dono"
+    owner = _task_assignee(task) or "Sem Dono"
     return (
         f"[{card_type}: {card_title}] ID: {task.get('id')} -> {task.get('title')} "
         f"(Status: {task.get('status')} | Dono: {owner})"
     )
+
+
+def _iter_cards_and_tasks():
+    for card_type, file_path in (("PROJETO", PROJECTS_FILE), ("INICIATIVA", INITIATIVES_FILE)):
+        data, _ = github_client.get_file_content(file_path)
+        if not data:
+            continue
+
+        for board in data.get("boards", []):
+            for card in board.get("cards", []):
+                yield card_type, card
+
+
+def get_operational_snapshot(reference_date: date | None = None) -> dict:
+    today = reference_date or date.today()
+    unassigned_tasks = []
+    overdue_tasks = []
+
+    for card_type, card in _iter_cards_and_tasks():
+        for task in card.get("tasks", []):
+            if task.get("status") == "completed":
+                continue
+
+            task_info = {
+                "card_type": card_type,
+                "card_title": card.get("title", "Sem contexto"),
+                "task_title": task.get("title", "Sem titulo"),
+                "assignee": _task_assignee(task),
+                "due_date": task.get("dueDate", "").strip(),
+            }
+
+            if not task_info["assignee"]:
+                unassigned_tasks.append(task_info)
+
+            if task_info["due_date"]:
+                try:
+                    due = date.fromisoformat(task_info["due_date"])
+                    if due < today:
+                        overdue_tasks.append(task_info)
+                except ValueError:
+                    continue
+
+    return {
+        "reference_date": today.isoformat(),
+        "unassigned_tasks": unassigned_tasks,
+        "overdue_tasks": overdue_tasks,
+        "unassigned_count": len(unassigned_tasks),
+        "overdue_count": len(overdue_tasks),
+    }
+
+
+def get_partner_workload_snapshot(partners: list[dict], threshold: int = 3) -> dict:
+    partner_rows = []
+    for partner in partners:
+        aliases = {_normalize_person_name(alias) for alias in partner.get("aliases", []) if alias}
+        partner_rows.append(
+            {
+                "key": partner["key"],
+                "display_name": partner["display_name"],
+                "mention": partner["mention"],
+                "aliases": aliases,
+                "active_task_count": 0,
+                "active_examples": [],
+                "active_tasks": [],
+            }
+        )
+
+    for _, card in _iter_cards_and_tasks():
+        for task in card.get("tasks", []):
+            if task.get("status") == "completed":
+                continue
+
+            assignee = _normalize_person_name(_task_assignee(task))
+            if not assignee:
+                continue
+
+            for partner in partner_rows:
+                if assignee in partner["aliases"]:
+                    partner["active_task_count"] += 1
+                    partner["active_tasks"].append(
+                        {
+                            "card_title": card.get("title", "Sem contexto"),
+                            "task_title": task.get("title", "Sem titulo"),
+                            "due_date": task.get("dueDate", "").strip(),
+                            "status": task.get("status", "").strip(),
+                        }
+                    )
+                    if len(partner["active_examples"]) < 2:
+                        partner["active_examples"].append(
+                            f"{card.get('title', 'Sem contexto')}: {task.get('title', 'Sem titulo')}"
+                        )
+                    break
+
+    for partner in partner_rows:
+        partner["below_threshold"] = partner["active_task_count"] < threshold
+        partner.pop("aliases", None)
+
+    return {
+        "threshold": threshold,
+        "partners": partner_rows,
+        "low_workload_partners": [partner for partner in partner_rows if partner["below_threshold"]],
+    }
 
 
 def get_tasks(filtro_responsavel: str) -> str:
@@ -72,7 +184,7 @@ def get_tasks(filtro_responsavel: str) -> str:
         for board in data.get("boards", []):
             for card in board.get("cards", []):
                 for task in card.get("tasks", []):
-                    assignee = task.get("assignee", "").strip().lower()
+                    assignee = _task_assignee(task).lower()
                     filtro = filtro_responsavel.lower()
 
                     match = False
@@ -104,7 +216,7 @@ def assign_all_unassigned_tasks(novo_responsavel: str) -> str:
         for board in data.get("boards", []):
             for card in board.get("cards", []):
                 for task in card.get("tasks", []):
-                    if not task.get("assignee", "").strip():
+                    if not _task_assignee(task):
                         task["assignee"] = novo_responsavel
                         total_edited += 1
                         modified = True

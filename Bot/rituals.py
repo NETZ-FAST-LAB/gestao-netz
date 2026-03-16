@@ -23,3 +23,19 @@ def should_run_night_watch_ritual(moment: datetime.datetime) -> bool:
 
 def should_run_surprise_purr_ritual(moment: datetime.datetime) -> bool:
     return is_weekday(moment) and 14 <= moment.hour < 17
+
+
+def should_run_weekly_provocation_ritual(moment: datetime.datetime) -> bool:
+    return is_weekday(moment) and moment.weekday() == 0
+
+
+def should_run_weekly_bottleneck_ritual(moment: datetime.datetime) -> bool:
+    return is_weekday(moment) and moment.weekday() == 2
+
+
+def should_run_partner_workload_nudge_ritual(moment: datetime.datetime) -> bool:
+    return is_weekday(moment) and moment.weekday() == 1
+
+
+def should_run_partner_open_tasks_checkin_ritual(moment: datetime.datetime) -> bool:
+    return is_weekday(moment) and moment.weekday() == 3

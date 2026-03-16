@@ -55,6 +55,64 @@ class KanbanServiceTests(unittest.TestCase):
         self.assertIn("Sem dono", payload)
         self.assertNotIn("Com dono", payload)
 
+    @patch("kanban_service.github_client.get_file_content")
+    def test_partner_workload_snapshot_counts_active_tasks_by_alias(self, mock_get_file_content):
+        mock_get_file_content.side_effect = [
+            (
+                {
+                    "boards": [
+                        {
+                            "cards": [
+                                {
+                                    "title": "Projeto X",
+                                    "tasks": [
+                                        {"id": "1", "title": "Definir proposta", "assignee": "João", "status": "pending"},
+                                        {"id": "2", "title": "Responder cliente", "assignee": "Gui R", "status": "in_progress"},
+                                        {"id": "3", "title": "Arquivada", "assignee": "João", "status": "completed"},
+                                    ],
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "sha-1",
+            ),
+            (
+                {
+                    "boards": [
+                        {
+                            "cards": [
+                                {
+                                    "title": "Iniciativa Y",
+                                    "tasks": [
+                                        {"id": "4", "title": "Planejar follow-up", "responsavel": "Dênis", "status": "pending"},
+                                        {"id": "5", "title": "Pente fino", "assignee": "Joãozíssimo", "status": "pending"},
+                                    ],
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "sha-2",
+            ),
+        ]
+
+        snapshot = kanban_service.get_partner_workload_snapshot(
+            [
+                {"key": "joao", "display_name": "Joao", "mention": "<@1>", "aliases": ["Joao", "Joãozíssimo"]},
+                {"key": "gui", "display_name": "Gui", "mention": "<@2>", "aliases": ["Gui", "Gui R"]},
+                {"key": "denis", "display_name": "Denis", "mention": "<@3>", "aliases": ["Denis", "Dênis"]},
+            ],
+            threshold=3,
+        )
+
+        counts = {partner["key"]: partner["active_task_count"] for partner in snapshot["partners"]}
+
+        self.assertEqual(counts["joao"], 2)
+        self.assertEqual(counts["gui"], 1)
+        self.assertEqual(counts["denis"], 1)
+        self.assertEqual(len(snapshot["low_workload_partners"]), 3)
+
 
 if __name__ == "__main__":
     unittest.main()
