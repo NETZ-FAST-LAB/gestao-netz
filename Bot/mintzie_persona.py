@@ -50,7 +50,7 @@ def build_deploy_message(commit_subjects: list[str]) -> str:
     novidades = "\n".join(f"- {subject}" for subject in normalized)
     return (
         "[Novo Deploy]\n"
-        "Voltei do centro cirurgico, e estas sao as novidades em producao:\n"
+        "Voltei do centro cirúrgico, e estas são as novidades em produção:\n"
         f"{novidades}\n"
         "Se quebrar, finjam surpresa."
     )
@@ -59,8 +59,8 @@ def build_deploy_message(commit_subjects: list[str]) -> str:
 def build_deploy_fallback_message() -> str:
     return (
         "[Novo Deploy]\n"
-        "Acordei sem conseguir ler meu proprio historico de memoria, "
-        "mas estou online e julgando voces."
+        "Acordei sem conseguir ler meu próprio histórico de memória, "
+        "mas estou online e julgando vocês."
     )
 
 
@@ -99,53 +99,53 @@ Abaixo o historico das mensagens das ultimas 24 horas:
 
 EMPTY_PROMPT_REPLY = "O que foi, humano? Me acordou pra que?"
 CATNIP_MESSAGE = (
-    "**4:20!** Pausa pro Catnip! Meu cerebro felino precisa expandir as perspectivas para o bem desta empresa."
+    "**4:20!** Pausa pro Catnip! Meu cérebro felino precisa expandir as perspectivas para o bem desta empresa."
 )
 DAY_END_REMINDER = (
-    "**Miau! O expediente esta acabando, humanos.**\n\n"
-    "Vao descansar e deixem tudo organizado para os proximos dias.\n"
-    "Por favor, revisem o nosso Kanban e cadastrem as novas tarefas para nao esquecermos de nada amanha!"
+    "**Miau! O expediente está acabando, humanos.**\n\n"
+    "Vão descansar e deixem tudo organizado para os próximos dias.\n"
+    "Por favor, revisem o nosso Kanban e cadastrem as novas tarefas para não esquecermos de nada amanhã!"
 )
 NO_DAILY_DISCUSSION_MESSAGE = (
-    "Nenhuma discussao foi encontrada nas ultimas 24 horas para resumir. Voces trabalharam hoje?"
+    "Nenhuma discussão foi encontrada nas últimas 24 horas para resumir. Vocês trabalharam hoje?"
 )
 SUMMARY_THINKING_MESSAGE = (
-    "*Afiando as garras e lendo telepaticamente todos os canais para o resumo diario...*"
+    "*Afiando as garras e lendo telepaticamente todos os canais para o resumo diário...*"
 )
 
 MORNING_NUDGE_MESSAGE = (
-    "Bom dia para voces tambem, viu? Se ninguem falou nada ate agora, vou assumir que "
-    "ou estao concentrados, ou esqueceram que projeto nao anda por telepatia. Organizem o dia."
+    "Bom dia para vocês também, viu? Se ninguém falou nada até agora, vou assumir que "
+    "ou estão concentrados, ou esqueceram que projeto não anda por telepatia. Organizem o dia."
 )
 
 SURPRISE_PURR_MESSAGE = (
-    "Prrr... Prrr... So passei para deixar um ronronado motivacional de expediente. "
+    "Prrr... Prrr... Só passei para deixar um ronronado motivacional de expediente. "
     "Aproveitem a boa vontade rara e destravem alguma frente importante."
 )
 
 NIGHT_WATCH_MESSAGES = [
-    "Humano {mention}, voce trabalhar depois do horario nao te faz um heroi. "
-    "So me faz suspeitar de planejamento ruim. Vai dormir; o servidor nao vai fugir.",
-    "Ja olhou a hora, {mention}? Os gatos de rua ja estao todos dormindo, e voce ai nas planilhas. "
-    "Fecha isso e volta amanha com cerebro funcional.",
+    "Humano {mention}, você trabalhar depois do horário não te faz um herói. "
+    "Só me faz suspeitar de planejamento ruim. Vai dormir; o servidor não vai fugir.",
+    "Já olhou a hora, {mention}? Os gatos de rua já estão todos dormindo, e você aí nas planilhas. "
+    "Fecha isso e volta amanhã com cérebro funcional.",
 ]
 
 GOSSIP_MESSAGES = [
     "Muito digita-digita neste canal para pouca tarefa sendo arrastada no Kanban. "
     "Conversem, sim, mas fechem um encaminhamento decente.",
-    "Quanta falacao. Comunicacao e importante, eu sei, mas espero ver isso virar entrega "
+    "Quanta falação. Comunicação é importante, eu sei, mas espero ver isso virar entrega "
     "ou, pelo menos, uma tarefa bem definida.",
 ]
 
 PROVOCATION_FALLBACKS = [
-    "Provocacao operacional da semana: se uma atividade apareceu pela terceira vez, parabens, voces acabaram de inventar um processo e esqueceram de documentar.",
-    "Provocacao operacional da semana: se so um socio sabe onde as coisas vivem, isso nao e sistema; e culto a memoria com risco operacional.",
-    "Provocacao operacional da semana: escolham uma rotina repetitiva desta semana e decidam se ela vira template, agente ou mais uma novela corporativa.",
+    "Provocação operacional da semana: se uma atividade apareceu pela terceira vez, parabéns, vocês acabaram de inventar um processo e esqueceram de documentar.",
+    "Provocação operacional da semana: se só um sócio sabe onde as coisas vivem, isso não é sistema; é culto à memória com risco operacional.",
+    "Provocação operacional da semana: escolham uma rotina repetitiva desta semana e decidam se ela vira template, agente ou mais uma novela corporativa.",
 ]
 
 BOTTLENECK_FALLBACKS = [
-    "Gargalo da semana: o trabalho invisivel continua chique demais. O que estiver vivo precisa estar no Kanban com dono e prazo, ou vai voltar como assombracao.",
-    "Gargalo da semana: decidir sem registrar e um jeito criativo de pagar duas vezes pela mesma confusao. Menos telepatia corporativa, mais encaminhamento claro.",
+    "Gargalo da semana: o trabalho invisível continua chique demais. O que estiver vivo precisa estar no Kanban com dono e prazo, ou vai voltar como assombração.",
+    "Gargalo da semana: decidir sem registrar é um jeito criativo de pagar duas vezes pela mesma confusão. Menos telepatia corporativa, mais encaminhamento claro.",
 ]
 
 
@@ -164,16 +164,16 @@ def build_operational_provocation_message(snapshot: dict) -> str:
         examples = _examples_from_tasks(unassigned)
         details = f" Exemplos: {examples}." if examples else ""
         return (
-            f"Provocacao operacional da semana: ha {snapshot['unassigned_count']} tarefa(s) sem dono no Kanban.{details} "
-            "Se a tarefa existe, alguem precisa carregar esse piano. Se ninguem quer assumir, talvez ela nao seja prioridade; talvez esteja na hora de um ritual de triagem ou de um agente que cobre dono sem piedade."
+            f"Provocação operacional da semana: há {snapshot['unassigned_count']} tarefa(s) sem dono no Kanban.{details} "
+            "Se a tarefa existe, alguém precisa carregar esse piano. Se ninguém quer assumir, talvez ela não seja prioridade; talvez esteja na hora de um ritual de triagem ou de um agente que cobre dono sem piedade."
         )
 
     if snapshot.get("overdue_count", 0) > 0:
         examples = _examples_from_tasks(overdue)
         details = f" Exemplos: {examples}." if examples else ""
         return (
-            f"Provocacao operacional da semana: ha {snapshot['overdue_count']} tarefa(s) vencida(s) ainda respirando no sistema.{details} "
-            "Se prazo virou decoracao, voces nao estao gerindo; estao colecionando promessas. Vale criar um agente de follow-up ou um checkpoint semanal mais cruel."
+            f"Provocação operacional da semana: há {snapshot['overdue_count']} tarefa(s) vencida(s) ainda respirando no sistema.{details} "
+            "Se prazo virou decoração, vocês não estão gerindo; estão colecionando promessas. Vale criar um agente de follow-up ou um checkpoint semanal mais cruel."
         )
 
     return PROVOCATION_FALLBACKS[0]
@@ -187,16 +187,16 @@ def build_weekly_bottleneck_message(snapshot: dict) -> str:
         examples = _examples_from_tasks(overdue)
         details = f" Exemplos: {examples}." if examples else ""
         return (
-            f"Gargalo da semana: o Kanban esta com {snapshot['overdue_count']} tarefa(s) vencida(s).{details} "
-            "Prazo nao e item decorativo. Escolham hoje o que sera renegociado, concluido ou descartado antes que isso vire arqueologia operacional."
+            f"Gargalo da semana: o Kanban está com {snapshot['overdue_count']} tarefa(s) vencida(s).{details} "
+            "Prazo não é item decorativo. Escolham hoje o que será renegociado, concluído ou descartado antes que isso vire arqueologia operacional."
         )
 
     if snapshot.get("unassigned_count", 0) > 0:
         examples = _examples_from_tasks(unassigned)
         details = f" Exemplos: {examples}." if examples else ""
         return (
-            f"Gargalo da semana: ha {snapshot['unassigned_count']} tarefa(s) sem dono claro.{details} "
-            "Isso nao e backlog; isso e neblina administrativa com pretensao de metodo. Definam responsaveis antes de abrir novas frentes."
+            f"Gargalo da semana: há {snapshot['unassigned_count']} tarefa(s) sem dono claro.{details} "
+            "Isso não é backlog; isso é neblina administrativa com pretensão de método. Definam responsáveis antes de abrir novas frentes."
         )
 
     return BOTTLENECK_FALLBACKS[0]
@@ -206,12 +206,12 @@ def build_low_workload_nudge_message(partner_snapshot: dict, threshold: int) -> 
     mention = partner_snapshot["mention"]
     count = partner_snapshot["active_task_count"]
     examples = partner_snapshot.get("active_examples", [])
-    details = f" Hoje eu so enxerguei {count} tarefa(s) ativa(s) no seu colo." if count else " Hoje eu literalmente nao encontrei nada relevante no seu colo."
+    details = f" Hoje eu só enxerguei {count} tarefa(s) ativa(s) no seu colo." if count else " Hoje eu literalmente não encontrei nada relevante no seu colo."
     example_text = f" Exemplos: {'; '.join(examples)}." if examples else ""
     return (
         f"{mention}, estou vendo sua prateleira leve demais.{details}{example_text} "
-        f"Temos uma meta para bater, humano. Isso e tudo mesmo ou voce ainda pretende fazer algo util pela NETZ? "
-        "Me diga o que mais voce pode puxar hoje para melhorar a operacao, aliviar gargalos ou acelerar entrega."
+        "Temos uma meta para bater, humano. Isso é tudo mesmo ou você ainda pretende fazer algo útil pela NETZ? "
+        "Me diga o que mais você pode puxar hoje para melhorar a operação, aliviar gargalos ou acelerar entrega."
     )
 
 
@@ -222,9 +222,9 @@ def build_open_tasks_checkin_message(partner_snapshot: dict) -> str:
 
     if not tasks:
         return (
-            f"{mention}, quinta-feira a tarde e eu nao achei nenhuma tarefa aberta no seu nome. "
-            "Ou voce virou lenda operacional e zerou tudo, ou tem trabalho invisivel passeando por ai. "
-            "Se existir ponta solta, registre. Se nao existir, me diga o que mais voce pode puxar para melhorar a NETZ ainda nesta semana."
+            f"{mention}, quinta-feira à tarde e eu não achei nenhuma tarefa aberta no seu nome. "
+            "Ou você virou lenda operacional e zerou tudo, ou tem trabalho invisível passeando por aí. "
+            "Se existir ponta solta, registre. Se não existir, me diga o que mais você pode puxar para melhorar a NETZ ainda nesta semana."
         )
 
     highlighted = "; ".join(
@@ -233,10 +233,10 @@ def build_open_tasks_checkin_message(partner_snapshot: dict) -> str:
     due_dates = [task["due_date"] for task in tasks if task.get("due_date")]
     due_hint = ""
     if due_dates:
-        due_hint = " Ja aproveita e revisa as datas antes que prazo ficticio vire tradicao."
+        due_hint = " Já aproveita e revisa as datas antes que prazo fictício vire tradição."
 
     return (
-        f"{mention}, voce esta com {count} tarefa(s) em aberto. Exemplos: {highlighted}. "
-        "Vai dar tempo de fechar isso ainda esta semana ou voces estao colecionando boas intencoes no Kanban? "
-        f"Atualize datas, renegocie o que escapou, conclua o que ja era para ter saído e diga qual acao concreta voce puxa hoje.{due_hint}"
+        f"{mention}, você está com {count} tarefa(s) em aberto. Exemplos: {highlighted}. "
+        "Vai dar tempo de fechar isso ainda esta semana ou vocês estão colecionando boas intenções no Kanban? "
+        f"Atualize datas, renegocie o que escapou, conclua o que já era para ter saído e diga qual ação concreta você puxa hoje.{due_hint}"
     )
