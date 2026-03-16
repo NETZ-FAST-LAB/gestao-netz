@@ -1,6 +1,5 @@
 ﻿import datetime
 import random
-import subprocess
 import sys
 import time
 import traceback
@@ -69,11 +68,7 @@ async def send_deploy_message():
         return
 
     try:
-        recent_commits = (
-            subprocess.check_output(["git", "log", "-3", "--pretty=%s"])
-            .decode("utf-8")
-            .splitlines()
-        )
+        recent_commits = github_client.get_recent_commit_subjects(limit=3)
         await channel.send(build_deploy_message(recent_commits))
     except Exception as error:
         print(f"Erro ao buscar commit para aviso de deploy: {error}")

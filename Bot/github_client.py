@@ -88,3 +88,18 @@ def get_all_tarefas():
     except Exception as e:
         print(f"Erro buscando tarefas.json recursivos: {e}")
     return projetos
+
+
+def get_recent_commit_subjects(limit: int = 3):
+    try:
+        commits = repo.get_commits(sha=settings.github_branch or repo.default_branch)
+        subjects = []
+        for commit in commits[:limit]:
+            message = commit.commit.message or ""
+            subject = message.splitlines()[0].strip()
+            if subject:
+                subjects.append(subject)
+        return subjects
+    except Exception as e:
+        print(f"Erro buscando commits recentes no GitHub: {e}")
+        return []
