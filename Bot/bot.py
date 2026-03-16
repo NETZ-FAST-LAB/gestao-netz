@@ -40,6 +40,7 @@ BRASILIA_TZ = datetime.timezone(datetime.timedelta(hours=-3))
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
+TOKEN = settings.discord_token
 
 night_watch_cache = {}
 gossip_tracker = {}
