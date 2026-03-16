@@ -38,6 +38,14 @@
               "status": "pending",
               "dueDate": "",
               "reminders": []
+            },
+            {
+              "id": "task-ai-3",
+              "title": "Dar sequência na estratégia do SEBRAE",
+              "assignee": "Gui",
+              "status": "pending",
+              "dueDate": "",
+              "reminders": []
             }
           ]
         },
