@@ -152,7 +152,19 @@ function isOverdue(dateString: string, today: Date): boolean {
 function getPartnerId(assignee: string): string | null {
   const normalized = normalizeName(assignee);
 
-  if (["joao", "joaozissimo"].includes(normalized)) return "joao";
+  if (
+    [
+      "joao",
+      "joao henrique",
+      "joao henrique zborowski scholz",
+      "joao scholz",
+      "joe",
+      "john",
+      "joaozissimo",
+    ].includes(normalized)
+  ) {
+    return "joao";
+  }
   if (["gui", "gui r", "gui r.", "roennau", "guilherme roennau", "guilherme r"].includes(normalized)) {
     return "gui";
   }
