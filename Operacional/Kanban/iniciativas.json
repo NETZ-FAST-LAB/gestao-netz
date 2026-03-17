@@ -254,6 +254,14 @@
               "status": "pending",
               "dueDate": "",
               "reminders": []
+            },
+            {
+              "id": "task-netz-4e959b01",
+              "title": "Ampliar o universo visual da marca",
+              "assignee": "Gui Stacke",
+              "status": "pending",
+              "dueDate": "",
+              "reminders": []
             }
           ],
           "owner": "Joãozíssimo"
