@@ -230,6 +230,14 @@
               "status": "pending",
               "dueDate": "",
               "reminders": []
+            },
+            {
+              "id": "task-netz-4c4b392a",
+              "title": "Organizar e enviar o canvas preenchido para o David",
+              "assignee": "Gui R",
+              "status": "pending",
+              "dueDate": "",
+              "reminders": []
             }
           ],
           "owner": "Joãozíssimo"
