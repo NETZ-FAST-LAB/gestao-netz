@@ -54,6 +54,14 @@
               "status": "pending",
               "dueDate": "",
               "reminders": []
+            },
+            {
+              "id": "task-sebrae-cf8d7bd5",
+              "title": "Coordenar a participação da NETZ em eventos estratégicos",
+              "assignee": "Joãozíssimo",
+              "status": "pending",
+              "dueDate": "",
+              "reminders": []
             }
           ]
         },
