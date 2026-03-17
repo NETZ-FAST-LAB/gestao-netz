@@ -64,7 +64,7 @@ type DashboardWorkload = {
 
 function repairText(value: string): string {
   if (!value) return value;
-  if (!/[ÃÂâ€™â€œâ€\u00c2]/.test(value)) return value;
+  if (!/[ÃƒÃ‚Ã¢â‚¬â„¢Ã¢â‚¬Å“Ã¢â‚¬\u00c2]/.test(value)) return value;
 
   try {
     return Buffer.from(value, "latin1").toString("utf8");
@@ -153,9 +153,13 @@ function getPartnerId(assignee: string): string | null {
   const normalized = normalizeName(assignee);
 
   if (["joao", "joaozissimo"].includes(normalized)) return "joao";
-  if (["gui", "gui r", "guilherme roennau", "guilherme r"].includes(normalized)) return "gui";
-  if (["denis", "denis polidoro", "denis p", "dênis"].includes(normalized)) return "denis";
-  if (["stacke", "guilherme stacke", "guilherme s"].includes(normalized)) return "stacke";
+  if (["gui", "gui r", "gui r.", "roennau", "guilherme roennau", "guilherme r"].includes(normalized)) {
+    return "gui";
+  }
+  if (["denis", "denis polidoro", "denis p", "denis p."].includes(normalized)) return "denis";
+  if (["stacke", "tak", "gui s", "gui stacke", "guilherme stacke"].includes(normalized)) {
+    return "stacke";
+  }
 
   return null;
 }
@@ -180,21 +184,24 @@ async function buildDashboardPayload() {
   ];
 
   const tasks: DashboardTask[] = cards.flatMap((card) =>
-    (card.tasks || []).map((task) => ({
-      id: task.id || `${card.id}-task`,
-      title: task.title || "Sem título",
-      assignee: getTaskAssignee(task) || "Sem dono",
-      status: mapStatus(task.status || ""),
-      dueDate: task.dueDate || "",
-      overdue: task.status !== "completed" && isOverdue(task.dueDate || "", today),
-      dueSoon: task.status !== "completed" && isWithinDays(task.dueDate || "", today, 7),
-      contextId: card.id || "sem-contexto",
-      contextTitle: card.title || "Sem contexto",
-      contextType: card.contextType,
-    })),
+    (card.tasks || []).map((task) => {
+      const mappedStatus = mapStatus(task.status || "");
+      return {
+        id: task.id || `${card.id}-task`,
+        title: task.title || "Sem título",
+        assignee: getTaskAssignee(task) || "Sem dono",
+        status: mappedStatus,
+        dueDate: task.dueDate || "",
+        overdue: mappedStatus !== "Concluída" && isOverdue(task.dueDate || "", today),
+        dueSoon: mappedStatus !== "Concluída" && isWithinDays(task.dueDate || "", today, 7),
+        contextId: card.id || "sem-contexto",
+        contextTitle: card.title || "Sem contexto",
+        contextType: card.contextType,
+      };
+    }),
   );
 
-  const projectCards = cards.map((card) => {
+  const boardCards = cards.map((card) => {
     const cardTasks = tasks.filter((task) => task.contextId === (card.id || ""));
     const openTasks = cardTasks.filter((task) => task.status !== "Concluída").length;
 
@@ -267,10 +274,10 @@ async function buildDashboardPayload() {
   });
 
   const partnerSeed: DashboardWorkload[] = [
-    { id: "joao", name: "João", activeTaskCount: 0, overdueTaskCount: 0, dueSoonTaskCount: 0, examples: [] },
-    { id: "gui", name: "Gui", activeTaskCount: 0, overdueTaskCount: 0, dueSoonTaskCount: 0, examples: [] },
+    { id: "joao", name: "Joãozíssimo", activeTaskCount: 0, overdueTaskCount: 0, dueSoonTaskCount: 0, examples: [] },
+    { id: "gui", name: "Gui R.", activeTaskCount: 0, overdueTaskCount: 0, dueSoonTaskCount: 0, examples: [] },
     { id: "denis", name: "Dênis", activeTaskCount: 0, overdueTaskCount: 0, dueSoonTaskCount: 0, examples: [] },
-    { id: "stacke", name: "Stacke", activeTaskCount: 0, overdueTaskCount: 0, dueSoonTaskCount: 0, examples: [] },
+    { id: "stacke", name: "Guilherme Stacke", activeTaskCount: 0, overdueTaskCount: 0, dueSoonTaskCount: 0, examples: [] },
   ];
 
   for (const task of tasks) {
@@ -291,10 +298,15 @@ async function buildDashboardPayload() {
   const sortedTasks = [...tasks].sort((a, b) => {
     if (a.overdue !== b.overdue) return a.overdue ? -1 : 1;
     if (a.dueSoon !== b.dueSoon) return a.dueSoon ? -1 : 1;
+    if (a.contextType !== b.contextType) return a.contextType === "iniciativa" ? -1 : 1;
     return a.title.localeCompare(b.title, "pt-BR");
   });
 
-  const sortedCards = [...projectCards].sort((a, b) => b.openTasks - a.openTasks);
+  const sortedCards = [...boardCards].sort((a, b) => {
+    if (a.type !== b.type) return a.type === "iniciativa" ? -1 : 1;
+    return b.openTasks - a.openTasks;
+  });
+
   const sortedMilestones = [...milestones]
     .filter((milestone) => milestone.date)
     .sort((a, b) => a.date.localeCompare(b.date));
@@ -303,8 +315,8 @@ async function buildDashboardPayload() {
     organization,
     generatedAt: new Date().toISOString(),
     summary: {
-      totalProjects: projectCards.filter((card) => card.type === "projeto").length,
-      totalInitiatives: projectCards.filter((card) => card.type === "iniciativa").length,
+      totalProjects: boardCards.filter((card) => card.type === "projeto").length,
+      totalInitiatives: boardCards.filter((card) => card.type === "iniciativa").length,
       openTasks: tasks.filter((task) => task.status !== "Concluída").length,
       completedTasks: tasks.filter((task) => task.status === "Concluída").length,
       overdueTasks: tasks.filter((task) => task.overdue).length,

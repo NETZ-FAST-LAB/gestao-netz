@@ -69,13 +69,19 @@ PARTNER_WORKLOAD_TARGETS = [
         "key": "gui_r",
         "display_name": "Gui R",
         "mention": settings.member_mentions["gui_r"],
-        "aliases": ["Gui", "Gui R", "Guilherme Roennau"],
+        "aliases": ["Gui", "Gui R", "Gui R.", "Roennau", "Guilherme Roennau"],
     },
     {
         "key": "denis",
         "display_name": "Denis",
         "mention": settings.member_mentions["denis"],
         "aliases": ["Denis", "Denis Polidoro", "Denis P", "Denis P."],
+    },
+    {
+        "key": "stacke",
+        "display_name": "Guilherme Stacke",
+        "mention": settings.member_mentions.get("stacke", "@Stacke"),
+        "aliases": ["Stacke", "Tak", "Gui S", "Gui Stacke", "Guilherme Stacke"],
     },
 ]
 LOW_WORKLOAD_THRESHOLD = 3
