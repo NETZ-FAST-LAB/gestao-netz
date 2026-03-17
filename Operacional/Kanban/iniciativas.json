@@ -46,6 +46,14 @@
               "status": "pending",
               "dueDate": "",
               "reminders": []
+            },
+            {
+              "id": "task-sebrae-e6f4b40c",
+              "title": "Complementar e coordenar cadastro da NETZ na plataforma Unio",
+              "assignee": "Joãozíssimo",
+              "status": "pending",
+              "dueDate": "",
+              "reminders": []
             }
           ]
         },
