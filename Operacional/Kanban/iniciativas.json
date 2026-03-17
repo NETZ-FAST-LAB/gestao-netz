@@ -180,6 +180,18 @@
             }
           ],
           "owner": "Joãozíssimo"
+        },
+        {
+          "id": "inic-gestao-netz",
+          "title": "Gestão Netz",
+          "column": "Ideias",
+          "health_status": "No Prazo",
+          "tags": [
+            "AI-Created"
+          ],
+          "artifacts": [],
+          "tasks": [],
+          "owner": "Joãozíssimo"
         }
       ]
     }
