@@ -206,7 +206,16 @@
             "AI-Created"
           ],
           "artifacts": [],
-          "tasks": [],
+          "tasks": [
+            {
+              "id": "task-netz-30723a52",
+              "title": "Implementar formalização de parcerias comerciais via formulário de cadastro e website",
+              "assignee": "Denis",
+              "status": "pending",
+              "dueDate": "",
+              "reminders": []
+            }
+          ],
           "owner": "Joãozíssimo"
         }
       ]
