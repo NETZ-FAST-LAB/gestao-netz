@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
-  CalendarClock,
   FlaskConical,
   FolderKanban,
   RefreshCcw,
@@ -12,13 +11,11 @@ import {
 
 import { goals, getTrimestreTotals } from "@/data/goals";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   type DashboardCard,
-  type DashboardMilestone,
   type DashboardPartner,
   type DashboardPayload,
   type DashboardTask,
@@ -41,12 +38,6 @@ function formatCurrency(value: number) {
 function statusTone(task: DashboardTask) {
   if (task.overdue) return "destructive" as const;
   if (task.dueSoon) return "secondary" as const;
-  return "outline" as const;
-}
-
-function milestoneTone(milestone: DashboardMilestone) {
-  if (milestone.type === "upsell") return "default" as const;
-  if (milestone.type === "fechamento") return "secondary" as const;
   return "outline" as const;
 }
 
@@ -87,7 +78,7 @@ export default function Home() {
   }, []);
 
   const trimestre = useMemo(() => getTrimestreTotals(), []);
-  const initiativeCards = useMemo(
+  const experimentCards = useMemo(
     () => (data?.cards || []).filter((card) => card.type === "iniciativa"),
     [data],
   );
@@ -100,7 +91,6 @@ export default function Home() {
     [data],
   );
   const activeLabCards = useMemo(() => (data?.cards || []).slice(0, 4), [data]);
-  const topMilestones = useMemo(() => (data?.milestones || []).slice(0, 6), [data]);
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.22),_transparent_28%),radial-gradient(circle_at_15%_20%,_rgba(16,185,129,0.18),_transparent_24%),radial-gradient(circle_at_85%_12%,_rgba(251,191,36,0.12),_transparent_22%),linear-gradient(155deg,_#06131c_0%,_#091018_40%,_#120d14_100%)] text-white">
@@ -113,26 +103,24 @@ export default function Home() {
                 Painel operacional vivo
               </Badge>
             </div>
-            <h1 className="text-4xl font-semibold tracking-tight lg:text-5xl">
-              Sala de controle do laboratório maluco da NETZ
-            </h1>
+            <h1 className="text-4xl font-semibold tracking-tight lg:text-5xl">Sala de controle do laboratório</h1>
             <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-300">
-              Aqui ficam os experimentos internos, a pressão comercial, os projetos em incubação e as
-              tarefas que ninguém mais pode fingir que não viu.
+              Aqui ficam os projetos, os experimentos internos, a pressão comercial e os riscos de
+              explosão que ninguém mais pode fingir que não viu.
             </p>
           </div>
 
           <div className="rounded-3xl border border-cyan-300/15 bg-white/5 p-5 backdrop-blur-xl lg:w-[360px]">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs uppercase tracking-[0.28em] text-slate-400">Reator de Receita</p>
+                <p className="text-xs uppercase tracking-[0.28em] text-slate-400">Reator de receita</p>
                 <p className="mt-2 text-3xl font-semibold">{formatCurrency(trimestre.targetRevenue)}</p>
               </div>
               <Rocket className="h-8 w-8 text-cyan-300" />
             </div>
             <p className="mt-3 text-sm text-slate-300">
-              Meta trimestral com teto de custos em {formatCurrency(trimestre.targetCosts)} e receita líquida-alvo de{" "}
-              {formatCurrency(trimestre.targetNetRevenue)}.
+              Meta trimestral com tesouraria-alvo de {formatCurrency(trimestre.targetCosts)} e receita
+              líquida-alvo de {formatCurrency(trimestre.targetNetRevenue)}.
             </p>
             <div className="mt-4">
               <div className="mb-2 flex items-center justify-between text-xs text-slate-400">
@@ -158,7 +146,7 @@ export default function Home() {
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
             <CardHeader className="pb-2">
-              <CardDescription>Projetos + iniciativas</CardDescription>
+              <CardDescription>Projetos + experimentos internos</CardDescription>
               <CardTitle className="flex items-center gap-2 text-2xl">
                 <FolderKanban className="h-5 w-5 text-cyan-300" />
                 {isLoading || !data ? "..." : data.summary.totalProjects + data.summary.totalInitiatives}
@@ -167,7 +155,7 @@ export default function Home() {
             <CardContent className="text-sm text-slate-300">
               {isLoading || !data
                 ? "Lendo os experimentos..."
-                : `${data.summary.totalProjects} projetos externos e ${data.summary.totalInitiatives} iniciativas internas.`}
+                : `${data.summary.totalProjects} projetos e ${data.summary.totalInitiatives} experimentos internos.`}
             </CardContent>
           </Card>
 
@@ -188,7 +176,7 @@ export default function Home() {
 
           <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
             <CardHeader className="pb-2">
-              <CardDescription>Pressão de prazo</CardDescription>
+              <CardDescription>Risco de explosão</CardDescription>
               <CardTitle className="flex items-center gap-2 text-2xl">
                 <Siren className="h-5 w-5 text-amber-300" />
                 {isLoading || !data ? "..." : data.summary.overdueTasks}
@@ -203,28 +191,25 @@ export default function Home() {
 
           <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
             <CardHeader className="pb-2">
-              <CardDescription>Marcos monitorados</CardDescription>
+              <CardDescription>Tesouraria</CardDescription>
               <CardTitle className="flex items-center gap-2 text-2xl">
-                <CalendarClock className="h-5 w-5 text-fuchsia-300" />
-                {isLoading || !data ? "..." : data.milestones.length}
+                <RefreshCcw className="h-5 w-5 text-fuchsia-300" />
+                {formatCurrency(trimestre.targetCosts)}
               </CardTitle>
             </CardHeader>
             <CardContent className="text-sm text-slate-300">
-              {isLoading || !data
-                ? "Ajustando cronômetros..."
-                : "Checkpoints, alinhamentos, fechamentos e oportunidades de upsell."}
+              15% do trimestre reservados para custos, estrutura e contenção operacional.
             </CardContent>
           </Card>
         </div>
 
         <Tabs defaultValue="visao-geral" className="mt-8">
-          <TabsList className="grid h-auto w-full grid-cols-3 gap-2 border border-white/10 bg-white/5 p-2 lg:grid-cols-6">
+          <TabsList className="grid h-auto w-full grid-cols-2 gap-2 border border-white/10 bg-white/5 p-2 lg:grid-cols-5">
             <TabsTrigger value="visao-geral">Visão geral</TabsTrigger>
             <TabsTrigger value="socios">Sócios</TabsTrigger>
             <TabsTrigger value="tarefas">Tarefas</TabsTrigger>
-            <TabsTrigger value="iniciativas">Iniciativas</TabsTrigger>
+            <TabsTrigger value="iniciativas">Experimentos internos</TabsTrigger>
             <TabsTrigger value="projetos">Projetos</TabsTrigger>
-            <TabsTrigger value="marcos">Marcos</TabsTrigger>
           </TabsList>
 
           <TabsContent value="visao-geral" className="mt-6 space-y-6">
@@ -234,9 +219,9 @@ export default function Home() {
                   <div className="flex items-center gap-3">
                     <FlaskConical className="h-5 w-5 text-cyan-300" />
                     <div>
-                      <CardTitle>Meta trimestral sob observação</CardTitle>
+                      <CardTitle>Reator de receita sob observação</CardTitle>
                       <CardDescription>
-                        Meta de receita de {formatCurrency(192000)} com custos controlados em 15%.
+                        Meta de receita de {formatCurrency(192000)} com tesouraria controlada em 15%.
                       </CardDescription>
                     </div>
                   </div>
@@ -248,7 +233,7 @@ export default function Home() {
                       <p className="mt-2 text-2xl font-semibold">{formatCurrency(192000)}</p>
                     </div>
                     <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                      <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Custos máximos</p>
+                      <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Tesouraria</p>
                       <p className="mt-2 text-2xl font-semibold">{formatCurrency(28800)}</p>
                     </div>
                     <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
@@ -288,20 +273,24 @@ export default function Home() {
                 </CardHeader>
                 <CardContent className="space-y-3 text-sm text-slate-300">
                   <p>
-                    A bancada está com <span className="font-semibold text-white">{data?.summary.openTasks || 0}</span> tarefas abertas,
-                    incluindo <span className="font-semibold text-amber-300">{data?.summary.overdueTasks || 0}</span> atrasadas.
+                    A bancada está com <span className="font-semibold text-white">{data?.summary.openTasks || 0}</span>{" "}
+                    tarefas abertas, incluindo{" "}
+                    <span className="font-semibold text-amber-300">{data?.summary.overdueTasks || 0}</span> atrasadas.
                   </p>
                   <p>
-                    O motor interno tem <span className="font-semibold text-cyan-300">{initiativeCards.length}</span> iniciativas visíveis e{" "}
+                    O motor interno tem <span className="font-semibold text-cyan-300">{experimentCards.length}</span>{" "}
+                    experimentos internos visíveis e{" "}
                     <span className="font-semibold text-emerald-300">{projectCards.length}</span> projetos em curso.
                   </p>
                   <p>
-                    Se algo parecer perdido, agora existe uma aba exclusiva de iniciativas para ninguém alegar neblina operacional.
+                    Se algo parecer perdido, existe uma aba exclusiva de experimentos internos para ninguém alegar
+                    neblina operacional.
                   </p>
                   <div className="rounded-2xl border border-dashed border-cyan-300/20 bg-cyan-400/5 p-4">
                     <p className="text-xs uppercase tracking-[0.24em] text-cyan-200">Hipótese de melhoria</p>
                     <p className="mt-2">
-                      O próximo salto de produtividade aqui é unir pressão comercial, calendário de marcos e saúde de tarefas numa só leitura.
+                      O próximo salto de produtividade aqui é unir pressão comercial, tesouraria e saúde de tarefas
+                      numa só leitura.
                     </p>
                   </div>
                 </CardContent>
@@ -311,7 +300,7 @@ export default function Home() {
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_1fr]">
               <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
                 <CardHeader>
-                  <CardTitle>Fila crítica</CardTitle>
+                  <CardTitle>Risco de explosão</CardTitle>
                   <CardDescription>Tarefas vencidas ou prestes a explodir.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -328,7 +317,7 @@ export default function Home() {
                           <Badge variant={statusTone(task)}>{task.status}</Badge>
                         </div>
                         <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-300">
-                          <span>{task.contextType === "projeto" ? "Projeto" : "Iniciativa"}</span>
+                          <span>{task.contextType === "projeto" ? "Projeto" : "Experimento interno"}</span>
                           <span>•</span>
                           <span>{task.dueDate ? `Prazo ${formatDate(task.dueDate)}` : "Sem prazo definido"}</span>
                         </div>
@@ -354,7 +343,7 @@ export default function Home() {
                         <div>
                           <p className="font-medium">{card.title}</p>
                           <p className="mt-1 text-sm text-slate-400">
-                            {card.type === "projeto" ? "Projeto" : "Iniciativa"} · {card.owner}
+                            {card.type === "projeto" ? "Projeto" : "Experimento interno"} · {card.owner}
                           </p>
                         </div>
                         <Badge variant="outline">{card.column}</Badge>
@@ -443,13 +432,13 @@ export default function Home() {
           <TabsContent value="iniciativas" className="mt-6">
             <Card className="border-cyan-300/15 bg-white/5 backdrop-blur-xl">
               <CardHeader>
-                <CardTitle>Incubadora de iniciativas</CardTitle>
+                <CardTitle>Experimentos internos</CardTitle>
                 <CardDescription>
-                  Todas as iniciativas internas do laboratório, incluindo a recém-criada Gestão Netz.
+                  Todos os experimentos internos do laboratório, incluindo a Gestão Netz.
                 </CardDescription>
               </CardHeader>
               <CardContent className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-                {initiativeCards.map((card) => (
+                {experimentCards.map((card) => (
                   <Card key={card.id} className="border-white/10 bg-black/20">
                     <CardHeader>
                       <div className="flex items-start justify-between gap-3">
@@ -544,35 +533,6 @@ export default function Home() {
                 </Card>
               ))}
             </div>
-          </TabsContent>
-
-          <TabsContent value="marcos" className="mt-6">
-            <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
-              <CardHeader>
-                <CardTitle>Cronômetros e checkpoints</CardTitle>
-                <CardDescription>Os marcos que o laboratório não pode perder de vista.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {topMilestones.map((milestone: DashboardMilestone) => (
-                  <div key={milestone.id} className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                      <div>
-                        <p className="font-medium">{milestone.title}</p>
-                        <p className="mt-1 text-sm text-slate-400">{milestone.contextTitle}</p>
-                        {milestone.description && (
-                          <p className="mt-2 text-sm text-slate-300">{milestone.description}</p>
-                        )}
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        <Badge variant={milestoneTone(milestone)}>{milestone.type}</Badge>
-                        <Badge variant="outline">{formatDate(milestone.date)}</Badge>
-                        {milestone.responsible && <Badge variant="outline">{milestone.responsible}</Badge>}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
           </TabsContent>
         </Tabs>
       </main>

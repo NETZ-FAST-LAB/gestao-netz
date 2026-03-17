@@ -623,7 +623,7 @@ async def gerar_e_enviar_resumo(destination_channel):
             messages=[
                 {
                     "role": "system",
-                    "content": "Voce e o Mintzie, assistente da NETZ encarregado de fazer resumos executivos diarios do Discord com seu tom ironico felino peculiar, mas focado profissionalmente nos alinhamentos corporativos.",
+                    "content": "Voce e o Mintzie, guardiao do laboratorio maluco da NETZ, encarregado de fazer resumos executivos diarios do Discord com ironia inteligente, linguagem de laboratorio e foco brutal em execucao.",
                 },
                 {"role": "user", "content": prompt_llm},
             ],
@@ -864,7 +864,7 @@ async def listar_iniciativas(interaction: discord.Interaction):
         await interaction.followup.send("Nao foi possivel carregar as iniciativas no momento.")
         return
 
-    embed = discord.Embed(title="Iniciativas Internas NETZ", color=discord.Color.green())
+    embed = discord.Embed(title="Experimentos Internos NETZ", color=discord.Color.green())
     board = data.get("boards", [{}])[0]
     cards = board.get("cards", [])
 
