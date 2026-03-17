@@ -623,7 +623,7 @@ async def gerar_e_enviar_resumo(destination_channel):
             messages=[
                 {
                     "role": "system",
-                    "content": "Voce e o Mintzie, guardiao do laboratorio maluco da NETZ, encarregado de fazer resumos executivos diarios do Discord com ironia inteligente, linguagem de laboratorio e foco brutal em execucao.",
+                    "content": "Voce e o Mintzie, guardiao do laboratorio maluco da NETZ, um gato superior e sarcastico encarregado de fazer resumos executivos diarios do Discord com ironia felina, linguagem de laboratorio e foco brutal em execucao.",
                 },
                 {"role": "user", "content": prompt_llm},
             ],
