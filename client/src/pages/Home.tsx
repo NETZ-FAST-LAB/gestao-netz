@@ -3,6 +3,7 @@ import { AlertCircle, Bot, FolderKanban, Pencil, RefreshCcw, Rocket, Siren, User
 
 import { AgentChat } from "@/components/AgentChat";
 import { KanbanBoard } from "@/components/Kanban/Board";
+import { KanbanFilterPanel } from "@/components/Kanban/FilterPanel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,6 +23,12 @@ import {
   type DashboardTask,
   updateDashboardTask,
 } from "@/services/dashboardService";
+import {
+  applyKanbanFilters,
+  DEFAULT_KANBAN_FILTERS,
+  getTaskAssigneeOptions,
+  type KanbanFilterQuery,
+} from "@/services/filterService";
 
 type TaskDialogMode = "edit" | "create";
 
@@ -83,6 +90,7 @@ export default function Home() {
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [editingTask, setEditingTask] = useState<DashboardTask | null>(null);
   const [taskDialogMode, setTaskDialogMode] = useState<TaskDialogMode>("edit");
+  const [kanbanFilters, setKanbanFilters] = useState<KanbanFilterQuery>(DEFAULT_KANBAN_FILTERS);
   const [taskForm, setTaskForm] = useState<TaskFormState>({
     title: "",
     assignee: "",
@@ -129,6 +137,23 @@ export default function Home() {
   const currentContextCards = useMemo(
     () => (data?.cards || []).filter((card) => card.type === taskForm.contextType),
     [data, taskForm.contextType],
+  );
+  const filteredTasks = useMemo(
+    () => applyKanbanFilters(data?.tasks || [], kanbanFilters),
+    [data, kanbanFilters],
+  );
+  const assigneeOptions = useMemo(
+    () => getTaskAssigneeOptions(data?.tasks || []),
+    [data],
+  );
+  const filteredSummary = useMemo(
+    () => ({
+      total: filteredTasks.length,
+      overdue: filteredTasks.filter((task) => task.overdue).length,
+      dueSoon: filteredTasks.filter((task) => task.dueSoon).length,
+      done: filteredTasks.filter((task) => task.status === "Concluida").length,
+    }),
+    [filteredTasks],
   );
 
   function openTaskEditor(task: DashboardTask) {
@@ -457,21 +482,67 @@ export default function Home() {
           </TabsContent>
 
           <TabsContent value="kanban" className="mt-6">
-            <KanbanBoard
-              tasks={data?.tasks || []}
-              onEditTask={openTaskEditor}
-              onCreateTask={openTaskCreator}
-              onMoveTask={(task, status) => void handleMoveTask(task, status)}
-            />
+            <div className="space-y-6">
+              <KanbanFilterPanel filters={kanbanFilters} assigneeOptions={assigneeOptions} onChange={setKanbanFilters} />
+
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+                <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
+                  <CardHeader className="pb-2">
+                    <CardDescription>Recorte atual</CardDescription>
+                    <CardTitle className="text-2xl">{filteredSummary.total}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-sm text-slate-300">tarefas no filtro ativo.</CardContent>
+                </Card>
+
+                <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
+                  <CardHeader className="pb-2">
+                    <CardDescription>Risco quente</CardDescription>
+                    <CardTitle className="text-2xl text-amber-200">{filteredSummary.overdue}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-sm text-slate-300">atrasadas dentro do recorte.</CardContent>
+                </Card>
+
+                <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
+                  <CardHeader className="pb-2">
+                    <CardDescription>Prazo próximo</CardDescription>
+                    <CardTitle className="text-2xl text-cyan-200">{filteredSummary.dueSoon}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-sm text-slate-300">com vencimento nos próximos 7 dias.</CardContent>
+                </Card>
+
+                <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
+                  <CardHeader className="pb-2">
+                    <CardDescription>Fechadas</CardDescription>
+                    <CardTitle className="text-2xl text-emerald-200">{filteredSummary.done}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-sm text-slate-300">já concluídas no recorte.</CardContent>
+                </Card>
+              </div>
+
+              <KanbanBoard
+                tasks={filteredTasks}
+                onEditTask={openTaskEditor}
+                onCreateTask={openTaskCreator}
+                onMoveTask={(task, status) => void handleMoveTask(task, status)}
+              />
+            </div>
           </TabsContent>
 
           <TabsContent value="tarefas" className="mt-6">
             <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
               <CardHeader>
                 <CardTitle>Fila operacional completa</CardTitle>
-                <CardDescription>Leitura viva das tarefas abertas no Kanban com edicao basica.</CardDescription>
+                <CardDescription>Leitura viva do mesmo recorte aplicado ao Kanban.</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-3">{(data?.tasks || []).map((task) => renderTaskCard(task))}</CardContent>
+              <CardContent className="space-y-3">
+                {filteredTasks.length > 0 ? (
+                  filteredTasks.map((task) => renderTaskCard(task))
+                ) : (
+                  <div className="rounded-2xl border border-dashed border-white/10 px-4 py-8 text-center text-slate-400">
+                    Nenhuma tarefa corresponde aos filtros atuais.
+                  </div>
+                )}
+              </CardContent>
             </Card>
           </TabsContent>
 
