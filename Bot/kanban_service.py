@@ -63,6 +63,21 @@ def _task_assignee(task: dict) -> str:
     return (task.get("assignee") or task.get("responsavel") or "").strip()
 
 
+def _normalize_task_title(value: str) -> str:
+    return _normalize_person_name(value)
+
+
+def _status_to_github(status_value: str) -> str:
+    normalized = _normalize_person_name(status_value)
+    if normalized in {"concluido", "concluida", "completed", "done"}:
+        return "completed"
+    if normalized in {"em andamento", "in progress", "in_progress", "doing"}:
+        return "in_progress"
+    if normalized in {"em revisao", "review"}:
+        return "review"
+    return "pending"
+
+
 def _format_task(card_type: str, card_title: str, task: dict) -> str:
     owner = _task_assignee(task) or "Sem Dono"
     return (
@@ -331,28 +346,51 @@ def edit_github_task(
     if not data or not sha:
         return json.dumps({"status": "error", "message": "Erro de leitura no json."})
 
-    tarefa_encontrada = False
-    lookup = titulo_tarefa_atual.lower()
+    normalized_lookup = _normalize_task_title(titulo_tarefa_atual)
+    exact_matches = []
+    partial_matches = []
 
     for board in data.get("boards", []):
         for card in board.get("cards", []):
             for task in card.get("tasks", []):
-                if lookup in task.get("title", "").lower() or lookup == task.get("id", "").lower():
-                    if novo_responsavel:
-                        task["assignee"] = novo_responsavel
-                    if novo_status:
-                        task["status"] = novo_status
-                    if nova_data:
-                        task["dueDate"] = nova_data
-                    tarefa_encontrada = True
-                    break
-            if tarefa_encontrada:
-                break
-        if tarefa_encontrada:
-            break
+                task_title = task.get("title", "")
+                normalized_title = _normalize_task_title(task_title)
+                if normalized_lookup == task.get("id", "").lower() or normalized_title == normalized_lookup:
+                    exact_matches.append((card, task))
+                elif normalized_lookup and normalized_lookup in normalized_title:
+                    partial_matches.append((card, task))
 
-    if not tarefa_encontrada:
-        return json.dumps({"status": "error", "message": f"Eu nao encontrei nenhuma tarefa contendo '{titulo_tarefa_atual}' nas suas listas de {tipo}s. Verifique o nome real da tarefa."})
+    candidates = exact_matches or partial_matches
+    if not candidates:
+        return json.dumps(
+            {
+                "status": "error",
+                "message": f"Eu nao encontrei nenhuma tarefa correspondente a '{titulo_tarefa_atual}' nas suas listas de {tipo}s. Verifique o nome real da tarefa.",
+            }
+        )
+
+    if len(candidates) > 1:
+        options = [
+            f"{card.get('title', 'Sem contexto')}: {task.get('title', 'Sem titulo')}"
+            for card, task in candidates[:5]
+        ]
+        return json.dumps(
+            {
+                "status": "error",
+                "message": (
+                    "Achei mais de uma tarefa parecida com esse nome. "
+                    f"Seja mais especifico. Exemplos: {'; '.join(options)}"
+                ),
+            }
+        )
+
+    _, task = candidates[0]
+    if novo_responsavel:
+        task["assignee"] = novo_responsavel
+    if novo_status:
+        task["status"] = _status_to_github(novo_status)
+    if nova_data:
+        task["dueDate"] = nova_data
 
     success = github_client.update_file_content(
         file_path,
@@ -363,6 +401,127 @@ def edit_github_task(
     if success:
         return json.dumps({"status": "success", "message": "A tarefa foi editada. Ufa. Que canseira."})
     return json.dumps({"status": "error", "message": "Deu algum erro nojento ao tentar gravar isso no GitHub."})
+
+
+def bulk_update_tasks_from_message(mensagem_status: str) -> str:
+    sections = []
+    current_tipo = None
+    current_context = None
+    current_tasks = []
+
+    for raw_line in mensagem_status.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+
+        match_context = re.match(r"^(Iniciativa|Projeto)\s*:\s*(.+)$", line, re.IGNORECASE)
+        if match_context:
+            if current_tipo and current_context and current_tasks:
+                sections.append((current_tipo, current_context, current_tasks))
+            current_tipo = "iniciativa" if match_context.group(1).lower().startswith("inici") else "projeto"
+            current_context = match_context.group(2).strip()
+            current_tasks = []
+            continue
+
+        match_task = re.match(
+            r"^\[(?P<status>[^\]]+)\]\s*(?P<title>.+?)(?:\s*\(Respons[aá]vel:\s*(?P<owner>[^)]+)\))?$",
+            line,
+            re.IGNORECASE,
+        )
+        if match_task and current_tipo and current_context:
+            current_tasks.append(
+                {
+                    "status": match_task.group("status").strip(),
+                    "title": match_task.group("title").strip(),
+                    "owner": (match_task.group("owner") or "").strip(),
+                }
+            )
+
+    if current_tipo and current_context and current_tasks:
+        sections.append((current_tipo, current_context, current_tasks))
+
+    if not sections:
+        return json.dumps(
+            {
+                "status": "error",
+                "message": (
+                    "Nao encontrei uma lista estruturada de status. "
+                    "Use blocos como 'Iniciativa: Nome' e linhas '[Pendente] Tarefa (...)'."
+                ),
+            }
+        )
+
+    total_updates = 0
+    touched_files = {}
+
+    for tipo, contexto, tasks in sections:
+        file_path = _file_for_tipo(tipo)
+        if file_path not in touched_files:
+            data, sha = github_client.get_file_content(file_path)
+            if not data or not sha:
+                return json.dumps({"status": "error", "message": f"Falha ao ler o arquivo de {tipo}s."})
+            touched_files[file_path] = {"data": data, "sha": sha}
+
+        data = touched_files[file_path]["data"]
+        normalized_context = _normalize_person_name(contexto)
+        target_card = None
+        for board in data.get("boards", []):
+            for card in board.get("cards", []):
+                card_name = _normalize_person_name(card.get("title", ""))
+                if card_name == normalized_context:
+                    target_card = card
+                    break
+            if target_card:
+                break
+
+        if not target_card:
+            return json.dumps(
+                {
+                    "status": "error",
+                    "message": f"Nao encontrei o contexto '{contexto}' entre os {tipo}s.",
+                }
+            )
+
+        for task_update in tasks:
+            normalized_title = _normalize_task_title(task_update["title"])
+            matches = [
+                task
+                for task in target_card.get("tasks", [])
+                if _normalize_task_title(task.get("title", "")) == normalized_title
+            ]
+            if len(matches) != 1:
+                return json.dumps(
+                    {
+                        "status": "error",
+                        "message": (
+                            f"Encontrei {len(matches)} correspondencia(s) para '{task_update['title']}' em '{contexto}'. "
+                            "Mande o nome exato da tarefa para eu nao sair derramando reagente no laboratorio."
+                        ),
+                    }
+                )
+
+            task = matches[0]
+            task["status"] = _status_to_github(task_update["status"])
+            if task_update["owner"]:
+                task["assignee"] = task_update["owner"]
+            total_updates += 1
+
+    for file_path, payload in touched_files.items():
+        success = github_client.update_file_content(
+            file_path,
+            payload["data"],
+            payload["sha"],
+            "bot(Mintzie): atualiza tarefas em lote via lista estruturada no Discord",
+        )
+        if not success:
+            return json.dumps({"status": "error", "message": f"Falhei ao gravar atualizacoes em {file_path}."})
+
+    return json.dumps(
+        {
+            "status": "success",
+            "message": f"Atualizei {total_updates} tarefa(s) a partir da lista estruturada.",
+        }
+    )
 
 
 tool_schemas = [
@@ -432,7 +591,7 @@ tool_schemas = [
         "type": "function",
         "function": {
             "name": "edit_github_task",
-            "description": "Edita uma tarefa existente no Kanban do GitHub.",
+            "description": "Edita UMA tarefa existente no Kanban do GitHub. Use apenas para tarefa individual e claramente identificada.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -446,6 +605,23 @@ tool_schemas = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "bulk_update_tasks_from_message",
+            "description": (
+                "Atualiza varias tarefas de uma vez APENAS quando o usuario enviar uma lista estruturada "
+                "com blocos como 'Iniciativa: Nome' ou 'Projeto: Nome' e linhas '[Status] Tarefa (Responsavel: X)'."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "mensagem_status": {"type": "string"},
+                },
+                "required": ["mensagem_status"],
+            },
+        },
+    },
 ]
 
 
@@ -455,4 +631,5 @@ available_functions = {
     "assign_all_unassigned_tasks": assign_all_unassigned_tasks,
     "create_github_task": create_github_task,
     "edit_github_task": edit_github_task,
+    "bulk_update_tasks_from_message": bulk_update_tasks_from_message,
 }
