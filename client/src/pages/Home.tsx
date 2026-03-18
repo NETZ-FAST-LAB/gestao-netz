@@ -650,12 +650,29 @@ export default function Home() {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="grid gap-2">
                 <label className="text-sm font-medium text-slate-200">Responsável</label>
-                <Input
-                  value={taskForm.assignee}
-                  onChange={(event) => setTaskForm((current) => ({ ...current, assignee: event.target.value }))}
-                  placeholder="Sem dono"
-                  className="border-white/10 bg-white/5 text-white"
-                />
+                <Select
+                  value={taskForm.assignee || "__sem_dono__"}
+                  onValueChange={(value) =>
+                    setTaskForm((current) => ({
+                      ...current,
+                      assignee: value === "__sem_dono__" ? "" : value,
+                    }))
+                  }
+                >
+                  <SelectTrigger className="w-full border-white/10 bg-white/5 text-white">
+                    <SelectValue placeholder="Selecione um responsável" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__sem_dono__">Sem dono</SelectItem>
+                    {assigneeOptions
+                      .filter((assignee) => assignee !== "todos")
+                      .map((assignee) => (
+                        <SelectItem key={assignee} value={assignee}>
+                          {assignee}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="grid gap-2">
                 <label className="text-sm font-medium text-slate-200">Prazo</label>
