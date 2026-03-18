@@ -61,6 +61,13 @@ function statusTone(task: DashboardTask) {
   return "outline" as const;
 }
 
+function trimestreToneClasses(tone: "emerald" | "cyan" | "amber" | "rose") {
+  if (tone === "emerald") return "border-emerald-400/30 bg-emerald-400/15 text-emerald-100";
+  if (tone === "amber") return "border-amber-400/30 bg-amber-400/15 text-amber-100";
+  if (tone === "rose") return "border-rose-400/30 bg-rose-400/15 text-rose-100";
+  return "border-cyan-400/30 bg-cyan-400/15 text-cyan-100";
+}
+
 function buildTaskForm(task: DashboardTask): TaskFormState {
   return {
     title: task.title,
@@ -284,7 +291,7 @@ export default function Home() {
               <img
                 src="/brand/logo1-branco.png"
                 alt="NETZ"
-                className="h-10 w-auto object-contain opacity-95 lg:h-12"
+                className="h-6 w-auto object-contain opacity-95 lg:h-[1.8rem]"
               />
               <div className="flex flex-wrap items-center gap-2">
                 <Badge className="bg-cyan-400/15 text-cyan-200 hover:bg-cyan-400/15">Laboratório NETZ</Badge>
@@ -300,13 +307,17 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="rounded-3xl border border-cyan-300/15 bg-white/5 p-5 backdrop-blur-xl lg:w-[360px]">
-            <div className="flex items-center justify-between">
+          <div className="rounded-3xl border border-cyan-300/15 bg-white/5 p-5 backdrop-blur-xl lg:w-[430px]">
+            <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs uppercase tracking-[0.28em] text-slate-400">Reator de receita</p>
                 <p className="mt-2 text-3xl font-semibold">{formatCurrency(trimestre.targetRevenue)}</p>
+                <p className="mt-1 text-xs text-slate-500">{trimestre.cycleLabel}</p>
               </div>
-              <Rocket className="h-8 w-8 text-cyan-300" />
+              <div className="flex flex-col items-end gap-3">
+                <Rocket className="h-8 w-8 text-cyan-300" />
+                <Badge className={trimestreToneClasses(trimestre.statusTone)}>{trimestre.statusLabel}</Badge>
+              </div>
             </div>
             <p className="mt-3 text-sm text-slate-300">
               Meta trimestral com tesouraria-alvo de {formatCurrency(trimestre.targetCosts)}.
@@ -314,9 +325,45 @@ export default function Home() {
             <div className="mt-4">
               <div className="mb-2 flex items-center justify-between text-xs text-slate-400">
                 <span>Progresso do trimestre</span>
-                <span>{trimestre.progressPercentage}%</span>
+                <span>
+                  {trimestre.progressPercentage}% real vs {trimestre.expectedProgressPercentage}% esperado
+                </span>
               </div>
               <Progress value={trimestre.progressPercentage} className="h-2.5" />
+            </div>
+            <div className="mt-4 grid gap-3 text-sm text-slate-300 md:grid-cols-2">
+              <div className="rounded-2xl border border-white/10 bg-black/15 p-3">
+                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Tempo restante</p>
+                <p className="mt-2 text-lg font-semibold text-white">{trimestre.daysRemaining} dias</p>
+                <p className="mt-1 text-xs text-slate-400">até o fim do ciclo atual.</p>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-black/15 p-3">
+                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Ritmo mínimo</p>
+                <p className="mt-2 text-lg font-semibold text-white">{formatCurrency(trimestre.requiredDailyRevenue)}/dia</p>
+                <p className="mt-1 text-xs text-slate-400">{formatCurrency(trimestre.requiredMonthlyRevenue)}/mês restante.</p>
+              </div>
+            </div>
+            <div className="mt-4 rounded-2xl border border-white/10 bg-black/15 p-3 text-sm text-slate-300">
+              <div className="flex items-center justify-between gap-3">
+                <p className="font-medium text-white">Falta capturar {formatCurrency(trimestre.remainingRevenue)}</p>
+                <p className="text-xs text-slate-400">
+                  {trimestre.gapToPacePercentage >= 0 ? "+" : ""}
+                  {trimestre.gapToPacePercentage} pts vs ritmo
+                </p>
+              </div>
+              <p className="mt-2 text-xs text-slate-400">
+                Se esta meta virar cadência, os próximos trimestres acumulam o seguinte reator:
+              </p>
+              <div className="mt-3 space-y-2">
+                {trimestre.forecastQuarters.map((quarter) => (
+                  <div key={quarter.label} className="flex items-center justify-between text-xs">
+                    <span className="text-slate-300">{quarter.label}</span>
+                    <span className="text-slate-400">
+                      {formatCurrency(quarter.targetRevenue)} por trimestre • acumulado {formatCurrency(quarter.cumulativeRevenue)}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
