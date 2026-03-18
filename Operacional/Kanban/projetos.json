@@ -242,7 +242,7 @@
               "id": "task_1_3",
               "title": "[Priorização & Planejamento] Preparar material para reunião de sexta-feira",
               "assignee": "João",
-              "status": "pending",
+              "status": "completed",
               "dueDate": "2026-03-14",
               "reminders": []
             },
