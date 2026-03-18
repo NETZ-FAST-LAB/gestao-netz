@@ -546,6 +546,20 @@ async function readJsonFile<T>(relativePath: string): Promise<T> {
   return sanitizeDeep(JSON.parse(content)) as T;
 }
 
+async function readJsonFileWithFallback<T>(relativePaths: string[]): Promise<T> {
+  let lastError: unknown = null;
+
+  for (const relativePath of relativePaths) {
+    try {
+      return await readJsonFile<T>(relativePath);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error("Falha ao carregar arquivo JSON com fallback.");
+}
+
 async function writeJsonFile<T>(relativePath: string, data: T) {
   await fs.writeFile(getFullPath(relativePath), `${JSON.stringify(data, null, 2)}\n`, "utf8");
 }
@@ -623,7 +637,10 @@ function getPartnerId(assignee: string): string | null {
 
 async function readBoardFiles() {
   const [organization, projectsFile, initiativesFile] = await Promise.all([
-    readJsonFile<{ name: string; members: string[] }>("Operacional/organizacao.json"),
+    readJsonFileWithFallback<{ name: string; members: string[] }>([
+      "Operacional/organizacao.json",
+      "Operacional/organização.json",
+    ]),
     readJsonFile<BoardFile>(PROJECTS_PATH),
     readJsonFile<BoardFile>(INITIATIVES_PATH),
   ]);
