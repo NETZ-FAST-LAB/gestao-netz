@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { AlertCircle, FolderKanban, Pencil, RefreshCcw, Rocket, Siren, Users } from "lucide-react";
 
 import { KanbanBoard } from "@/components/Kanban/Board";
@@ -40,7 +40,7 @@ type TaskFormState = {
   contextType: "projeto" | "iniciativa";
 };
 
-const TASK_STATUS_OPTIONS = ["Pendente", "Em andamento", "Em revisão", "Concluída"];
+const TASK_STATUS_OPTIONS = ["Pendente", "Em andamento", "Em revisÃ£o", "ConcluÃ­da"];
 
 function formatDate(date: string) {
   if (!date) return "Sem data";
@@ -116,7 +116,7 @@ export default function Home() {
       setData(payload);
     } catch (loadError) {
       console.error(loadError);
-      setError("Não consegui carregar os dados reais do laboratório agora.");
+      setError("NÃ£o consegui carregar os dados reais do laboratÃ³rio agora.");
     } finally {
       setIsLoading(false);
     }
@@ -156,7 +156,7 @@ export default function Home() {
       total: filteredTasks.length,
       overdue: filteredTasks.filter((task) => task.overdue).length,
       dueSoon: filteredTasks.filter((task) => task.dueSoon).length,
-      done: filteredTasks.filter((task) => task.status === "Concluída").length,
+      done: filteredTasks.filter((task) => task.status === "ConcluÃ­da").length,
     }),
     [filteredTasks],
   );
@@ -257,11 +257,11 @@ export default function Home() {
           <div>
             <p className="font-medium">{task.title}</p>
             <p className="mt-1 text-sm text-slate-400">
-              {task.contextTitle} · {task.assignee}
+              {task.contextTitle} Â· {task.assignee}
             </p>
             <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-300">
               <span>{task.contextType === "projeto" ? "Projeto" : "Experimento interno"}</span>
-              <span>•</span>
+              <span>â€¢</span>
               <span>{task.dueDate ? `Prazo ${formatDate(task.dueDate)}` : "Sem prazo definido"}</span>
             </div>
           </div>
@@ -285,44 +285,82 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.22),_transparent_28%),radial-gradient(circle_at_15%_20%,_rgba(16,185,129,0.18),_transparent_24%),radial-gradient(circle_at_85%_12%,_rgba(251,191,36,0.12),_transparent_22%),linear-gradient(155deg,_#06131c_0%,_#091018_40%,_#120d14_100%)] text-white">
       <div className="border-b border-white/10 bg-black/20 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl flex-col gap-6 px-6 py-8 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-3xl">
-            <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-center">
+        <div className="mx-auto grid max-w-7xl gap-8 px-6 py-10 lg:grid-cols-[minmax(0,1.15fr)_430px] lg:items-center">
+          <div className="space-y-6">
+            <div className="flex flex-wrap items-center gap-3">
               <img
                 src="/brand/logo1-branco.png"
                 alt="NETZ"
                 className="h-6 w-auto object-contain opacity-95 lg:h-[1.8rem]"
               />
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge className="bg-cyan-400/15 text-cyan-200 hover:bg-cyan-400/15">Laboratório NETZ</Badge>
-                <Badge variant="outline" className="border-emerald-300/30 text-emerald-200">
-                  Painel operacional vivo
-                </Badge>
+              <Badge className="bg-cyan-400/15 text-cyan-200 hover:bg-cyan-400/15">Laboratório NETZ</Badge>
+              <Badge variant="outline" className="border-emerald-300/30 text-emerald-200">
+                Painel operacional vivo
+              </Badge>
+            </div>
+
+            <div className="max-w-4xl space-y-4">
+              <p className="text-xs uppercase tracking-[0.26em] text-cyan-200/70">Bancada central</p>
+              <h1 className="max-w-4xl text-4xl font-semibold tracking-tight text-white lg:text-6xl">
+                Sala de controle do laboratório
+              </h1>
+              <p className="max-w-3xl text-base leading-8 text-slate-300">
+                Agora o CopilotX já opera a bancada: conversa com agentes, edita tarefas, move o Kanban e mantém o
+                laboratório em fluxo sem depender de planilhas espalhadas ou lembretes perdidos.
+              </p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="rounded-2xl border border-cyan-300/15 bg-cyan-400/8 p-4">
+                <p className="text-xs uppercase tracking-[0.18em] text-cyan-100/60">Projetos vivos</p>
+                <p className="mt-2 text-2xl font-semibold text-white">
+                  {isLoading || !data ? "..." : data.summary.totalProjects + data.summary.totalInitiatives}
+                </p>
+                <p className="mt-1 text-sm text-slate-300">
+                  {isLoading || !data
+                    ? "Lendo a bancada..."
+                    : `${data.summary.totalProjects} projetos e ${data.summary.totalInitiatives} experimentos.`}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Fila viva</p>
+                <p className="mt-2 text-2xl font-semibold text-white">{isLoading || !data ? "..." : data.summary.openTasks}</p>
+                <p className="mt-1 text-sm text-slate-300">
+                  {isLoading || !data
+                    ? "Contando reagentes..."
+                    : `${data.summary.unassignedTasks} sem dono e ${data.summary.overdueTasks} em risco.`}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Status do ciclo</p>
+                <div className="mt-2 flex items-center gap-2">
+                  <p className="text-2xl font-semibold text-white">{trimestre.progressPercentage}%</p>
+                  <Badge className={trimestreToneClasses(trimestre.statusTone)}>{trimestre.statusLabel}</Badge>
+                </div>
+                <p className="mt-1 text-sm text-slate-300">{trimestre.daysRemaining} dias até o fim do trimestre atual.</p>
               </div>
             </div>
-            <h1 className="text-4xl font-semibold tracking-tight lg:text-5xl">Sala de controle do laboratório</h1>
-            <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-300">
-              Agora o CopilotX já opera a bancada: conversa com agentes, edita tarefas e abre um Kanban visual para mover
-              o laboratório sem sair da tela.
-            </p>
           </div>
 
-          <div className="rounded-3xl border border-cyan-300/15 bg-white/5 p-5 backdrop-blur-xl lg:w-[430px]">
+          <div className="rounded-[2rem] border border-cyan-300/15 bg-white/5 p-5 shadow-[0_20px_80px_rgba(0,0,0,0.25)] backdrop-blur-xl">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs uppercase tracking-[0.28em] text-slate-400">Reator de receita</p>
-                <p className="mt-2 text-3xl font-semibold">{formatCurrency(trimestre.targetRevenue)}</p>
-                <p className="mt-1 text-xs text-slate-500">{trimestre.cycleLabel}</p>
+                <p className="mt-3 text-4xl font-semibold text-white">{formatCurrency(trimestre.targetRevenue)}</p>
+                <p className="mt-1 text-sm text-slate-500">{trimestre.cycleLabel}</p>
               </div>
               <div className="flex flex-col items-end gap-3">
                 <Rocket className="h-8 w-8 text-cyan-300" />
                 <Badge className={trimestreToneClasses(trimestre.statusTone)}>{trimestre.statusLabel}</Badge>
               </div>
             </div>
-            <p className="mt-3 text-sm text-slate-300">
-              Meta trimestral com tesouraria-alvo de {formatCurrency(trimestre.targetCosts)}.
+            <p className="mt-4 text-sm leading-6 text-slate-300">
+              Meta trimestral com tesouraria-alvo de {formatCurrency(trimestre.targetCosts)} e leitura comparada contra o
+              ritmo esperado do ciclo.
             </p>
-            <div className="mt-4">
+            <div className="mt-5">
               <div className="mb-2 flex items-center justify-between text-xs text-slate-400">
                 <span>Progresso do trimestre</span>
                 <span>
@@ -331,34 +369,34 @@ export default function Home() {
               </div>
               <Progress value={trimestre.progressPercentage} className="h-2.5" />
             </div>
-            <div className="mt-4 grid gap-3 text-sm text-slate-300 md:grid-cols-2">
-              <div className="rounded-2xl border border-white/10 bg-black/15 p-3">
+            <div className="mt-5 grid gap-3 text-sm text-slate-300 md:grid-cols-2">
+              <div className="rounded-2xl border border-white/10 bg-black/15 p-4">
                 <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Tempo restante</p>
-                <p className="mt-2 text-lg font-semibold text-white">{trimestre.daysRemaining} dias</p>
-                <p className="mt-1 text-xs text-slate-400">até o fim do ciclo atual.</p>
+                <p className="mt-2 text-3xl font-semibold text-white">{trimestre.daysRemaining} dias</p>
+                <p className="mt-1 text-sm text-slate-400">até o fim do ciclo atual.</p>
               </div>
-              <div className="rounded-2xl border border-white/10 bg-black/15 p-3">
+              <div className="rounded-2xl border border-white/10 bg-black/15 p-4">
                 <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Ritmo mínimo</p>
-                <p className="mt-2 text-lg font-semibold text-white">{formatCurrency(trimestre.requiredDailyRevenue)}/dia</p>
-                <p className="mt-1 text-xs text-slate-400">{formatCurrency(trimestre.requiredMonthlyRevenue)}/mês restante.</p>
+                <p className="mt-2 text-3xl font-semibold text-white">{formatCurrency(trimestre.requiredDailyRevenue)}/dia</p>
+                <p className="mt-1 text-sm text-slate-400">{formatCurrency(trimestre.requiredMonthlyRevenue)}/mês restante.</p>
               </div>
             </div>
-            <div className="mt-4 rounded-2xl border border-white/10 bg-black/15 p-3 text-sm text-slate-300">
+            <div className="mt-5 rounded-2xl border border-white/10 bg-black/15 p-4 text-sm text-slate-300">
               <div className="flex items-center justify-between gap-3">
-                <p className="font-medium text-white">Falta capturar {formatCurrency(trimestre.remainingRevenue)}</p>
+                <p className="text-lg font-medium text-white">Falta capturar {formatCurrency(trimestre.remainingRevenue)}</p>
                 <p className="text-xs text-slate-400">
                   {trimestre.gapToPacePercentage >= 0 ? "+" : ""}
                   {trimestre.gapToPacePercentage} pts vs ritmo
                 </p>
               </div>
-              <p className="mt-2 text-xs text-slate-400">
+              <p className="mt-3 text-xs leading-5 text-slate-400">
                 Se esta meta virar cadência, os próximos trimestres acumulam o seguinte reator:
               </p>
               <div className="mt-3 space-y-2">
                 {trimestre.forecastQuarters.map((quarter) => (
-                  <div key={quarter.label} className="flex items-center justify-between text-xs">
+                  <div key={quarter.label} className="flex items-center justify-between gap-4 text-xs">
                     <span className="text-slate-300">{quarter.label}</span>
-                    <span className="text-slate-400">
+                    <span className="text-right text-slate-400">
                       {formatCurrency(quarter.targetRevenue)} por trimestre • acumulado {formatCurrency(quarter.cumulativeRevenue)}
                     </span>
                   </div>
@@ -408,14 +446,14 @@ export default function Home() {
 
           <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
             <CardHeader className="pb-2">
-              <CardDescription>Risco de explosão</CardDescription>
+              <CardDescription>Risco de explosÃ£o</CardDescription>
               <CardTitle className="flex items-center gap-2 text-2xl">
                 <Siren className="h-5 w-5 text-amber-300" />
                 {isLoading || !data ? "..." : data.summary.overdueTasks}
               </CardTitle>
             </CardHeader>
             <CardContent className="text-sm text-slate-300">
-              {isLoading || !data ? "Varrendo o laboratório..." : `${data.summary.dueSoonTasks} vencem nos próximos 7 dias.`}
+              {isLoading || !data ? "Varrendo o laboratÃ³rio..." : `${data.summary.dueSoonTasks} vencem nos prÃ³ximos 7 dias.`}
             </CardContent>
           </Card>
 
@@ -433,9 +471,9 @@ export default function Home() {
 
         <Tabs defaultValue="visao-geral" className="mt-8">
           <TabsList className="grid h-auto w-full grid-cols-2 gap-2 border border-white/10 bg-white/5 p-2 lg:grid-cols-7">
-            <TabsTrigger value="visao-geral">Visão geral</TabsTrigger>
+            <TabsTrigger value="visao-geral">VisÃ£o geral</TabsTrigger>
             <TabsTrigger value="agentes">Agentes</TabsTrigger>
-            <TabsTrigger value="socios">Sócios</TabsTrigger>
+            <TabsTrigger value="socios">SÃ³cios</TabsTrigger>
             <TabsTrigger value="kanban">Kanban</TabsTrigger>
             <TabsTrigger value="tarefas">Tarefas</TabsTrigger>
             <TabsTrigger value="iniciativas">Experimentos internos</TabsTrigger>
@@ -446,7 +484,7 @@ export default function Home() {
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_1fr]">
               <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
                 <CardHeader>
-                  <CardTitle>Risco de explosão</CardTitle>
+                  <CardTitle>Risco de explosÃ£o</CardTitle>
                   <CardDescription>Tarefas vencidas ou prestes a explodir.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -462,17 +500,17 @@ export default function Home() {
 
               <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
                 <CardHeader>
-                  <CardTitle>Radar do laboratório</CardTitle>
-                  <CardDescription>Leitura rápida do estado operacional.</CardDescription>
+                  <CardTitle>Radar do laboratÃ³rio</CardTitle>
+                  <CardDescription>Leitura rÃ¡pida do estado operacional.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4 text-sm text-slate-300">
                   <p>
-                    Há <span className="font-semibold text-white">{experimentCards.length}</span> experimentos internos visíveis e{" "}
+                    HÃ¡ <span className="font-semibold text-white">{experimentCards.length}</span> experimentos internos visÃ­veis e{" "}
                     <span className="font-semibold text-white">{projectCards.length}</span> projetos.
                   </p>
-                  <p>A bancada agora aceita conversa com agentes, criação de tarefa e movimentação visual por status.</p>
+                  <p>A bancada agora aceita conversa com agentes, criaÃ§Ã£o de tarefa e movimentaÃ§Ã£o visual por status.</p>
                   <div className="rounded-2xl border border-dashed border-cyan-300/20 bg-cyan-400/5 p-4">
-                    O próximo salto natural é trazer filtros, automações e sincronização mais inteligente com GitHub.
+                    O prÃ³ximo salto natural Ã© trazer filtros, automaÃ§Ãµes e sincronizaÃ§Ã£o mais inteligente com GitHub.
                   </div>
                 </CardContent>
               </Card>
@@ -489,7 +527,7 @@ export default function Home() {
                 <Card key={partner.id} className="border-white/10 bg-white/5 backdrop-blur-xl">
                   <CardHeader>
                     <CardTitle className="text-lg">{partner.name}</CardTitle>
-                    <CardDescription>Pressão operacional atual</CardDescription>
+                    <CardDescription>PressÃ£o operacional atual</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
@@ -501,7 +539,7 @@ export default function Home() {
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <Badge variant="outline">{partner.overdueTaskCount} atrasadas</Badge>
-                      <Badge variant="outline">{partner.dueSoonTaskCount} com prazo próximo</Badge>
+                      <Badge variant="outline">{partner.dueSoonTaskCount} com prazo prÃ³ximo</Badge>
                     </div>
                   </CardContent>
                 </Card>
@@ -532,10 +570,10 @@ export default function Home() {
 
                 <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
                   <CardHeader className="pb-2">
-                    <CardDescription>Prazo próximo</CardDescription>
+                    <CardDescription>Prazo prÃ³ximo</CardDescription>
                     <CardTitle className="text-2xl text-cyan-200">{filteredSummary.dueSoon}</CardTitle>
                   </CardHeader>
-                  <CardContent className="text-sm text-slate-300">com vencimento nos próximos 7 dias.</CardContent>
+                  <CardContent className="text-sm text-slate-300">com vencimento nos prÃ³ximos 7 dias.</CardContent>
                 </Card>
 
                 <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
@@ -543,7 +581,7 @@ export default function Home() {
                     <CardDescription>Fechadas</CardDescription>
                     <CardTitle className="text-2xl text-emerald-200">{filteredSummary.done}</CardTitle>
                   </CardHeader>
-                  <CardContent className="text-sm text-slate-300">já concluídas no recorte.</CardContent>
+                  <CardContent className="text-sm text-slate-300">jÃ¡ concluÃ­das no recorte.</CardContent>
                 </Card>
               </div>
 
@@ -578,7 +616,7 @@ export default function Home() {
             <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
               <CardHeader>
                 <CardTitle>Experimentos internos</CardTitle>
-                <CardDescription>Todos os experimentos internos do laboratório.</CardDescription>
+                <CardDescription>Todos os experimentos internos do laboratÃ³rio.</CardDescription>
               </CardHeader>
               <CardContent className="grid grid-cols-1 gap-6 xl:grid-cols-2">
                 {experimentCards.map((card: DashboardCard) => (
@@ -591,7 +629,7 @@ export default function Home() {
                       <Badge variant="outline">{card.column}</Badge>
                     </div>
                     <div className="mt-4 text-sm text-slate-300">
-                      {card.openTasks} abertas · {card.completedTasks} concluídas
+                      {card.openTasks} abertas Â· {card.completedTasks} concluÃ­das
                     </div>
                   </div>
                 ))}
@@ -603,7 +641,7 @@ export default function Home() {
             <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
               <CardHeader>
                 <CardTitle>Projetos</CardTitle>
-                <CardDescription>Projetos ativos monitorados pelo laboratório.</CardDescription>
+                <CardDescription>Projetos ativos monitorados pelo laboratÃ³rio.</CardDescription>
               </CardHeader>
               <CardContent className="grid grid-cols-1 gap-6 xl:grid-cols-2">
                 {projectCards.map((card: DashboardCard) => (
@@ -616,7 +654,7 @@ export default function Home() {
                       <Badge variant="outline">{card.column}</Badge>
                     </div>
                     <div className="mt-4 text-sm text-slate-300">
-                      {card.openTasks} abertas · {card.completedTasks} concluídas
+                      {card.openTasks} abertas Â· {card.completedTasks} concluÃ­das
                     </div>
                   </div>
                 ))}
@@ -633,13 +671,13 @@ export default function Home() {
             <DialogDescription className="text-slate-400">
               {taskDialogMode === "create"
                 ? "Adicione uma nova tarefa na bancada e escolha onde ela entra."
-                : "Ajuste título, responsável, status e prazo sem sair da sala de controle."}
+                : "Ajuste tÃ­tulo, responsÃ¡vel, status e prazo sem sair da sala de controle."}
             </DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4 py-2">
             <div className="grid gap-2">
-              <label className="text-sm font-medium text-slate-200">Título</label>
+              <label className="text-sm font-medium text-slate-200">TÃ­tulo</label>
               <Input
                 value={taskForm.title}
                 onChange={(event) => setTaskForm((current) => ({ ...current, title: event.target.value }))}
@@ -649,7 +687,7 @@ export default function Home() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="grid gap-2">
-                <label className="text-sm font-medium text-slate-200">Responsável</label>
+                <label className="text-sm font-medium text-slate-200">ResponsÃ¡vel</label>
                 <Select
                   value={taskForm.assignee || "__sem_dono__"}
                   onValueChange={(value) =>
@@ -660,7 +698,7 @@ export default function Home() {
                   }
                 >
                   <SelectTrigger className="w-full border-white/10 bg-white/5 text-white">
-                    <SelectValue placeholder="Selecione um responsável" />
+                    <SelectValue placeholder="Selecione um responsÃ¡vel" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__sem_dono__">Sem dono</SelectItem>
@@ -764,7 +802,7 @@ export default function Home() {
               disabled={isSavingTask || !taskForm.title.trim() || !taskForm.contextId}
               className="bg-cyan-400 text-slate-950 hover:bg-cyan-300"
             >
-              {isSavingTask ? "Salvando..." : taskDialogMode === "create" ? "Criar tarefa" : "Salvar alterações"}
+              {isSavingTask ? "Salvando..." : taskDialogMode === "create" ? "Criar tarefa" : "Salvar alteraÃ§Ãµes"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -772,3 +810,4 @@ export default function Home() {
     </div>
   );
 }
+
