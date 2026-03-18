@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AlertCircle, Bot, FolderKanban, Pencil, RefreshCcw, Rocket, Siren, Users } from "lucide-react";
 
 import { AgentChat } from "@/components/AgentChat";
+import { KanbanBoard } from "@/components/Kanban/Board";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,22 +14,27 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { agents, type Agent } from "@/data/agents";
 import { getTrimestreTotals } from "@/data/goals";
 import {
+  createDashboardTask,
+  fetchDashboard,
   type DashboardCard,
   type DashboardPartner,
   type DashboardPayload,
   type DashboardTask,
-  fetchDashboard,
   updateDashboardTask,
 } from "@/services/dashboardService";
+
+type TaskDialogMode = "edit" | "create";
 
 type TaskFormState = {
   title: string;
   assignee: string;
   status: string;
   dueDate: string;
+  contextId: string;
+  contextType: "projeto" | "iniciativa";
 };
 
-const TASK_STATUS_OPTIONS = ["Pendente", "Em andamento", "Em revisão", "Concluída"];
+const TASK_STATUS_OPTIONS = ["Pendente", "Em andamento", "Em revisao", "Concluida"];
 
 function formatDate(date: string) {
   if (!date) return "Sem data";
@@ -55,6 +61,18 @@ function buildTaskForm(task: DashboardTask): TaskFormState {
     assignee: task.assignee === "Sem dono" ? "" : task.assignee,
     status: task.status,
     dueDate: task.dueDate,
+    contextId: task.contextId,
+    contextType: task.contextType,
+  };
+}
+
+function getDefaultTaskContext(data: DashboardPayload | null) {
+  const cards = data?.cards || [];
+  const preferredContext = cards.find((card) => card.type === "iniciativa") || cards[0] || null;
+
+  return {
+    contextId: preferredContext?.id || "",
+    contextType: (preferredContext?.type || "iniciativa") as "projeto" | "iniciativa",
   };
 }
 
@@ -64,11 +82,14 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [editingTask, setEditingTask] = useState<DashboardTask | null>(null);
+  const [taskDialogMode, setTaskDialogMode] = useState<TaskDialogMode>("edit");
   const [taskForm, setTaskForm] = useState<TaskFormState>({
     title: "",
     assignee: "",
     status: "Pendente",
     dueDate: "",
+    contextId: "",
+    contextType: "iniciativa",
   });
   const [isSavingTask, setIsSavingTask] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
@@ -82,7 +103,7 @@ export default function Home() {
       setData(payload);
     } catch (loadError) {
       console.error(loadError);
-      setError("Não consegui carregar os dados reais do laboratório agora.");
+      setError("Nao consegui carregar os dados reais do laboratorio agora.");
     } finally {
       setIsLoading(false);
     }
@@ -105,30 +126,85 @@ export default function Home() {
     () => (data?.tasks || []).filter((task) => task.overdue || task.dueSoon).slice(0, 8),
     [data],
   );
+  const currentContextCards = useMemo(
+    () => (data?.cards || []).filter((card) => card.type === taskForm.contextType),
+    [data, taskForm.contextType],
+  );
 
   function openTaskEditor(task: DashboardTask) {
+    setTaskDialogMode("edit");
     setEditingTask(task);
     setTaskForm(buildTaskForm(task));
     setSaveMessage(null);
   }
 
-  function closeTaskEditor() {
+  function openTaskCreator(initialStatus: string) {
+    const defaultContext = getDefaultTaskContext(data);
+    setTaskDialogMode("create");
     setEditingTask(null);
+    setTaskForm({
+      title: "",
+      assignee: "",
+      status: initialStatus,
+      dueDate: "",
+      contextId: defaultContext.contextId,
+      contextType: defaultContext.contextType,
+    });
     setSaveMessage(null);
   }
 
-  async function handleSaveTask() {
-    if (!editingTask) return;
+  function closeTaskEditor() {
+    setEditingTask(null);
+    setTaskDialogMode("edit");
+    setSaveMessage(null);
+  }
 
+  async function handleMoveTask(task: DashboardTask, status: DashboardTask["status"]) {
+    try {
+      const response = await updateDashboardTask(task.id, {
+        status,
+        contextId: task.contextId,
+        contextType: task.contextType,
+      });
+      setData(response.payload);
+      setSaveMessage(response.message);
+    } catch (moveError) {
+      console.error(moveError);
+      setSaveMessage(moveError instanceof Error ? moveError.message : "Falha ao mover a tarefa.");
+    }
+  }
+
+  async function handleSaveTask() {
     setIsSavingTask(true);
     setSaveMessage(null);
 
     try {
+      if (taskDialogMode === "create") {
+        const response = await createDashboardTask({
+          title: taskForm.title,
+          assignee: taskForm.assignee,
+          status: taskForm.status,
+          dueDate: taskForm.dueDate,
+          contextId: taskForm.contextId,
+          contextType: taskForm.contextType,
+        });
+        setData(response.payload);
+        setSaveMessage(response.message);
+        closeTaskEditor();
+        return;
+      }
+
+      if (!editingTask) return;
+
       const response = await updateDashboardTask(editingTask.id, {
-        ...taskForm,
-        contextId: editingTask.contextId,
-        contextType: editingTask.contextType,
+        title: taskForm.title,
+        assignee: taskForm.assignee,
+        status: taskForm.status,
+        dueDate: taskForm.dueDate,
+        contextId: taskForm.contextId,
+        contextType: taskForm.contextType,
       });
+
       setData(response.payload);
       setSaveMessage(response.message);
 
@@ -138,7 +214,7 @@ export default function Home() {
       }
     } catch (saveError) {
       console.error(saveError);
-      setSaveMessage(saveError instanceof Error ? saveError.message : "Falha ao atualizar a tarefa.");
+      setSaveMessage(saveError instanceof Error ? saveError.message : "Falha ao salvar a tarefa.");
     } finally {
       setIsSavingTask(false);
     }
@@ -146,7 +222,7 @@ export default function Home() {
 
   function renderTaskCard(task: DashboardTask) {
     return (
-      <div key={task.id} className="rounded-2xl border border-white/10 bg-black/20 p-4">
+      <div key={`${task.contextId}-${task.id}`} className="rounded-2xl border border-white/10 bg-black/20 p-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <p className="font-medium">{task.title}</p>
@@ -182,12 +258,15 @@ export default function Home() {
         <div className="mx-auto flex max-w-7xl flex-col gap-6 px-6 py-8 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-3xl">
             <div className="mb-4 flex flex-wrap items-center gap-2">
-              <Badge className="bg-cyan-400/15 text-cyan-200 hover:bg-cyan-400/15">Laboratório NETZ</Badge>
-              <Badge variant="outline" className="border-emerald-300/30 text-emerald-200">Painel operacional vivo</Badge>
+              <Badge className="bg-cyan-400/15 text-cyan-200 hover:bg-cyan-400/15">Laboratorio NETZ</Badge>
+              <Badge variant="outline" className="border-emerald-300/30 text-emerald-200">
+                Painel operacional vivo
+              </Badge>
             </div>
-            <h1 className="text-4xl font-semibold tracking-tight lg:text-5xl">Sala de controle do laboratório</h1>
+            <h1 className="text-4xl font-semibold tracking-tight lg:text-5xl">Sala de controle do laboratorio</h1>
             <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-300">
-              Agora já dá para abrir conversa com os agentes e editar tarefa, responsável, status e prazo sem sair do painel.
+              Agora o CopilotX ja opera a bancada: conversa com agentes, edita tarefas e abre um Kanban visual para mover
+              o laboratorio sem sair da tela.
             </p>
           </div>
 
@@ -252,14 +331,14 @@ export default function Home() {
 
           <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
             <CardHeader className="pb-2">
-              <CardDescription>Risco de explosão</CardDescription>
+              <CardDescription>Risco de explosao</CardDescription>
               <CardTitle className="flex items-center gap-2 text-2xl">
                 <Siren className="h-5 w-5 text-amber-300" />
                 {isLoading || !data ? "..." : data.summary.overdueTasks}
               </CardTitle>
             </CardHeader>
             <CardContent className="text-sm text-slate-300">
-              {isLoading || !data ? "Varrendo o laboratório..." : `${data.summary.dueSoonTasks} vencem nos próximos 7 dias.`}
+              {isLoading || !data ? "Varrendo o laboratorio..." : `${data.summary.dueSoonTasks} vencem nos proximos 7 dias.`}
             </CardContent>
           </Card>
 
@@ -276,10 +355,11 @@ export default function Home() {
         </div>
 
         <Tabs defaultValue="visao-geral" className="mt-8">
-          <TabsList className="grid h-auto w-full grid-cols-2 gap-2 border border-white/10 bg-white/5 p-2 lg:grid-cols-6">
-            <TabsTrigger value="visao-geral">Visão geral</TabsTrigger>
+          <TabsList className="grid h-auto w-full grid-cols-2 gap-2 border border-white/10 bg-white/5 p-2 lg:grid-cols-7">
+            <TabsTrigger value="visao-geral">Visao geral</TabsTrigger>
             <TabsTrigger value="agentes">Agentes</TabsTrigger>
-            <TabsTrigger value="socios">Sócios</TabsTrigger>
+            <TabsTrigger value="socios">Socios</TabsTrigger>
+            <TabsTrigger value="kanban">Kanban</TabsTrigger>
             <TabsTrigger value="tarefas">Tarefas</TabsTrigger>
             <TabsTrigger value="iniciativas">Experimentos internos</TabsTrigger>
             <TabsTrigger value="projetos">Projetos</TabsTrigger>
@@ -289,11 +369,13 @@ export default function Home() {
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_1fr]">
               <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
                 <CardHeader>
-                  <CardTitle>Risco de explosão</CardTitle>
+                  <CardTitle>Risco de explosao</CardTitle>
                   <CardDescription>Tarefas vencidas ou prestes a explodir.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {criticalTasks.length > 0 ? criticalTasks.map((task) => renderTaskCard(task)) : (
+                  {criticalTasks.length > 0 ? (
+                    criticalTasks.map((task) => renderTaskCard(task))
+                  ) : (
                     <div className="rounded-2xl border border-dashed border-white/10 px-4 py-8 text-center text-slate-400">
                       Nenhum experimento prestes a explodir agora.
                     </div>
@@ -303,19 +385,17 @@ export default function Home() {
 
               <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
                 <CardHeader>
-                  <CardTitle>Radar do laboratório</CardTitle>
-                  <CardDescription>Leitura rápida do estado operacional.</CardDescription>
+                  <CardTitle>Radar do laboratorio</CardTitle>
+                  <CardDescription>Leitura rapida do estado operacional.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4 text-sm text-slate-300">
                   <p>
-                    Há <span className="font-semibold text-white">{experimentCards.length}</span> experimentos internos visíveis e{" "}
+                    Ha <span className="font-semibold text-white">{experimentCards.length}</span> experimentos internos visiveis e{" "}
                     <span className="font-semibold text-white">{projectCards.length}</span> projetos.
                   </p>
-                  <p>
-                    A bancada agora já aceita conversa com agentes e edição básica de tarefas.
-                  </p>
+                  <p>A bancada agora aceita conversa com agentes, criacao de tarefa e movimentacao visual por status.</p>
                   <div className="rounded-2xl border border-dashed border-cyan-300/20 bg-cyan-400/5 p-4">
-                    O próximo salto é colocar os agentes propondo ações estruturadas e executando com confirmação.
+                    O proximo salto natural e trazer filtros, automacoes e sincronizacao mais inteligente com GitHub.
                   </div>
                 </CardContent>
               </Card>
@@ -326,7 +406,7 @@ export default function Home() {
             <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
               <CardHeader>
                 <CardTitle>Centro de agentes</CardTitle>
-                <CardDescription>Converse com os especialistas do laboratório.</CardDescription>
+                <CardDescription>Converse com os especialistas do laboratorio.</CardDescription>
               </CardHeader>
               <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {agents.map((agent) => (
@@ -356,7 +436,7 @@ export default function Home() {
                 <Card key={partner.id} className="border-white/10 bg-white/5 backdrop-blur-xl">
                   <CardHeader>
                     <CardTitle className="text-lg">{partner.name}</CardTitle>
-                    <CardDescription>Pressão operacional atual</CardDescription>
+                    <CardDescription>Pressao operacional atual</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
@@ -368,7 +448,7 @@ export default function Home() {
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <Badge variant="outline">{partner.overdueTaskCount} atrasadas</Badge>
-                      <Badge variant="outline">{partner.dueSoonTaskCount} com prazo próximo</Badge>
+                      <Badge variant="outline">{partner.dueSoonTaskCount} com prazo proximo</Badge>
                     </div>
                   </CardContent>
                 </Card>
@@ -376,15 +456,22 @@ export default function Home() {
             </div>
           </TabsContent>
 
+          <TabsContent value="kanban" className="mt-6">
+            <KanbanBoard
+              tasks={data?.tasks || []}
+              onEditTask={openTaskEditor}
+              onCreateTask={openTaskCreator}
+              onMoveTask={(task, status) => void handleMoveTask(task, status)}
+            />
+          </TabsContent>
+
           <TabsContent value="tarefas" className="mt-6">
             <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
               <CardHeader>
                 <CardTitle>Fila operacional completa</CardTitle>
-                <CardDescription>Leitura viva das tarefas abertas no Kanban com edição básica.</CardDescription>
+                <CardDescription>Leitura viva das tarefas abertas no Kanban com edicao basica.</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-3">
-                {(data?.tasks || []).map((task) => renderTaskCard(task))}
-              </CardContent>
+              <CardContent className="space-y-3">{(data?.tasks || []).map((task) => renderTaskCard(task))}</CardContent>
             </Card>
           </TabsContent>
 
@@ -392,7 +479,7 @@ export default function Home() {
             <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
               <CardHeader>
                 <CardTitle>Experimentos internos</CardTitle>
-                <CardDescription>Todos os experimentos internos do laboratório.</CardDescription>
+                <CardDescription>Todos os experimentos internos do laboratorio.</CardDescription>
               </CardHeader>
               <CardContent className="grid grid-cols-1 gap-6 xl:grid-cols-2">
                 {experimentCards.map((card: DashboardCard) => (
@@ -404,7 +491,9 @@ export default function Home() {
                       </div>
                       <Badge variant="outline">{card.column}</Badge>
                     </div>
-                    <div className="mt-4 text-sm text-slate-300">{card.openTasks} abertas · {card.completedTasks} concluídas</div>
+                    <div className="mt-4 text-sm text-slate-300">
+                      {card.openTasks} abertas · {card.completedTasks} concluidas
+                    </div>
                   </div>
                 ))}
               </CardContent>
@@ -415,7 +504,7 @@ export default function Home() {
             <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
               <CardHeader>
                 <CardTitle>Projetos</CardTitle>
-                <CardDescription>Projetos ativos monitorados pelo laboratório.</CardDescription>
+                <CardDescription>Projetos ativos monitorados pelo laboratorio.</CardDescription>
               </CardHeader>
               <CardContent className="grid grid-cols-1 gap-6 xl:grid-cols-2">
                 {projectCards.map((card: DashboardCard) => (
@@ -427,7 +516,9 @@ export default function Home() {
                       </div>
                       <Badge variant="outline">{card.column}</Badge>
                     </div>
-                    <div className="mt-4 text-sm text-slate-300">{card.openTasks} abertas · {card.completedTasks} concluídas</div>
+                    <div className="mt-4 text-sm text-slate-300">
+                      {card.openTasks} abertas · {card.completedTasks} concluidas
+                    </div>
                   </div>
                 ))}
               </CardContent>
@@ -436,44 +527,105 @@ export default function Home() {
         </Tabs>
       </main>
 
-      <Dialog open={!!editingTask} onOpenChange={(open) => (!open ? closeTaskEditor() : undefined)}>
+      <Dialog open={taskDialogMode === "create" || !!editingTask} onOpenChange={(open) => (!open ? closeTaskEditor() : undefined)}>
         <DialogContent className="border-white/10 bg-slate-950 text-white sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Editar tarefa</DialogTitle>
+            <DialogTitle>{taskDialogMode === "create" ? "Criar tarefa" : "Editar tarefa"}</DialogTitle>
             <DialogDescription className="text-slate-400">
-              Ajuste título, responsável, status e prazo sem sair da sala de controle.
+              {taskDialogMode === "create"
+                ? "Adicione uma nova tarefa na bancada e escolha onde ela entra."
+                : "Ajuste titulo, responsavel, status e prazo sem sair da sala de controle."}
             </DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4 py-2">
             <div className="grid gap-2">
-              <label className="text-sm font-medium text-slate-200">Título</label>
-              <Input value={taskForm.title} onChange={(event) => setTaskForm((current) => ({ ...current, title: event.target.value }))} className="border-white/10 bg-white/5 text-white" />
+              <label className="text-sm font-medium text-slate-200">Titulo</label>
+              <Input
+                value={taskForm.title}
+                onChange={(event) => setTaskForm((current) => ({ ...current, title: event.target.value }))}
+                className="border-white/10 bg-white/5 text-white"
+              />
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="grid gap-2">
-                <label className="text-sm font-medium text-slate-200">Responsável</label>
-                <Input value={taskForm.assignee} onChange={(event) => setTaskForm((current) => ({ ...current, assignee: event.target.value }))} placeholder="Sem dono" className="border-white/10 bg-white/5 text-white" />
+                <label className="text-sm font-medium text-slate-200">Responsavel</label>
+                <Input
+                  value={taskForm.assignee}
+                  onChange={(event) => setTaskForm((current) => ({ ...current, assignee: event.target.value }))}
+                  placeholder="Sem dono"
+                  className="border-white/10 bg-white/5 text-white"
+                />
               </div>
               <div className="grid gap-2">
                 <label className="text-sm font-medium text-slate-200">Prazo</label>
-                <Input type="date" value={taskForm.dueDate} onChange={(event) => setTaskForm((current) => ({ ...current, dueDate: event.target.value }))} className="border-white/10 bg-white/5 text-white" />
+                <Input
+                  type="date"
+                  value={taskForm.dueDate}
+                  onChange={(event) => setTaskForm((current) => ({ ...current, dueDate: event.target.value }))}
+                  className="border-white/10 bg-white/5 text-white"
+                />
               </div>
             </div>
 
-            <div className="grid gap-2">
-              <label className="text-sm font-medium text-slate-200">Status</label>
-              <Select value={taskForm.status} onValueChange={(value) => setTaskForm((current) => ({ ...current, status: value }))}>
-                <SelectTrigger className="w-full border-white/10 bg-white/5 text-white">
-                  <SelectValue placeholder="Selecione um status" />
-                </SelectTrigger>
-                <SelectContent>
-                  {TASK_STATUS_OPTIONS.map((status) => (
-                    <SelectItem key={status} value={status}>{status}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="grid gap-2">
+                <label className="text-sm font-medium text-slate-200">Status</label>
+                <Select value={taskForm.status} onValueChange={(value) => setTaskForm((current) => ({ ...current, status: value }))}>
+                  <SelectTrigger className="w-full border-white/10 bg-white/5 text-white">
+                    <SelectValue placeholder="Selecione um status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TASK_STATUS_OPTIONS.map((status) => (
+                      <SelectItem key={status} value={status}>
+                        {status}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid gap-2">
+                <label className="text-sm font-medium text-slate-200">Tipo</label>
+                <Select
+                  value={taskForm.contextType}
+                  onValueChange={(value: "projeto" | "iniciativa") =>
+                    setTaskForm((current) => ({
+                      ...current,
+                      contextType: value,
+                      contextId: (data?.cards || []).find((card) => card.type === value)?.id || "",
+                    }))
+                  }
+                >
+                  <SelectTrigger className="w-full border-white/10 bg-white/5 text-white">
+                    <SelectValue placeholder="Selecione um tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="iniciativa">Experimento interno</SelectItem>
+                    <SelectItem value="projeto">Projeto</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid gap-2">
+                <label className="text-sm font-medium text-slate-200">Contexto</label>
+                <Select
+                  value={taskForm.contextId}
+                  onValueChange={(value) => setTaskForm((current) => ({ ...current, contextId: value }))}
+                >
+                  <SelectTrigger className="w-full border-white/10 bg-white/5 text-white">
+                    <SelectValue placeholder="Selecione um contexto" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {currentContextCards.map((card) => (
+                      <SelectItem key={card.id} value={card.id}>
+                        {card.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {saveMessage && (
@@ -484,9 +636,19 @@ export default function Home() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={closeTaskEditor} className="border-white/10 bg-transparent text-white hover:bg-white/10">Fechar</Button>
-            <Button onClick={() => void handleSaveTask()} disabled={isSavingTask} className="bg-cyan-400 text-slate-950 hover:bg-cyan-300">
-              {isSavingTask ? "Salvando..." : "Salvar alterações"}
+            <Button
+              variant="outline"
+              onClick={closeTaskEditor}
+              className="border-white/10 bg-transparent text-white hover:bg-white/10"
+            >
+              Fechar
+            </Button>
+            <Button
+              onClick={() => void handleSaveTask()}
+              disabled={isSavingTask || !taskForm.title.trim() || !taskForm.contextId}
+              className="bg-cyan-400 text-slate-950 hover:bg-cyan-300"
+            >
+              {isSavingTask ? "Salvando..." : taskDialogMode === "create" ? "Criar tarefa" : "Salvar alteracoes"}
             </Button>
           </DialogFooter>
         </DialogContent>

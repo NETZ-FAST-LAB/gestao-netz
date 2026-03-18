@@ -1,5 +1,6 @@
 import express from "express";
 import { createServer } from "http";
+import { randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "url";
@@ -24,6 +25,7 @@ type RawTask = {
   responsavel?: string;
   status?: string;
   dueDate?: string;
+  reminders?: Array<Record<string, string>>;
 };
 
 type RawCard = {
@@ -114,6 +116,15 @@ type DashboardPayload = {
 };
 
 type TaskUpdatePayload = {
+  title?: string;
+  assignee?: string;
+  status?: string;
+  dueDate?: string;
+  contextId?: string;
+  contextType?: "projeto" | "iniciativa";
+};
+
+type TaskCreatePayload = {
   title?: string;
   assignee?: string;
   status?: string;
@@ -678,6 +689,52 @@ async function updateTaskById(taskId: string, updates: TaskUpdatePayload) {
   return null;
 }
 
+async function createTaskInContext(input: TaskCreatePayload) {
+  const contextId = input.contextId?.trim();
+  const contextType = input.contextType;
+  const title = input.title?.trim();
+
+  if (!contextId || !contextType || !title) {
+    throw new Error("Dados insuficientes para criar tarefa.");
+  }
+
+  const target = contextType === "projeto" ? { relativePath: PROJECTS_PATH } : { relativePath: INITIATIVES_PATH };
+  const boardFile = await readJsonFile<BoardFile>(target.relativePath);
+
+  for (const board of boardFile.boards || []) {
+    for (const card of board.cards || []) {
+      if (card.id !== contextId) continue;
+
+      const trimmedAssignee = input.assignee?.trim() || "";
+      const newTaskId = `task-${contextId}-${randomUUID().slice(0, 8)}`;
+      const newTask: RawTask = {
+        id: newTaskId,
+        title,
+        assignee: trimmedAssignee,
+        responsavel: trimmedAssignee,
+        status: mapStatusToRaw(input.status || "Pendente"),
+        dueDate: input.dueDate?.trim() || "",
+      };
+
+      card.tasks = [...(card.tasks || []), newTask];
+
+      await writeJsonFile(target.relativePath, boardFile);
+      const githubSynced = await syncJsonFileToGithub(
+        target.relativePath,
+        boardFile,
+        `feat(kanban): cria tarefa ${newTask.id} via copilotx`,
+      ).catch((error) => {
+        console.error("Failed to sync task creation to GitHub:", error);
+        return false;
+      });
+
+      return { taskId: newTaskId, githubSynced };
+    }
+  }
+
+  return null;
+}
+
 function summarizeDashboardForPrompt(payload: DashboardPayload) {
   const criticalTasks = payload.tasks
     .filter((task) => task.overdue || task.dueSoon)
@@ -938,6 +995,34 @@ async function startServer() {
     } catch (error) {
       console.error("Failed to update task:", error);
       res.status(500).json({ message: "Falha ao atualizar a tarefa." });
+    }
+  });
+
+  app.post("/api/tasks", async (req, res) => {
+    try {
+      const input = sanitizeDeep(req.body || {}) as TaskCreatePayload;
+      const created = await createTaskInContext(input);
+
+      if (!created) {
+        res.status(404).json({ message: "Contexto nao encontrado para criar a tarefa." });
+        return;
+      }
+
+      const payload = await buildDashboardPayload();
+      const createdTask = payload.tasks.find(
+        (task) => task.id === created.taskId && task.contextId === input.contextId,
+      );
+
+      res.status(201).json({
+        message: created.githubSynced
+          ? "Tarefa criada e sincronizada com o GitHub."
+          : "Tarefa criada na instancia atual. Para persistir entre deploys, configure GITHUB_TOKEN no copilotx.",
+        task: createdTask || null,
+        payload,
+      });
+    } catch (error) {
+      console.error("Failed to create task:", error);
+      res.status(500).json({ message: "Falha ao criar a tarefa." });
     }
   });
 

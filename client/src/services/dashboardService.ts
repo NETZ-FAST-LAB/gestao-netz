@@ -77,6 +77,15 @@ export interface TaskUpdateInput {
   contextType?: "projeto" | "iniciativa";
 }
 
+export interface TaskCreateInput {
+  title: string;
+  assignee?: string;
+  status?: string;
+  dueDate?: string;
+  contextId: string;
+  contextType: "projeto" | "iniciativa";
+}
+
 export async function fetchDashboard(): Promise<DashboardPayload> {
   const response = await fetch("/api/dashboard");
   if (!response.ok) {
@@ -102,6 +111,31 @@ export async function updateDashboardTask(taskId: string, updates: TaskUpdateInp
   if (!response.ok) {
     const errorPayload = (await response.json().catch(() => null)) as { message?: string } | null;
     throw new Error(errorPayload?.message || "Falha ao atualizar a tarefa.");
+  }
+
+  return response.json() as Promise<{
+    message: string;
+    task: DashboardTask | null;
+    payload: DashboardPayload;
+  }>;
+}
+
+export async function createDashboardTask(input: TaskCreateInput): Promise<{
+  message: string;
+  task: DashboardTask | null;
+  payload: DashboardPayload;
+}> {
+  const response = await fetch("/api/tasks", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(input),
+  });
+
+  if (!response.ok) {
+    const errorPayload = (await response.json().catch(() => null)) as { message?: string } | null;
+    throw new Error(errorPayload?.message || "Falha ao criar a tarefa.");
   }
 
   return response.json() as Promise<{
