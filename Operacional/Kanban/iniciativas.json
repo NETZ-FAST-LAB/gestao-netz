@@ -139,8 +139,8 @@
           "tasks": [
             {
               "id": "task-ai-1",
-              "title": "Revisar próximos passos",
-              "assignee": "Joãozíssimo",
+              "title": "Revisar plano de trabalho",
+              "assignee": "Dênis",
               "status": "in_progress",
               "dueDate": "2026-03-20",
               "reminders": []
