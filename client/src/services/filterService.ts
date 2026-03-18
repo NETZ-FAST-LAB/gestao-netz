@@ -26,10 +26,46 @@ function normalize(value: string) {
     .trim();
 }
 
+export function canonicalizeAssigneeLabel(assignee: string) {
+  const normalized = normalize(assignee);
+
+  if (!normalized || normalized === "sem dono" || normalized === "antigravity") {
+    return "Sem dono";
+  }
+
+  if (
+    [
+      "joao",
+      "joaozissimo",
+      "joao henrique",
+      "joao henrique zborowski scholz",
+      "joao scholz",
+      "joe",
+      "john",
+    ].includes(normalized)
+  ) {
+    return "Joãozíssimo";
+  }
+
+  if (["gui", "gui r", "gui r.", "roennau", "guilherme roennau", "guilherme r"].includes(normalized)) {
+    return "Gui R.";
+  }
+
+  if (["denis", "denis polidoro", "denis p", "denis p.", "denis polidoro netz", "denis polidoro."].includes(normalized)) {
+    return "Denis";
+  }
+
+  if (["gui stacke", "guilherme stacke", "gui s", "tak", "stacke"].includes(normalized)) {
+    return "Guilherme Stacke";
+  }
+
+  return assignee.trim();
+}
+
 export function getTaskAssigneeOptions(tasks: DashboardTask[]) {
-  const uniqueAssignees = Array.from(new Set(tasks.map((task) => task.assignee))).sort((a, b) =>
-    a.localeCompare(b, "pt-BR"),
-  );
+  const uniqueAssignees = Array.from(
+    new Set(tasks.map((task) => canonicalizeAssigneeLabel(task.assignee)).filter((assignee) => assignee !== "Sem dono")),
+  ).sort((a, b) => a.localeCompare(b, "pt-BR"));
 
   return ["todos", ...uniqueAssignees];
 }
@@ -38,11 +74,13 @@ export function applyKanbanFilters(tasks: DashboardTask[], filters: KanbanFilter
   const normalizedSearch = normalize(filters.search);
 
   return tasks.filter((task) => {
+    const canonicalAssignee = canonicalizeAssigneeLabel(task.assignee);
+
     if (filters.statuses.length > 0 && !filters.statuses.includes(task.status)) {
       return false;
     }
 
-    if (filters.assignee !== "todos" && task.assignee !== filters.assignee) {
+    if (filters.assignee !== "todos" && canonicalAssignee !== filters.assignee) {
       return false;
     }
 
@@ -54,12 +92,12 @@ export function applyKanbanFilters(tasks: DashboardTask[], filters: KanbanFilter
       return false;
     }
 
-    if (filters.onlyUnassigned && task.assignee !== "Sem dono") {
+    if (filters.onlyUnassigned && canonicalAssignee !== "Sem dono") {
       return false;
     }
 
     if (normalizedSearch) {
-      const haystack = normalize(`${task.title} ${task.contextTitle} ${task.assignee}`);
+      const haystack = normalize(`${task.title} ${task.contextTitle} ${canonicalAssignee}`);
       if (!haystack.includes(normalizedSearch)) {
         return false;
       }
