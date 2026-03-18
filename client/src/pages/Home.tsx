@@ -592,7 +592,7 @@ export default function Home() {
 
           <div className="grid gap-4 py-2">
             <div className="grid gap-2">
-              <label className="text-sm font-medium text-slate-200">Titulo</label>
+              <label className="text-sm font-medium text-slate-200">Título</label>
               <Input
                 value={taskForm.title}
                 onChange={(event) => setTaskForm((current) => ({ ...current, title: event.target.value }))}
@@ -602,7 +602,7 @@ export default function Home() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="grid gap-2">
-                <label className="text-sm font-medium text-slate-200">Responsavel</label>
+                <label className="text-sm font-medium text-slate-200">Responsável</label>
                 <Input
                   value={taskForm.assignee}
                   onChange={(event) => setTaskForm((current) => ({ ...current, assignee: event.target.value }))}

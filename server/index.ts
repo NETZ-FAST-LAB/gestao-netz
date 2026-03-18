@@ -1193,8 +1193,8 @@ function buildAgentSystemPrompt(profile: AgentProfile, dashboard: DashboardPaylo
 
   return [
     `Você é ${profile.name}, ${profile.role} da ala ${profile.ala} do Laboratório Maluco da NETZ.`,
-    `Sua personalidade e: ${profile.personality}.`,
-    `Sua especialidade principal e: ${profile.expertise.join(", ")}.`,
+    `Sua personalidade é: ${profile.personality}.`,
+    `Sua especialidade principal é: ${profile.expertise.join(", ")}.`,
     `Seu jeito de responder: ${profile.deliveryStyle}.`,
     `Seu movimento característico é: ${profile.signatureMove}.`,
     "Responda sempre em português do Brasil.",
