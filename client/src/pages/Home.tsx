@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertCircle, Bot, FolderKanban, Pencil, RefreshCcw, Rocket, Siren, Users } from "lucide-react";
+import { AlertCircle, FolderKanban, Pencil, RefreshCcw, Rocket, Siren, Users } from "lucide-react";
 
-import { AgentChat } from "@/components/AgentChat";
 import { KanbanBoard } from "@/components/Kanban/Board";
 import { KanbanFilterPanel } from "@/components/Kanban/FilterPanel";
+import { MultiAgentWorkbench } from "@/components/MultiAgent/MultiAgentWorkbench";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +12,6 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { agents, type Agent } from "@/data/agents";
 import { getTrimestreTotals } from "@/data/goals";
 import {
   createDashboardTask,
@@ -87,7 +86,6 @@ export default function Home() {
   const [data, setData] = useState<DashboardPayload | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [editingTask, setEditingTask] = useState<DashboardTask | null>(null);
   const [taskDialogMode, setTaskDialogMode] = useState<TaskDialogMode>("edit");
   const [kanbanFilters, setKanbanFilters] = useState<KanbanFilterQuery>(DEFAULT_KANBAN_FILTERS);
@@ -282,11 +280,18 @@ export default function Home() {
       <div className="border-b border-white/10 bg-black/20 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl flex-col gap-6 px-6 py-8 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-3xl">
-            <div className="mb-4 flex flex-wrap items-center gap-2">
-              <Badge className="bg-cyan-400/15 text-cyan-200 hover:bg-cyan-400/15">Laboratorio NETZ</Badge>
-              <Badge variant="outline" className="border-emerald-300/30 text-emerald-200">
-                Painel operacional vivo
-              </Badge>
+            <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-center">
+              <img
+                src="/brand/logo1-branco.png"
+                alt="NETZ"
+                className="h-10 w-auto object-contain opacity-95 lg:h-12"
+              />
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge className="bg-cyan-400/15 text-cyan-200 hover:bg-cyan-400/15">Laboratorio NETZ</Badge>
+                <Badge variant="outline" className="border-emerald-300/30 text-emerald-200">
+                  Painel operacional vivo
+                </Badge>
+              </div>
             </div>
             <h1 className="text-4xl font-semibold tracking-tight lg:text-5xl">Sala de controle do laboratorio</h1>
             <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-300">
@@ -428,31 +433,7 @@ export default function Home() {
           </TabsContent>
 
           <TabsContent value="agentes" className="mt-6">
-            <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
-              <CardHeader>
-                <CardTitle>Centro de agentes</CardTitle>
-                <CardDescription>Converse com os especialistas do laboratorio.</CardDescription>
-              </CardHeader>
-              <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {agents.map((agent) => (
-                  <div key={agent.id} className="rounded-2xl border border-white/10 bg-black/20 p-5">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-3xl">{agent.emoji}</p>
-                        <p className="mt-3 text-lg font-semibold">{agent.name}</p>
-                        <p className="text-sm text-slate-400">{agent.role}</p>
-                      </div>
-                      <Badge variant="outline">{agent.ala}</Badge>
-                    </div>
-                    <p className="mt-4 text-sm leading-6 text-slate-300">{agent.description}</p>
-                    <Button className="mt-5 w-full bg-cyan-400 text-slate-950 hover:bg-cyan-300" onClick={() => setSelectedAgent(agent)}>
-                      <Bot className="mr-2 h-4 w-4" />
-                      Conversar
-                    </Button>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
+            <MultiAgentWorkbench />
           </TabsContent>
 
           <TabsContent value="socios" className="mt-6">
@@ -724,8 +705,6 @@ export default function Home() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {selectedAgent && <AgentChat agent={selectedAgent} onClose={() => setSelectedAgent(null)} />}
     </div>
   );
 }

@@ -144,6 +144,67 @@ type AgentProfile = {
   signatureMove: string;
 };
 
+type AgentStatus = "idle" | "thinking" | "executing" | "waiting" | "error";
+
+type AgentToolDescriptor = {
+  id: string;
+  name: string;
+  description: string;
+  capabilities: string[];
+};
+
+type AgentMemoryEntry = {
+  id: string;
+  role: "user" | "agent" | "system";
+  kind: "chat" | "insight" | "handoff";
+  content: string;
+  createdAt: string;
+};
+
+type AgentCollaboration = {
+  agentId: string;
+  agentName: string;
+  role: string;
+  mode: "consultar" | "delegar" | "revisar";
+  reason: string;
+};
+
+type AgentWorkspace = {
+  headline: string;
+  focus: string[];
+  relevantTasks: string[];
+  relatedContexts: string[];
+  riskCount: number;
+};
+
+type AgentRuntimeState = {
+  status: AgentStatus;
+  currentTask: string | null;
+  lastActivity: string;
+  memory: AgentMemoryEntry[];
+};
+
+type AgentApiSummary = {
+  id: string;
+  name: string;
+  role: string;
+  ala: string;
+  expertise: string[];
+  personality: string;
+  status: AgentStatus;
+  currentTask: string | null;
+  lastActivity: string;
+  tools: AgentToolDescriptor[];
+  memoryPreview: AgentMemoryEntry[];
+};
+
+type AgentApiDetail = AgentApiSummary & {
+  memory: AgentMemoryEntry[];
+  collaborators: AgentCollaboration[];
+  workspace: AgentWorkspace;
+  availableActions: string[];
+};
+
 const AGENT_PROFILES: Record<string, AgentProfile> = {
   picles: {
     id: "picles",
@@ -295,6 +356,150 @@ const AGENT_PROFILES: Record<string, AgentProfile> = {
     deliveryStyle: "responda com estrutura, numeros e detalhamento",
     signatureMove: "nao deixar variavel escapar da planilha mental",
   },
+};
+
+const AGENT_MEMORY_LIMIT = 18;
+const AGENT_RUNTIMES = new Map<string, AgentRuntimeState>();
+
+const AGENT_TOOLBOX: Record<string, AgentToolDescriptor[]> = {
+  picles: [
+    {
+      id: "task-breakdown",
+      name: "Fatiador de frentes",
+      description: "Quebra uma frente nebulosa em objetivo, dono, prazo e criterio de conclusao.",
+      capabilities: ["priorizacao", "sequenciamento", "definicao de proxima acao"],
+    },
+    {
+      id: "lab-brief",
+      name: "Sintese de bancada",
+      description: "Condensa discussao em leitura executiva e ordem de prioridade.",
+      capabilities: ["sintese", "briefing", "decisao"],
+    },
+  ],
+  arquimedes: [
+    {
+      id: "signal-scan",
+      name: "Scanner de sinal",
+      description: "Fareja padroes, gargalos e anomalias na operacao.",
+      capabilities: ["analise", "metricas", "padroes"],
+    },
+    {
+      id: "hypothesis-check",
+      name: "Validador de hipotese",
+      description: "Separa correlacao oportunista de evidencia minimamente decente.",
+      capabilities: ["validacao", "dados faltantes", "checagem"],
+    },
+  ],
+  veritas: [
+    {
+      id: "premise-audit",
+      name: "Auditoria de premissas",
+      description: "Ataca suposicoes frageis antes que virem verdade oficial do laboratorio.",
+      capabilities: ["pesquisa", "checagem", "contraponto"],
+    },
+  ],
+  zola: [
+    {
+      id: "future-probe",
+      name: "Sonda temporal",
+      description: "Traduz o pedido em cenarios futuros e experimentos pequenos de validacao.",
+      capabilities: ["cenario", "prototipo", "futuro"],
+    },
+  ],
+  barnum: [
+    {
+      id: "offer-crafting",
+      name: "Lapidador de oferta",
+      description: "Transforma resultado em proposta vendavel com tese e chamada para acao.",
+      capabilities: ["copy comercial", "pitch", "proposta"],
+    },
+  ],
+  zuzu: [
+    {
+      id: "user-reading",
+      name: "Leitor de comportamento",
+      description: "Traduz o caos humano em dor, gatilho e contexto de uso.",
+      capabilities: ["usuario", "entrevista", "insight"],
+    },
+  ],
+  pixel: [
+    {
+      id: "ui-prototype",
+      name: "Bancada visual",
+      description: "Desenha a menor interface que ja ajuda a agir.",
+      capabilities: ["ui", "ux", "hierarquia"],
+    },
+  ],
+  lola: [
+    {
+      id: "story-assembler",
+      name: "Montadora de narrativa",
+      description: "Converte achado cru em historia clara, util e memoravel.",
+      capabilities: ["copy", "narrativa", "documentacao"],
+    },
+  ],
+  pipo: [
+    {
+      id: "protocol-engine",
+      name: "Motor de protocolo",
+      description: "Costura dono, etapa, dependencia e rito para a operacao sair do improviso.",
+      capabilities: ["processos", "cadencia", "governanca"],
+    },
+    {
+      id: "kanban-action",
+      name: "Orquestrador de Kanban",
+      description: "Transforma decisao em acao operacional no quadro.",
+      capabilities: ["tarefas", "status", "responsaveis"],
+    },
+  ],
+  spark: [
+    {
+      id: "system-architecture",
+      name: "Prancheta de arquitetura",
+      description: "Desenha contratos, persistencia e integracoes antes de codar por impulso.",
+      capabilities: ["backend", "integracoes", "arquitetura"],
+    },
+  ],
+  gigi: [
+    {
+      id: "deploy-guardian",
+      name: "Guardia de deploy",
+      description: "Olha risco operacional, ambiente e observabilidade antes de empurrar mudanca.",
+      capabilities: ["deploy", "infra", "estabilidade"],
+    },
+  ],
+  mintz: [
+    {
+      id: "culture-radar",
+      name: "Radar cultural",
+      description: "Fareja desalinhamento, excesso de atrito e tom torto antes de contaminar o laboratorio.",
+      capabilities: ["cultura", "tom", "alinhamento"],
+    },
+  ],
+  cautela: [
+    {
+      id: "risk-check",
+      name: "Triagem de risco",
+      description: "Aponta risco etico, juridico e operacional antes da genialidade virar passivo.",
+      capabilities: ["risco", "etica", "compliance"],
+    },
+  ],
+  tiopatinhas: [
+    {
+      id: "roi-lens",
+      name: "Lente de ROI",
+      description: "Puxa qualquer iniciativa de volta para retorno, custo e margem.",
+      capabilities: ["receita", "margem", "viabilidade"],
+    },
+  ],
+  calculin: [
+    {
+      id: "cost-ledger",
+      name: "Livro de custos",
+      description: "Traz precisionismo cirurgico para custo, tesouraria e controles.",
+      capabilities: ["custos", "controle", "financeiro"],
+    },
+  ],
 };
 
 function repairText(value: string): string {
@@ -584,6 +789,242 @@ async function buildDashboardPayload(): Promise<DashboardPayload> {
     milestones: [...milestones]
       .filter((milestone) => milestone.date)
       .sort((a, b) => a.date.localeCompare(b.date)),
+  };
+}
+
+function ensureAgentRuntime(profile: AgentProfile): AgentRuntimeState {
+  const existing = AGENT_RUNTIMES.get(profile.id);
+  if (existing) return existing;
+
+  const runtime: AgentRuntimeState = {
+    status: "idle",
+    currentTask: null,
+    lastActivity: new Date(0).toISOString(),
+    memory: [],
+  };
+
+  AGENT_RUNTIMES.set(profile.id, runtime);
+  return runtime;
+}
+
+function rememberAgentEvent(
+  agentId: string,
+  role: AgentMemoryEntry["role"],
+  content: string,
+  kind: AgentMemoryEntry["kind"] = "chat",
+) {
+  const profile = AGENT_PROFILES[agentId];
+  if (!profile) return;
+
+  const runtime = ensureAgentRuntime(profile);
+  runtime.memory = [
+    ...runtime.memory,
+    {
+      id: randomUUID(),
+      role,
+      kind,
+      content: content.trim(),
+      createdAt: new Date().toISOString(),
+    },
+  ].slice(-AGENT_MEMORY_LIMIT);
+  runtime.lastActivity = new Date().toISOString();
+}
+
+function setAgentStatus(agentId: string, status: AgentStatus, currentTask: string | null = null) {
+  const profile = AGENT_PROFILES[agentId];
+  if (!profile) return;
+
+  const runtime = ensureAgentRuntime(profile);
+  runtime.status = status;
+  runtime.currentTask = currentTask;
+  runtime.lastActivity = new Date().toISOString();
+}
+
+function buildAgentActions(profile: AgentProfile): string[] {
+  if (profile.id === "pipo") {
+    return ["Quebrar uma frente em fluxo, dono e prazo", "Transformar conversa em protocolo operacional"];
+  }
+
+  if (profile.id === "spark") {
+    return ["Desenhar arquitetura da solucao", "Separar frontend, backend e integracoes"];
+  }
+
+  if (profile.id === "pixel") {
+    return ["Reorganizar a interface com mais clareza", "Desenhar o fluxo minimo viavel"];
+  }
+
+  if (profile.id === "mintz") {
+    return ["Refinar linguagem e tom do laboratorio", "Apontar desalinhamento cultural antes de feder"];
+  }
+
+  if (profile.id === "tiopatinhas" || profile.id === "calculin") {
+    return ["Ler impacto em receita e custo", "Sugerir criterio economico para decidir prioridade"];
+  }
+
+  return [
+    `Responder pelo recorte de ${profile.expertise.join(", ")}`,
+    "Transformar o pedido em proxima acao concreta",
+  ];
+}
+
+function scoreTaskForAgent(task: DashboardTask, profile: AgentProfile) {
+  const haystack = normalizeName(
+    `${task.title} ${task.contextTitle} ${task.assignee} ${task.contextType} ${task.status}`,
+  );
+  let score = 0;
+
+  for (const expertise of profile.expertise) {
+    if (haystack.includes(normalizeName(expertise))) score += 2;
+  }
+
+  const topics = detectTopics(haystack);
+  if (topics.interface && ["pixel", "lola", "zuzu", "barnum"].includes(profile.id)) score += 3;
+  if (topics.operations && ["pipo", "picles", "mintz"].includes(profile.id)) score += 3;
+  if (topics.engineering && ["spark", "gigi", "cautela"].includes(profile.id)) score += 3;
+  if (topics.finance && ["tiopatinhas", "calculin", "cautela"].includes(profile.id)) score += 3;
+  if (task.overdue || task.dueSoon) score += 1;
+
+  return score;
+}
+
+function buildAgentWorkspace(profile: AgentProfile, dashboard: DashboardPayload, message = ""): AgentWorkspace {
+  const rankedTasks = [...dashboard.tasks]
+    .map((task) => ({ task, score: scoreTaskForAgent(task, profile) }))
+    .filter((item) => item.score > 0)
+    .sort((left, right) => right.score - left.score)
+    .slice(0, 5)
+    .map((item) => item.task);
+
+  const topicFlags = detectTopics(message);
+  const focus = [
+    topicFlags.operations ? "Operacao em movimento" : null,
+    topicFlags.engineering ? "Arquitetura e integracoes" : null,
+    topicFlags.interface ? "Experiencia e interface" : null,
+    topicFlags.finance ? "Tesouraria e retorno" : null,
+    ...profile.expertise.map((item) => item[0]?.toUpperCase() + item.slice(1)),
+  ]
+    .filter((item, index, array): item is string => Boolean(item) && array.indexOf(item) === index)
+    .slice(0, 4);
+
+  const relatedContexts = Array.from(new Set(rankedTasks.map((task) => task.contextTitle))).slice(0, 4);
+  const riskCount = rankedTasks.filter((task) => task.overdue || task.dueSoon).length;
+
+  return {
+    headline:
+      rankedTasks.length > 0
+        ? `${profile.name} esta com ${rankedTasks.length} frente(s) diretamente conectadas ao seu recorte agora.`
+        : `${profile.name} esta livre para puxar uma frente nova sem herdar bagunca alheia.`,
+    focus,
+    relevantTasks: rankedTasks.map((task) => `${task.contextTitle}: ${task.title}`),
+    relatedContexts,
+    riskCount,
+  };
+}
+
+function buildAgentCollaborations(profile: AgentProfile, dashboard: DashboardPayload, message = ""): AgentCollaboration[] {
+  const topics = detectTopics(message);
+  const picks = new Map<string, AgentCollaboration>();
+  const register = (agentId: string, reason: string, mode: AgentCollaboration["mode"]) => {
+    const collaborator = AGENT_PROFILES[agentId];
+    if (!collaborator || collaborator.id === profile.id || picks.has(agentId)) return;
+    picks.set(agentId, {
+      agentId,
+      agentName: collaborator.name,
+      role: collaborator.role,
+      mode,
+      reason,
+    });
+  };
+
+  if (["picles", "pipo", "mintz"].includes(profile.id)) {
+    register("spark", "traduz isso para arquitetura e implementacao sem explodir a bancada", "delegar");
+    register("pixel", "dar forma visual quando a frente precisar sair do texto", "consultar");
+  }
+
+  if (["spark", "gigi"].includes(profile.id)) {
+    register("pipo", "alinhar operacao, rito e dono antes do codigo escapar do trilho", "consultar");
+    register("cautela", "revisar riscos de integracao e limites do experimento", "revisar");
+  }
+
+  if (["pixel", "lola", "zuzu", "barnum"].includes(profile.id)) {
+    register("picles", "priorizar o que realmente mexe a agulha antes de polir espuma", "consultar");
+    register("spark", "garantir que a experiencia nao prometa o que a pilha nao entrega", "revisar");
+  }
+
+  if (["tiopatinhas", "calculin", "cautela"].includes(profile.id)) {
+    register("picles", "encaixar criterio economico na priorizacao da bancada", "consultar");
+    register("mintz", "alinhar impacto financeiro com o jeito NETZ de operar", "revisar");
+  }
+
+  if (topics.interface) {
+    register("pixel", "refinar interface e hierarquia do que vai para a tela", "consultar");
+    register("lola", "afinar narrativa para a experiencia nao soar generica", "revisar");
+  }
+
+  if (topics.operations) {
+    register("pipo", "transformar a conversa em fluxo, dono e prazo", "delegar");
+    register("mintz", "proteger o tom e o alinhamento no meio da correria", "revisar");
+  }
+
+  if (topics.engineering) {
+    register("spark", "desenhar a arquitetura e o contrato de dados", "consultar");
+    register("gigi", "avaliar deploy, ambiente e risco operacional", "revisar");
+  }
+
+  if (topics.finance) {
+    register("tiopatinhas", "ler retorno, margem e priorizacao economica", "consultar");
+    register("calculin", "validar tesouraria, custo e controle fino", "revisar");
+  }
+
+  const dashboardPressure =
+    dashboard.summary.overdueTasks > 0 || dashboard.summary.dueSoonTasks > 0
+      ? "O laboratorio esta com risco quente; puxe quem ajuda a tirar isso do vermelho."
+      : "Sem risco agudo agora, entao vale chamar quem acelera com menos atrito.";
+
+  register("mintz", dashboardPressure, "consultar");
+
+  return Array.from(picks.values()).slice(0, 4);
+}
+
+function buildAgentSummary(profile: AgentProfile, dashboard: DashboardPayload, message = ""): AgentApiSummary {
+  const runtime = ensureAgentRuntime(profile);
+  const tools = AGENT_TOOLBOX[profile.id] || [];
+  const workspace = buildAgentWorkspace(profile, dashboard, message);
+
+  if (!runtime.memory.length) {
+    rememberAgentEvent(
+      profile.id,
+      "system",
+      `${profile.name} pronto na bancada. Recorte quente agora: ${workspace.focus.join(", ") || "observacao geral do laboratorio"}.`,
+      "insight",
+    );
+  }
+
+  return {
+    id: profile.id,
+    name: profile.name,
+    role: profile.role,
+    ala: profile.ala,
+    expertise: profile.expertise,
+    personality: profile.personality,
+    status: runtime.status,
+    currentTask: runtime.currentTask,
+    lastActivity: runtime.lastActivity,
+    tools,
+    memoryPreview: runtime.memory.slice(-3),
+  };
+}
+
+function buildAgentDetail(profile: AgentProfile, dashboard: DashboardPayload, message = ""): AgentApiDetail {
+  const summary = buildAgentSummary(profile, dashboard, message);
+  const runtime = ensureAgentRuntime(profile);
+
+  return {
+    ...summary,
+    memory: runtime.memory,
+    collaborators: buildAgentCollaborations(profile, dashboard, message),
+    workspace: buildAgentWorkspace(profile, dashboard, message),
+    availableActions: buildAgentActions(profile),
   };
 }
 
@@ -936,23 +1377,32 @@ async function generateAgentReply(agentId: string, userMessage: string, dashboar
     throw new Error("Agente nao encontrado.");
   }
 
+  setAgentStatus(agentId, "thinking", userMessage.trim());
   const systemPrompt = buildAgentSystemPrompt(profile, dashboard);
 
   try {
     const githubReply = await callGithubModels(systemPrompt, userMessage);
-    if (githubReply) return githubReply;
+    if (githubReply) {
+      setAgentStatus(agentId, "idle");
+      return githubReply;
+    }
   } catch (error) {
     console.error("GitHub Models agent error:", error);
   }
 
   try {
     const openAiReply = await callOpenAI(systemPrompt, userMessage);
-    if (openAiReply) return openAiReply;
+    if (openAiReply) {
+      setAgentStatus(agentId, "idle");
+      return openAiReply;
+    }
   } catch (error) {
     console.error("OpenAI agent error:", error);
   }
 
-  return buildFallbackAgentReply(profile, userMessage, dashboard);
+  const fallbackReply = buildFallbackAgentReply(profile, userMessage, dashboard);
+  setAgentStatus(agentId, "idle");
+  return fallbackReply;
 }
 
 async function startServer() {
@@ -1026,11 +1476,46 @@ async function startServer() {
     }
   });
 
+  app.get("/api/agents", async (_req, res) => {
+    try {
+      const dashboard = await buildDashboardPayload();
+      const agents = Object.values(AGENT_PROFILES).map((profile) => buildAgentSummary(profile, dashboard));
+      res.json({ agents });
+    } catch (error) {
+      console.error("Failed to load agents:", error);
+      res.status(500).json({ message: "Falha ao carregar a estacao multiagente." });
+    }
+  });
+
+  app.get("/api/agents/:agentId", async (req, res) => {
+    try {
+      const agentId = req.params.agentId;
+      const profile = AGENT_PROFILES[agentId];
+
+      if (!profile) {
+        res.status(404).json({ message: "Agente nao encontrado." });
+        return;
+      }
+
+      const dashboard = await buildDashboardPayload();
+      res.json({ agent: buildAgentDetail(profile, dashboard) });
+    } catch (error) {
+      console.error("Failed to load agent detail:", error);
+      res.status(500).json({ message: "Falha ao carregar o detalhe do agente." });
+    }
+  });
+
   app.post("/api/agents/:agentId/chat", async (req, res) => {
     try {
       const agentId = req.params.agentId;
+      const profile = AGENT_PROFILES[agentId];
       const body = sanitizeDeep(req.body || {}) as { message?: string };
       const message = body.message?.trim();
+
+      if (!profile) {
+        res.status(404).json({ message: "Agente nao encontrado." });
+        return;
+      }
 
       if (!message) {
         res.status(400).json({ message: "Mensagem vazia." });
@@ -1038,10 +1523,22 @@ async function startServer() {
       }
 
       const dashboard = await buildDashboardPayload();
+      rememberAgentEvent(agentId, "user", message, "chat");
       const reply = await generateAgentReply(agentId, message, dashboard);
-      res.json({ reply });
+      rememberAgentEvent(agentId, "agent", reply, "chat");
+
+      const agent = buildAgentDetail(profile, dashboard, message);
+      res.json({
+        reply,
+        agent,
+        suggestions: {
+          nextActions: buildAgentActions(profile),
+          suggestedCollaborators: agent.collaborators,
+        },
+      });
     } catch (error) {
       console.error("Failed to generate agent reply:", error);
+      setAgentStatus(req.params.agentId, "error");
       res.status(500).json({ message: "Falha ao conversar com o agente." });
     }
   });
@@ -1051,6 +1548,7 @@ async function startServer() {
       ? path.resolve(__dirname, "public")
       : path.resolve(__dirname, "..", "dist", "public");
 
+  app.use("/brand", express.static(path.resolve(APP_ROOT, "logo")));
   app.use(express.static(staticPath));
 
   app.get("*", (_req, res) => {
