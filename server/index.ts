@@ -623,7 +623,7 @@ function getPartnerId(assignee: string): string | null {
 
 async function readBoardFiles() {
   const [organization, projectsFile, initiativesFile] = await Promise.all([
-    readJsonFile<{ name: string; members: string[] }>("Operacional/organização.json"),
+    readJsonFile<{ name: string; members: string[] }>("Operacional/organizacao.json"),
     readJsonFile<BoardFile>(PROJECTS_PATH),
     readJsonFile<BoardFile>(INITIATIVES_PATH),
   ]);
