@@ -1,26 +1,34 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  AlertCircle,
-  FlaskConical,
-  FolderKanban,
-  RefreshCcw,
-  Rocket,
-  Siren,
-  Users,
-} from "lucide-react";
+import { AlertCircle, Bot, FolderKanban, Pencil, RefreshCcw, Rocket, Siren, Users } from "lucide-react";
 
-import { goals, getTrimestreTotals } from "@/data/goals";
+import { AgentChat } from "@/components/AgentChat";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { agents, type Agent } from "@/data/agents";
+import { getTrimestreTotals } from "@/data/goals";
 import {
   type DashboardCard,
   type DashboardPartner,
   type DashboardPayload,
   type DashboardTask,
   fetchDashboard,
+  updateDashboardTask,
 } from "@/services/dashboardService";
+
+type TaskFormState = {
+  title: string;
+  assignee: string;
+  status: string;
+  dueDate: string;
+};
+
+const TASK_STATUS_OPTIONS = ["Pendente", "Em andamento", "Em revisão", "Concluída"];
 
 function formatDate(date: string) {
   if (!date) return "Sem data";
@@ -41,22 +49,29 @@ function statusTone(task: DashboardTask) {
   return "outline" as const;
 }
 
-function cardTone(card: DashboardCard) {
-  if (card.progress >= 80) return "text-emerald-300";
-  if (card.progress >= 40) return "text-cyan-300";
-  return "text-amber-300";
-}
-
-function monthlyStatusTone(progress: number) {
-  if (progress >= 85) return "text-emerald-300";
-  if (progress >= 50) return "text-cyan-300";
-  return "text-amber-300";
+function buildTaskForm(task: DashboardTask): TaskFormState {
+  return {
+    title: task.title,
+    assignee: task.assignee === "Sem dono" ? "" : task.assignee,
+    status: task.status,
+    dueDate: task.dueDate,
+  };
 }
 
 export default function Home() {
   const [data, setData] = useState<DashboardPayload | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
+  const [editingTask, setEditingTask] = useState<DashboardTask | null>(null);
+  const [taskForm, setTaskForm] = useState<TaskFormState>({
+    title: "",
+    assignee: "",
+    status: "Pendente",
+    dueDate: "",
+  });
+  const [isSavingTask, setIsSavingTask] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
   async function loadDashboard() {
     setIsLoading(true);
@@ -90,7 +105,72 @@ export default function Home() {
     () => (data?.tasks || []).filter((task) => task.overdue || task.dueSoon).slice(0, 8),
     [data],
   );
-  const activeLabCards = useMemo(() => (data?.cards || []).slice(0, 4), [data]);
+
+  function openTaskEditor(task: DashboardTask) {
+    setEditingTask(task);
+    setTaskForm(buildTaskForm(task));
+    setSaveMessage(null);
+  }
+
+  function closeTaskEditor() {
+    setEditingTask(null);
+    setSaveMessage(null);
+  }
+
+  async function handleSaveTask() {
+    if (!editingTask) return;
+
+    setIsSavingTask(true);
+    setSaveMessage(null);
+
+    try {
+      const response = await updateDashboardTask(editingTask.id, taskForm);
+      setData(response.payload);
+      setSaveMessage("Tarefa atualizada com sucesso.");
+
+      if (response.task) {
+        setEditingTask(response.task);
+        setTaskForm(buildTaskForm(response.task));
+      }
+    } catch (saveError) {
+      console.error(saveError);
+      setSaveMessage(saveError instanceof Error ? saveError.message : "Falha ao atualizar a tarefa.");
+    } finally {
+      setIsSavingTask(false);
+    }
+  }
+
+  function renderTaskCard(task: DashboardTask) {
+    return (
+      <div key={task.id} className="rounded-2xl border border-white/10 bg-black/20 p-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="font-medium">{task.title}</p>
+            <p className="mt-1 text-sm text-slate-400">
+              {task.contextTitle} · {task.assignee}
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-300">
+              <span>{task.contextType === "projeto" ? "Projeto" : "Experimento interno"}</span>
+              <span>•</span>
+              <span>{task.dueDate ? `Prazo ${formatDate(task.dueDate)}` : "Sem prazo definido"}</span>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant={statusTone(task)}>{task.status}</Badge>
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-cyan-300/20 bg-transparent text-cyan-100 hover:bg-cyan-400/10"
+              onClick={() => openTaskEditor(task)}
+            >
+              <Pencil className="mr-2 h-4 w-4" />
+              Editar
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.22),_transparent_28%),radial-gradient(circle_at_15%_20%,_rgba(16,185,129,0.18),_transparent_24%),radial-gradient(circle_at_85%_12%,_rgba(251,191,36,0.12),_transparent_22%),linear-gradient(155deg,_#06131c_0%,_#091018_40%,_#120d14_100%)] text-white">
@@ -99,14 +179,11 @@ export default function Home() {
           <div className="max-w-3xl">
             <div className="mb-4 flex flex-wrap items-center gap-2">
               <Badge className="bg-cyan-400/15 text-cyan-200 hover:bg-cyan-400/15">Laboratório NETZ</Badge>
-              <Badge variant="outline" className="border-emerald-300/30 text-emerald-200">
-                Painel operacional vivo
-              </Badge>
+              <Badge variant="outline" className="border-emerald-300/30 text-emerald-200">Painel operacional vivo</Badge>
             </div>
             <h1 className="text-4xl font-semibold tracking-tight lg:text-5xl">Sala de controle do laboratório</h1>
             <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-300">
-              Aqui ficam os projetos, os experimentos internos, a pressão comercial e os riscos de
-              explosão que ninguém mais pode fingir que não viu.
+              Agora já dá para abrir conversa com os agentes e editar tarefa, responsável, status e prazo sem sair do painel.
             </p>
           </div>
 
@@ -119,8 +196,7 @@ export default function Home() {
               <Rocket className="h-8 w-8 text-cyan-300" />
             </div>
             <p className="mt-3 text-sm text-slate-300">
-              Meta trimestral com tesouraria-alvo de {formatCurrency(trimestre.targetCosts)} e receita
-              líquida-alvo de {formatCurrency(trimestre.targetNetRevenue)}.
+              Meta trimestral com tesouraria-alvo de {formatCurrency(trimestre.targetCosts)}.
             </p>
             <div className="mt-4">
               <div className="mb-2 flex items-center justify-between text-xs text-slate-400">
@@ -153,9 +229,7 @@ export default function Home() {
               </CardTitle>
             </CardHeader>
             <CardContent className="text-sm text-slate-300">
-              {isLoading || !data
-                ? "Lendo os experimentos..."
-                : `${data.summary.totalProjects} projetos e ${data.summary.totalInitiatives} experimentos internos.`}
+              {isLoading || !data ? "Lendo os experimentos..." : `${data.summary.openTasks} tarefas abertas.`}
             </CardContent>
           </Card>
 
@@ -168,9 +242,7 @@ export default function Home() {
               </CardTitle>
             </CardHeader>
             <CardContent className="text-sm text-slate-300">
-              {isLoading || !data
-                ? "Contando reagentes..."
-                : `${data.summary.unassignedTasks} sem dono e ${data.summary.completedTasks} já concluídas.`}
+              {isLoading || !data ? "Contando reagentes..." : `${data.summary.unassignedTasks} sem dono.`}
             </CardContent>
           </Card>
 
@@ -183,9 +255,7 @@ export default function Home() {
               </CardTitle>
             </CardHeader>
             <CardContent className="text-sm text-slate-300">
-              {isLoading || !data
-                ? "Varrendo o laboratório..."
-                : `${data.summary.dueSoonTasks} tarefas vencem nos próximos 7 dias.`}
+              {isLoading || !data ? "Varrendo o laboratório..." : `${data.summary.dueSoonTasks} vencem nos próximos 7 dias.`}
             </CardContent>
           </Card>
 
@@ -197,106 +267,21 @@ export default function Home() {
                 {formatCurrency(trimestre.targetCosts)}
               </CardTitle>
             </CardHeader>
-            <CardContent className="text-sm text-slate-300">
-              15% do trimestre reservados para custos, estrutura e contenção operacional.
-            </CardContent>
+            <CardContent className="text-sm text-slate-300">15% do trimestre reservados para custos.</CardContent>
           </Card>
         </div>
 
         <Tabs defaultValue="visao-geral" className="mt-8">
-          <TabsList className="grid h-auto w-full grid-cols-2 gap-2 border border-white/10 bg-white/5 p-2 lg:grid-cols-5">
+          <TabsList className="grid h-auto w-full grid-cols-2 gap-2 border border-white/10 bg-white/5 p-2 lg:grid-cols-6">
             <TabsTrigger value="visao-geral">Visão geral</TabsTrigger>
+            <TabsTrigger value="agentes">Agentes</TabsTrigger>
             <TabsTrigger value="socios">Sócios</TabsTrigger>
             <TabsTrigger value="tarefas">Tarefas</TabsTrigger>
             <TabsTrigger value="iniciativas">Experimentos internos</TabsTrigger>
             <TabsTrigger value="projetos">Projetos</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="visao-geral" className="mt-6 space-y-6">
-            <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-              <Card className="border-cyan-300/15 bg-white/5 backdrop-blur-xl">
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <FlaskConical className="h-5 w-5 text-cyan-300" />
-                    <div>
-                      <CardTitle>Reator de receita sob observação</CardTitle>
-                      <CardDescription>
-                        Meta de receita de {formatCurrency(192000)} com tesouraria controlada em 15%.
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                      <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Receita-alvo</p>
-                      <p className="mt-2 text-2xl font-semibold">{formatCurrency(192000)}</p>
-                    </div>
-                    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                      <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Tesouraria</p>
-                      <p className="mt-2 text-2xl font-semibold">{formatCurrency(28800)}</p>
-                    </div>
-                    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                      <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Receita líquida-alvo</p>
-                      <p className="mt-2 text-2xl font-semibold">{formatCurrency(163200)}</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    {goals.map((goal) => {
-                      const monthProgress = Math.round((goal.currentRevenue / goal.targetRevenue) * 100);
-                      return (
-                        <div key={goal.id} className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                          <div className="mb-2 flex items-center justify-between">
-                            <div>
-                              <p className="font-medium">{goal.monthName}</p>
-                              <p className="text-sm text-slate-400">
-                                {formatCurrency(goal.currentRevenue)} de {formatCurrency(goal.targetRevenue)}
-                              </p>
-                            </div>
-                            <span className={`text-sm font-semibold ${monthlyStatusTone(monthProgress)}`}>
-                              {monthProgress}%
-                            </span>
-                          </div>
-                          <Progress value={monthProgress} className="h-2.5" />
-                        </div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
-                <CardHeader>
-                  <CardTitle>Diagnóstico do laboratório</CardTitle>
-                  <CardDescription>O que está pedindo intervenção humana agora.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3 text-sm text-slate-300">
-                  <p>
-                    A bancada está com <span className="font-semibold text-white">{data?.summary.openTasks || 0}</span>{" "}
-                    tarefas abertas, incluindo{" "}
-                    <span className="font-semibold text-amber-300">{data?.summary.overdueTasks || 0}</span> atrasadas.
-                  </p>
-                  <p>
-                    O motor interno tem <span className="font-semibold text-cyan-300">{experimentCards.length}</span>{" "}
-                    experimentos internos visíveis e{" "}
-                    <span className="font-semibold text-emerald-300">{projectCards.length}</span> projetos em curso.
-                  </p>
-                  <p>
-                    Se algo parecer perdido, existe uma aba exclusiva de experimentos internos para ninguém alegar
-                    neblina operacional.
-                  </p>
-                  <div className="rounded-2xl border border-dashed border-cyan-300/20 bg-cyan-400/5 p-4">
-                    <p className="text-xs uppercase tracking-[0.24em] text-cyan-200">Hipótese de melhoria</p>
-                    <p className="mt-2">
-                      O próximo salto de produtividade aqui é unir pressão comercial, tesouraria e saúde de tarefas
-                      numa só leitura.
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
+          <TabsContent value="visao-geral" className="mt-6">
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_1fr]">
               <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
                 <CardHeader>
@@ -304,28 +289,9 @@ export default function Home() {
                   <CardDescription>Tarefas vencidas ou prestes a explodir.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {criticalTasks.length > 0 ? (
-                    criticalTasks.map((task) => (
-                      <div key={task.id} className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="font-medium">{task.title}</p>
-                            <p className="mt-1 text-sm text-slate-400">
-                              {task.contextTitle} · {task.assignee}
-                            </p>
-                          </div>
-                          <Badge variant={statusTone(task)}>{task.status}</Badge>
-                        </div>
-                        <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-300">
-                          <span>{task.contextType === "projeto" ? "Projeto" : "Experimento interno"}</span>
-                          <span>•</span>
-                          <span>{task.dueDate ? `Prazo ${formatDate(task.dueDate)}` : "Sem prazo definido"}</span>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
+                  {criticalTasks.length > 0 ? criticalTasks.map((task) => renderTaskCard(task)) : (
                     <div className="rounded-2xl border border-dashed border-white/10 px-4 py-8 text-center text-slate-400">
-                      Nenhum experimento prestes a explodir agora. Aproveitem enquanto dura.
+                      Nenhum experimento prestes a explodir agora.
                     </div>
                   )}
                 </CardContent>
@@ -333,33 +299,51 @@ export default function Home() {
 
               <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
                 <CardHeader>
-                  <CardTitle>Experimentos em destaque</CardTitle>
-                  <CardDescription>Os cards com maior volume de trabalho aberto.</CardDescription>
+                  <CardTitle>Radar do laboratório</CardTitle>
+                  <CardDescription>Leitura rápida do estado operacional.</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-3">
-                  {activeLabCards.map((card) => (
-                    <div key={card.id} className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="font-medium">{card.title}</p>
-                          <p className="mt-1 text-sm text-slate-400">
-                            {card.type === "projeto" ? "Projeto" : "Experimento interno"} · {card.owner}
-                          </p>
-                        </div>
-                        <Badge variant="outline">{card.column}</Badge>
-                      </div>
-                      <div className="mt-4">
-                        <div className="mb-2 flex items-center justify-between text-xs text-slate-400">
-                          <span>Progresso</span>
-                          <span className={cardTone(card)}>{card.progress}%</span>
-                        </div>
-                        <Progress value={card.progress} className="h-2" />
-                      </div>
-                    </div>
-                  ))}
+                <CardContent className="space-y-4 text-sm text-slate-300">
+                  <p>
+                    Há <span className="font-semibold text-white">{experimentCards.length}</span> experimentos internos visíveis e{" "}
+                    <span className="font-semibold text-white">{projectCards.length}</span> projetos.
+                  </p>
+                  <p>
+                    A bancada agora já aceita conversa com agentes e edição básica de tarefas.
+                  </p>
+                  <div className="rounded-2xl border border-dashed border-cyan-300/20 bg-cyan-400/5 p-4">
+                    O próximo salto é colocar os agentes propondo ações estruturadas e executando com confirmação.
+                  </div>
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          <TabsContent value="agentes" className="mt-6">
+            <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
+              <CardHeader>
+                <CardTitle>Centro de agentes</CardTitle>
+                <CardDescription>Converse com os especialistas do laboratório.</CardDescription>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {agents.map((agent) => (
+                  <div key={agent.id} className="rounded-2xl border border-white/10 bg-black/20 p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-3xl">{agent.emoji}</p>
+                        <p className="mt-3 text-lg font-semibold">{agent.name}</p>
+                        <p className="text-sm text-slate-400">{agent.role}</p>
+                      </div>
+                      <Badge variant="outline">{agent.ala}</Badge>
+                    </div>
+                    <p className="mt-4 text-sm leading-6 text-slate-300">{agent.description}</p>
+                    <Button className="mt-5 w-full bg-cyan-400 text-slate-950 hover:bg-cyan-300" onClick={() => setSelectedAgent(agent)}>
+                      <Bot className="mr-2 h-4 w-4" />
+                      Conversar
+                    </Button>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="socios" className="mt-6">
@@ -382,19 +366,6 @@ export default function Home() {
                       <Badge variant="outline">{partner.overdueTaskCount} atrasadas</Badge>
                       <Badge variant="outline">{partner.dueSoonTaskCount} com prazo próximo</Badge>
                     </div>
-                    <div className="space-y-2 text-sm text-slate-300">
-                      {partner.examples.length > 0 ? (
-                        partner.examples.map((example) => (
-                          <div key={example} className="rounded-lg border border-white/10 bg-black/15 px-3 py-2">
-                            {example}
-                          </div>
-                        ))
-                      ) : (
-                        <div className="rounded-lg border border-dashed border-white/10 px-3 py-4 text-center text-slate-400">
-                          Sem tarefas abertas mapeadas agora.
-                        </div>
-                      )}
-                    </div>
                   </CardContent>
                 </Card>
               ))}
@@ -405,137 +376,119 @@ export default function Home() {
             <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
               <CardHeader>
                 <CardTitle>Fila operacional completa</CardTitle>
-                <CardDescription>Leitura viva das tarefas abertas no Kanban.</CardDescription>
+                <CardDescription>Leitura viva das tarefas abertas no Kanban com edição básica.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                {(data?.tasks || []).map((task: DashboardTask) => (
-                  <div key={task.id} className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                {(data?.tasks || []).map((task) => renderTaskCard(task))}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="iniciativas" className="mt-6">
+            <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
+              <CardHeader>
+                <CardTitle>Experimentos internos</CardTitle>
+                <CardDescription>Todos os experimentos internos do laboratório.</CardDescription>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+                {experimentCards.map((card: DashboardCard) => (
+                  <div key={card.id} className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                    <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="font-medium">{task.title}</p>
-                        <p className="mt-1 text-sm text-slate-400">
-                          {task.contextTitle} · {task.assignee}
-                        </p>
+                        <p className="font-medium">{card.title}</p>
+                        <p className="mt-1 text-sm text-slate-400">{card.owner}</p>
                       </div>
-                      <div className="flex flex-wrap gap-2">
-                        <Badge variant={statusTone(task)}>{task.status}</Badge>
-                        <Badge variant="outline">{task.contextType}</Badge>
-                        <Badge variant="outline">{task.dueDate ? formatDate(task.dueDate) : "Sem prazo"}</Badge>
-                      </div>
+                      <Badge variant="outline">{card.column}</Badge>
                     </div>
+                    <div className="mt-4 text-sm text-slate-300">{card.openTasks} abertas · {card.completedTasks} concluídas</div>
                   </div>
                 ))}
               </CardContent>
             </Card>
           </TabsContent>
 
-          <TabsContent value="iniciativas" className="mt-6">
-            <Card className="border-cyan-300/15 bg-white/5 backdrop-blur-xl">
+          <TabsContent value="projetos" className="mt-6">
+            <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
               <CardHeader>
-                <CardTitle>Experimentos internos</CardTitle>
-                <CardDescription>
-                  Todos os experimentos internos do laboratório, incluindo a Gestão Netz.
-                </CardDescription>
+                <CardTitle>Projetos</CardTitle>
+                <CardDescription>Projetos ativos monitorados pelo laboratório.</CardDescription>
               </CardHeader>
               <CardContent className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-                {experimentCards.map((card) => (
-                  <Card key={card.id} className="border-white/10 bg-black/20">
-                    <CardHeader>
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <CardTitle className="text-xl">{card.title}</CardTitle>
-                          <CardDescription>{card.owner}</CardDescription>
-                        </div>
-                        <Badge variant="outline">{card.column}</Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-3 gap-3 text-sm">
-                        <div>
-                          <p className="text-slate-400">Abertas</p>
-                          <p className="font-medium text-white">{card.openTasks}</p>
-                        </div>
-                        <div>
-                          <p className="text-slate-400">Concluídas</p>
-                          <p className="font-medium text-white">{card.completedTasks}</p>
-                        </div>
-                        <div>
-                          <p className="text-slate-400">Saúde</p>
-                          <p className="font-medium text-white">{card.healthStatus}</p>
-                        </div>
-                      </div>
+                {projectCards.map((card: DashboardCard) => (
+                  <div key={card.id} className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                    <div className="flex items-start justify-between gap-3">
                       <div>
-                        <div className="mb-2 flex items-center justify-between text-sm">
-                          <span className="text-slate-400">Progresso</span>
-                          <span className={cardTone(card)}>{card.progress}%</span>
-                        </div>
-                        <Progress value={card.progress} className="h-2" />
+                        <p className="font-medium">{card.title}</p>
+                        <p className="mt-1 text-sm text-slate-400">{card.client}</p>
                       </div>
-                      <div className="flex flex-wrap gap-2">
-                        {card.tags.map((tag) => (
-                          <Badge key={`${card.id}-${tag}`} variant="outline">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
+                      <Badge variant="outline">{card.column}</Badge>
+                    </div>
+                    <div className="mt-4 text-sm text-slate-300">{card.openTasks} abertas · {card.completedTasks} concluídas</div>
+                  </div>
                 ))}
               </CardContent>
             </Card>
           </TabsContent>
-
-          <TabsContent value="projetos" className="mt-6">
-            <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-              {projectCards.map((card) => (
-                <Card key={card.id} className="border-white/10 bg-white/5 backdrop-blur-xl">
-                  <CardHeader>
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <CardTitle>{card.title}</CardTitle>
-                        <CardDescription>
-                          Cliente: {card.client} · Dono operacional: {card.owner}
-                        </CardDescription>
-                      </div>
-                      <Badge variant="outline">{card.column}</Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-3 gap-3 text-sm">
-                      <div>
-                        <p className="text-slate-400">Abertas</p>
-                        <p className="font-medium text-white">{card.openTasks}</p>
-                      </div>
-                      <div>
-                        <p className="text-slate-400">Concluídas</p>
-                        <p className="font-medium text-white">{card.completedTasks}</p>
-                      </div>
-                      <div>
-                        <p className="text-slate-400">Saúde</p>
-                        <p className="font-medium text-white">{card.healthStatus}</p>
-                      </div>
-                    </div>
-                    <div>
-                      <div className="mb-2 flex items-center justify-between text-sm">
-                        <span className="text-slate-400">Progresso</span>
-                        <span className={cardTone(card)}>{card.progress}%</span>
-                      </div>
-                      <Progress value={card.progress} className="h-2" />
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {card.tags.map((tag) => (
-                        <Badge key={`${card.id}-${tag}`} variant="outline">
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </TabsContent>
         </Tabs>
       </main>
+
+      <Dialog open={!!editingTask} onOpenChange={(open) => (!open ? closeTaskEditor() : undefined)}>
+        <DialogContent className="border-white/10 bg-slate-950 text-white sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Editar tarefa</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              Ajuste título, responsável, status e prazo sem sair da sala de controle.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-2">
+            <div className="grid gap-2">
+              <label className="text-sm font-medium text-slate-200">Título</label>
+              <Input value={taskForm.title} onChange={(event) => setTaskForm((current) => ({ ...current, title: event.target.value }))} className="border-white/10 bg-white/5 text-white" />
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-2">
+                <label className="text-sm font-medium text-slate-200">Responsável</label>
+                <Input value={taskForm.assignee} onChange={(event) => setTaskForm((current) => ({ ...current, assignee: event.target.value }))} placeholder="Sem dono" className="border-white/10 bg-white/5 text-white" />
+              </div>
+              <div className="grid gap-2">
+                <label className="text-sm font-medium text-slate-200">Prazo</label>
+                <Input type="date" value={taskForm.dueDate} onChange={(event) => setTaskForm((current) => ({ ...current, dueDate: event.target.value }))} className="border-white/10 bg-white/5 text-white" />
+              </div>
+            </div>
+
+            <div className="grid gap-2">
+              <label className="text-sm font-medium text-slate-200">Status</label>
+              <Select value={taskForm.status} onValueChange={(value) => setTaskForm((current) => ({ ...current, status: value }))}>
+                <SelectTrigger className="w-full border-white/10 bg-white/5 text-white">
+                  <SelectValue placeholder="Selecione um status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {TASK_STATUS_OPTIONS.map((status) => (
+                    <SelectItem key={status} value={status}>{status}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {saveMessage && (
+              <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-200">
+                {saveMessage}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={closeTaskEditor} className="border-white/10 bg-transparent text-white hover:bg-white/10">Fechar</Button>
+            <Button onClick={() => void handleSaveTask()} disabled={isSavingTask} className="bg-cyan-400 text-slate-950 hover:bg-cyan-300">
+              {isSavingTask ? "Salvando..." : "Salvar alterações"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {selectedAgent && <AgentChat agent={selectedAgent} onClose={() => setSelectedAgent(null)} />}
     </div>
   );
 }

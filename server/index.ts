@@ -8,6 +8,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const APP_ROOT = path.resolve(__dirname, "..");
 
+const PROJECTS_PATH = "Operacional/Kanban/projetos.json";
+const INITIATIVES_PATH = "Operacional/Kanban/iniciativas.json";
+
 type RawTask = {
   id?: string;
   title?: string;
@@ -62,9 +65,16 @@ type DashboardWorkload = {
   examples: string[];
 };
 
+type TaskUpdatePayload = {
+  title?: string;
+  assignee?: string;
+  status?: string;
+  dueDate?: string;
+};
+
 function repairText(value: string): string {
   if (!value) return value;
-  if (!/[ÃƒÃ‚Ã¢â‚¬â„¢Ã¢â‚¬Å“Ã¢â‚¬\u00c2]/.test(value)) return value;
+  if (!/[ÃƒÆ’Ãƒâ€šÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÂ¢Ã¢â€šÂ¬\u00c2]/.test(value)) return value;
 
   try {
     return Buffer.from(value, "latin1").toString("utf8");
@@ -91,18 +101,25 @@ function sanitizeDeep<T>(value: T): T {
   return value;
 }
 
-async function readJsonFile<T>(relativePath: string): Promise<T> {
-  const fullPath = path.join(APP_ROOT, relativePath);
-  const content = await fs.readFile(fullPath, "utf8");
-  return sanitizeDeep(JSON.parse(content)) as T;
-}
-
 function normalizeName(value: string): string {
   return value
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .trim();
+}
+
+function getFullPath(relativePath: string) {
+  return path.join(APP_ROOT, relativePath);
+}
+
+async function readJsonFile<T>(relativePath: string): Promise<T> {
+  const content = await fs.readFile(getFullPath(relativePath), "utf8");
+  return sanitizeDeep(JSON.parse(content)) as T;
+}
+
+async function writeJsonFile<T>(relativePath: string, data: T) {
+  await fs.writeFile(getFullPath(relativePath), `${JSON.stringify(data, null, 2)}\n`, "utf8");
 }
 
 function getTaskAssignee(task: RawTask): string {
@@ -121,6 +138,20 @@ function mapStatus(status: string): string {
     return "Em revisão";
   }
   return "Pendente";
+}
+
+function mapStatusToRaw(status: string): string {
+  const normalized = normalizeName(status);
+  if (normalized === "concluida" || normalized === "concluída" || normalized === "done") {
+    return "completed";
+  }
+  if (normalized === "em andamento" || normalized === "in progress" || normalized === "in_progress") {
+    return "in_progress";
+  }
+  if (normalized === "em revisao" || normalized === "em revisão" || normalized === "review") {
+    return "review";
+  }
+  return "pending";
 }
 
 function buildProgress(tasks: DashboardTask[], column: string): number {
@@ -165,10 +196,15 @@ function getPartnerId(assignee: string): string | null {
   ) {
     return "joao";
   }
+
   if (["gui", "gui r", "gui r.", "roennau", "guilherme roennau", "guilherme r"].includes(normalized)) {
     return "gui";
   }
-  if (["denis", "denis polidoro", "denis p", "denis p."].includes(normalized)) return "denis";
+
+  if (["denis", "denis polidoro", "denis p", "denis p."].includes(normalized)) {
+    return "denis";
+  }
+
   if (["stacke", "tak", "gui s", "gui stacke", "guilherme stacke"].includes(normalized)) {
     return "stacke";
   }
@@ -176,17 +212,18 @@ function getPartnerId(assignee: string): string | null {
   return null;
 }
 
-async function buildDashboardPayload() {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
+async function readBoardFiles() {
   const [organization, projectsFile, initiativesFile] = await Promise.all([
     readJsonFile<{ name: string; members: string[] }>("Operacional/organizacao.json"),
-    readJsonFile<BoardFile>("Operacional/Kanban/projetos.json"),
-    readJsonFile<BoardFile>("Operacional/Kanban/iniciativas.json"),
+    readJsonFile<BoardFile>(PROJECTS_PATH),
+    readJsonFile<BoardFile>(INITIATIVES_PATH),
   ]);
 
-  const cards = [
+  return { organization, projectsFile, initiativesFile };
+}
+
+function buildCards(projectsFile: BoardFile, initiativesFile: BoardFile) {
+  return [
     ...(projectsFile.boards?.flatMap((board) =>
       (board.cards || []).map((card) => ({ ...card, contextType: "projeto" as const })),
     ) || []),
@@ -194,8 +231,10 @@ async function buildDashboardPayload() {
       (board.cards || []).map((card) => ({ ...card, contextType: "iniciativa" as const })),
     ) || []),
   ];
+}
 
-  const tasks: DashboardTask[] = cards.flatMap((card) =>
+function buildTasks(cards: Array<RawCard & { contextType: "projeto" | "iniciativa" }>, today: Date): DashboardTask[] {
+  return cards.flatMap((card) =>
     (card.tasks || []).map((task) => {
       const mappedStatus = mapStatus(task.status || "");
       return {
@@ -212,6 +251,15 @@ async function buildDashboardPayload() {
       };
     }),
   );
+}
+
+async function buildDashboardPayload() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const { organization, projectsFile, initiativesFile } = await readBoardFiles();
+  const cards = buildCards(projectsFile, initiativesFile);
+  const tasks = buildTasks(cards, today);
 
   const boardCards = cards.map((card) => {
     const cardTasks = tasks.filter((task) => task.contextId === (card.id || ""));
@@ -342,6 +390,51 @@ async function buildDashboardPayload() {
   };
 }
 
+async function updateTaskById(taskId: string, updates: TaskUpdatePayload) {
+  const fileTargets = [
+    { relativePath: PROJECTS_PATH, contextType: "projeto" as const },
+    { relativePath: INITIATIVES_PATH, contextType: "iniciativa" as const },
+  ];
+
+  for (const target of fileTargets) {
+    const boardFile = await readJsonFile<BoardFile>(target.relativePath);
+
+    for (const board of boardFile.boards || []) {
+      for (const card of board.cards || []) {
+        const tasks = card.tasks || [];
+        const task = tasks.find((item) => item.id === taskId);
+
+        if (!task) continue;
+
+        if (typeof updates.title === "string") {
+          task.title = updates.title.trim() || task.title || "Sem título";
+        }
+
+        if (typeof updates.assignee === "string") {
+          const trimmedAssignee = updates.assignee.trim();
+          task.assignee = trimmedAssignee;
+          if ("responsavel" in task) {
+            task.responsavel = trimmedAssignee;
+          }
+        }
+
+        if (typeof updates.status === "string") {
+          task.status = mapStatusToRaw(updates.status);
+        }
+
+        if (typeof updates.dueDate === "string") {
+          task.dueDate = updates.dueDate.trim();
+        }
+
+        await writeJsonFile(target.relativePath, boardFile);
+        return { contextType: target.contextType, cardId: card.id || "", taskId };
+      }
+    }
+  }
+
+  return null;
+}
+
 async function startServer() {
   const app = express();
   const server = createServer(app);
@@ -355,6 +448,31 @@ async function startServer() {
     } catch (error) {
       console.error("Failed to build dashboard payload:", error);
       res.status(500).json({ message: "Falha ao carregar os dados reais do dashboard." });
+    }
+  });
+
+  app.patch("/api/tasks/:taskId", async (req, res) => {
+    try {
+      const taskId = req.params.taskId;
+      const updates = sanitizeDeep(req.body || {}) as TaskUpdatePayload;
+
+      const taskUpdate = await updateTaskById(taskId, updates);
+      if (!taskUpdate) {
+        res.status(404).json({ message: "Tarefa não encontrada." });
+        return;
+      }
+
+      const payload = await buildDashboardPayload();
+      const updatedTask = payload.tasks.find((task) => task.id === taskId);
+
+      res.json({
+        message: "Tarefa atualizada com sucesso.",
+        task: updatedTask || null,
+        payload,
+      });
+    } catch (error) {
+      console.error("Failed to update task:", error);
+      res.status(500).json({ message: "Falha ao atualizar a tarefa." });
     }
   });
 

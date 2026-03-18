@@ -68,6 +68,13 @@ export interface DashboardPayload {
   milestones: DashboardMilestone[];
 }
 
+export interface TaskUpdateInput {
+  title?: string;
+  assignee?: string;
+  status?: string;
+  dueDate?: string;
+}
+
 export async function fetchDashboard(): Promise<DashboardPayload> {
   const response = await fetch("/api/dashboard");
   if (!response.ok) {
@@ -75,4 +82,29 @@ export async function fetchDashboard(): Promise<DashboardPayload> {
   }
 
   return response.json() as Promise<DashboardPayload>;
+}
+
+export async function updateDashboardTask(taskId: string, updates: TaskUpdateInput): Promise<{
+  message: string;
+  task: DashboardTask | null;
+  payload: DashboardPayload;
+}> {
+  const response = await fetch(`/api/tasks/${taskId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(updates),
+  });
+
+  if (!response.ok) {
+    const errorPayload = (await response.json().catch(() => null)) as { message?: string } | null;
+    throw new Error(errorPayload?.message || "Falha ao atualizar a tarefa.");
+  }
+
+  return response.json() as Promise<{
+    message: string;
+    task: DashboardTask | null;
+    payload: DashboardPayload;
+  }>;
 }
