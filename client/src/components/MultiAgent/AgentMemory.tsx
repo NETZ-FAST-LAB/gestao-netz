@@ -7,7 +7,7 @@ interface AgentMemoryProps {
 }
 
 const ROLE_LABEL: Record<AgentMemoryEntry["role"], string> = {
-  user: "Voce",
+  user: "Você",
   agent: "Agente",
   system: "Sistema",
 };
@@ -18,7 +18,7 @@ export function AgentMemory({ entries }: AgentMemoryProps) {
       <div className="space-y-3 p-4">
         {entries.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-white/10 px-4 py-8 text-center text-sm text-slate-500">
-            Ainda nao ha memoria viva deste agente.
+            Ainda não há memória viva deste agente.
           </div>
         ) : (
           entries.map((entry) => (

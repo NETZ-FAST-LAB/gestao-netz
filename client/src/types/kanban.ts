@@ -14,9 +14,9 @@ export const KANBAN_COLUMNS: KanbanColumnDefinition[] = [
   {
     id: "Pendente",
     title: "Planejamento",
-    description: "Hipoteses, backlog e preparacao de experimento.",
+    description: "Hipóteses, backlog e preparação de experimento.",
     accentClass: "from-slate-500/35 to-slate-700/10 border-slate-300/15",
-    emptyState: "Nenhuma formula esperando desenho.",
+    emptyState: "Nenhuma fórmula esperando desenho.",
   },
   {
     id: "Em andamento",
@@ -26,16 +26,16 @@ export const KANBAN_COLUMNS: KanbanColumnDefinition[] = [
     emptyState: "Nenhum reagente borbulhando agora.",
   },
   {
-    id: "Em revisao",
+    id: "Em revisão",
     title: "Em revisão",
-    description: "Checagem, lapidacao e controle de qualidade.",
+    description: "Checagem, lapidação e controle de qualidade.",
     accentClass: "from-amber-400/30 to-amber-950/10 border-amber-300/15",
-    emptyState: "Nada em revisao critica neste momento.",
+    emptyState: "Nada em revisão crítica neste momento.",
   },
   {
-    id: "Concluida",
+    id: "Concluída",
     title: "Concluídas",
-    description: "Entregas que ja sairam da bancada.",
+    description: "Entregas que já saíram da bancada.",
     accentClass: "from-emerald-400/30 to-emerald-950/10 border-emerald-300/15",
     emptyState: "Ainda sem experimentos finalizados aqui.",
   },

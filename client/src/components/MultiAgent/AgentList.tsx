@@ -2,9 +2,9 @@ import { Bot, CircleDot } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { getAgent } from "@/data/agents";
-import type { AgentSummary, AgentStatus } from "@/services/agentService";
+import { cn } from "@/lib/utils";
+import type { AgentStatus, AgentSummary } from "@/services/agentService";
 
 interface AgentListProps {
   agents: AgentSummary[];
@@ -17,7 +17,7 @@ const STATUS_LABELS: Record<AgentStatus, string> = {
   thinking: "Pensando",
   executing: "Executando",
   waiting: "Aguardando",
-  error: "Instavel",
+  error: "Instável",
 };
 
 const STATUS_TONE: Record<AgentStatus, string> = {

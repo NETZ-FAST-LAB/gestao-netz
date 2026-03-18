@@ -1,7 +1,7 @@
 import { Search, Siren, UserRoundX, X } from "lucide-react";
 
-import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DEFAULT_KANBAN_FILTERS, type KanbanFilterQuery } from "@/services/filterService";
@@ -12,7 +12,7 @@ interface KanbanFilterPanelProps {
   onChange: (filters: KanbanFilterQuery) => void;
 }
 
-const STATUS_OPTIONS = ["Pendente", "Em andamento", "Em revisao", "Concluida"];
+const STATUS_OPTIONS = ["Pendente", "Em andamento", "Em revisão", "Concluída"];
 
 export function KanbanFilterPanel({ filters, assigneeOptions, onChange }: KanbanFilterPanelProps) {
   function toggleStatus(status: string, checked: boolean) {

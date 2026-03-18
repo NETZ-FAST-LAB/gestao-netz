@@ -1,12 +1,12 @@
 import { ArrowRight, FlaskConical, Orbit, Sparkles } from "lucide-react";
 
+import { AgentMemory } from "@/components/MultiAgent/AgentMemory";
+import { AgentTools } from "@/components/MultiAgent/AgentTools";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getAgent } from "@/data/agents";
 import type { AgentDetail as AgentDetailModel } from "@/services/agentService";
-import { AgentMemory } from "@/components/MultiAgent/AgentMemory";
-import { AgentTools } from "@/components/MultiAgent/AgentTools";
 
 interface AgentDetailProps {
   agent: AgentDetailModel | null;
@@ -19,7 +19,7 @@ export function AgentDetail({ agent, onSelectCollaborator, onUseAction }: AgentD
     return (
       <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
         <CardContent className="flex min-h-[640px] items-center justify-center text-slate-400">
-          Selecione um agente para abrir a estacao dele.
+          Selecione um agente para abrir a estação dele.
         </CardContent>
       </Card>
     );
@@ -61,7 +61,7 @@ export function AgentDetail({ agent, onSelectCollaborator, onUseAction }: AgentD
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
               <FlaskConical className="h-5 w-5 text-cyan-200" />
-              Estacao de trabalho
+              Estação de trabalho
             </CardTitle>
             <CardDescription>O que este agente enxerga agora na bancada.</CardDescription>
           </CardHeader>
@@ -92,7 +92,7 @@ export function AgentDetail({ agent, onSelectCollaborator, onUseAction }: AgentD
               <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
                 <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Risco quente</p>
                 <p className="mt-3 text-3xl font-semibold text-white">{agent.workspace.riskCount}</p>
-                <p className="mt-2 text-sm text-slate-400">frente(s) com pressao real dentro do recorte deste agente.</p>
+                <p className="mt-2 text-sm text-slate-400">frente(s) com pressão real dentro do recorte deste agente.</p>
               </div>
             </div>
 
@@ -107,7 +107,7 @@ export function AgentDetail({ agent, onSelectCollaborator, onUseAction }: AgentD
                   ))
                 ) : (
                   <div className="rounded-2xl border border-dashed border-white/10 px-4 py-6 text-sm text-slate-500">
-                    Este agente nao esta puxando tarefa especifica agora.
+                    Este agente não está puxando tarefa específica agora.
                   </div>
                 )}
               </div>
@@ -119,9 +119,9 @@ export function AgentDetail({ agent, onSelectCollaborator, onUseAction }: AgentD
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
               <Orbit className="h-5 w-5 text-emerald-200" />
-              Colaboracoes sugeridas
+              Colaborações sugeridas
             </CardTitle>
-            <CardDescription>Quem este agente acionaria para nao trabalhar como ilha.</CardDescription>
+            <CardDescription>Quem este agente acionaria para não trabalhar como ilha.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {agent.collaborators.map((collaborator) => (
@@ -156,7 +156,7 @@ export function AgentDetail({ agent, onSelectCollaborator, onUseAction }: AgentD
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
               <Sparkles className="h-5 w-5 text-amber-200" />
-              Ferramentas e acoes
+              Ferramentas e ações
             </CardTitle>
             <CardDescription>Capacidades declaradas para operar a bancada.</CardDescription>
           </CardHeader>
@@ -164,7 +164,7 @@ export function AgentDetail({ agent, onSelectCollaborator, onUseAction }: AgentD
             <AgentTools tools={agent.tools} />
 
             <div>
-              <p className="text-xs uppercase tracking-[0.22em] text-slate-500">Acoes que vale pedir</p>
+              <p className="text-xs uppercase tracking-[0.22em] text-slate-500">Ações que vale pedir</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {agent.availableActions.map((action) => (
                   <Button
@@ -185,8 +185,8 @@ export function AgentDetail({ agent, onSelectCollaborator, onUseAction }: AgentD
 
         <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
           <CardHeader>
-            <CardTitle>Memoria operacional</CardTitle>
-            <CardDescription>Historico vivo da conversa e dos sinais deste agente.</CardDescription>
+            <CardTitle>Memória operacional</CardTitle>
+            <CardDescription>Histórico vivo da conversa e dos sinais deste agente.</CardDescription>
           </CardHeader>
           <CardContent>
             <AgentMemory entries={agent.memory} />

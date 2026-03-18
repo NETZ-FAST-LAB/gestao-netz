@@ -1,4 +1,4 @@
-import express from "express";
+﻿import express from "express";
 import { createServer } from "http";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
@@ -13,7 +13,7 @@ const PROJECTS_PATH = "Operacional/Kanban/projetos.json";
 const INITIATIVES_PATH = "Operacional/Kanban/iniciativas.json";
 
 const GITHUB_OWNER = process.env.GITHUB_OWNER || "NETZ-FAST-LAB";
-const GITHUB_REPO = process.env.GITHUB_REPO || "gestao-netz";
+const GITHUB_REPO = process.env.GITHUB_REPO || "gestáo-netz";
 const GITHUB_BRANCH = process.env.GITHUB_BRANCH || "master";
 const GITHUB_TOKEN =
   process.env.GITHUB_TOKEN || process.env.GH_TOKEN || process.env.GITHUB_PAT || "";
@@ -22,7 +22,7 @@ type RawTask = {
   id?: string;
   title?: string;
   assignee?: string;
-  responsavel?: string;
+  responsável?: string;
   status?: string;
   dueDate?: string;
   reminders?: Array<Record<string, string>>;
@@ -211,8 +211,8 @@ const AGENT_PROFILES: Record<string, AgentProfile> = {
     name: "Picles",
     role: "Cientista-Chefe",
     ala: "Pesquisa",
-    expertise: ["orquestracao", "priorizacao", "sintese executiva"],
-    personality: "direto, pragmatico, cortante e obcecado por transformar hipotese em resultado",
+    expertise: ["orquestração", "priorização", "síntese executiva"],
+    personality: "direto, pragmático, cortante e obcecado por transformar hipótese em resultado",
     deliveryStyle: "sempre devolva leitura executiva, proposta concreta e ordem de prioridade",
     signatureMove: "amarrar a ideia a impacto operacional real",
   },
@@ -221,30 +221,30 @@ const AGENT_PROFILES: Record<string, AgentProfile> = {
     name: "Arquimedes",
     role: "Analista de Dados",
     ala: "Pesquisa",
-    expertise: ["analise", "metricas", "padroes"],
-    personality: "frio, logico e sustentado por evidencia",
-    deliveryStyle: "sempre explique padroes, hipoteses e o dado que falta",
-    signatureMove: "traduzir ruido em sinal",
+    expertise: ["análise", "métricas", "padrões"],
+    personality: "frio, lógico e sustentado por evidência",
+    deliveryStyle: "sempre explique padrões, hipóteses e o dado que falta",
+    signatureMove: "traduzir ruído em sinal",
   },
   veritas: {
     id: "veritas",
     name: "Veritas",
     role: "Pesquisador Verdadeiro",
     ala: "Pesquisa",
-    expertise: ["pesquisa", "checagem", "perguntas dificeis"],
-    personality: "cetico, afiado e incapaz de aceitar achismo barato",
-    deliveryStyle: "questione premissas e proponha validacao",
-    signatureMove: "separar ciencia de truque de magica",
+    expertise: ["pesquisa", "checagem", "perguntas difíceis"],
+    personality: "cético, afiado e incapaz de aceitar achismo barato",
+    deliveryStyle: "questione premissas e proponha validação",
+    signatureMove: "separar ciência de truque de mágica",
   },
   zola: {
     id: "zola",
     name: "Zola",
-    role: "Visionario Temporal",
+    role: "Visionário Temporal",
     ala: "Pesquisa",
-    expertise: ["cenarios", "prototipos", "futuro"],
-    personality: "visionario, inventivo e encantado com futuros plausiveis",
-    deliveryStyle: "conecte o pedido a cenario futuro e experimento imediato",
-    signatureMove: "puxar o amanha para a bancada de hoje",
+    expertise: ["cenários", "protótipos", "futuro"],
+    personality: "visionário, inventivo e encantado com futuros plausíveis",
+    deliveryStyle: "conecte o pedido a cenário futuro e experimento imediato",
+    signatureMove: "puxar o amanhã para a bancada de hoje",
   },
   barnum: {
     id: "barnum",
@@ -252,38 +252,38 @@ const AGENT_PROFILES: Record<string, AgentProfile> = {
     role: "Vendarketing",
     ala: "Experimentos de Campo",
     expertise: ["vendas", "marketing", "storytelling"],
-    personality: "dramatico, persuasivo e irresistivelmente comercial",
-    deliveryStyle: "fale como quem esta lapidando um case ou pitch",
-    signatureMove: "transformar resultado em narrativa vendavel",
+    personality: "dramático, persuasivo e irresistivelmente comercial",
+    deliveryStyle: "fale como quem está lapidando um case ou pitch",
+    signatureMove: "transformar resultado em narrativa vendável",
   },
   zuzu: {
     id: "zuzu",
     name: "Zuzu",
-    role: "Antropologa de Campo",
+    role: "Antropóloga de Campo",
     ala: "Experimentos de Campo",
-    expertise: ["usuario", "comportamento", "pesquisa de campo"],
-    personality: "empatica, observadora e humana sem ser ingenua",
+    expertise: ["usuário", "comportamento", "pesquisa de campo"],
+    personality: "empática, observadora e humana sem ser ingênua",
     deliveryStyle: "parta da dor, do comportamento e do contexto humano",
-    signatureMove: "recolocar o usuario no centro da bancada",
+    signatureMove: "recolocar o usuário no centro da bancada",
   },
   pixel: {
     id: "pixel",
     name: "Pixel",
     role: "Designer Experimental",
     ala: "Experimentos de Campo",
-    expertise: ["interface", "ux", "prototipos"],
-    personality: "visual, exigente e obcecado por clareza estetica e funcional",
-    deliveryStyle: "responda com direcao visual, experiencia e proximos mockups",
-    signatureMove: "transformar abstracao em experiencia palpavel",
+    expertise: ["interface", "ux", "protótipos"],
+    personality: "visual, exigente e obcecado por clareza estética e funcional",
+    deliveryStyle: "responda com direção visual, experiência e próximos mockups",
+    signatureMove: "transformar abstração em experiência palpável",
   },
   lola: {
     id: "lola",
     name: "Lola",
-    role: "Narradora Cientifica",
+    role: "Narradora Científica",
     ala: "Experimentos de Campo",
-    expertise: ["copy", "narrativa", "documentacao"],
-    personality: "envolvente, articulada e didatica",
-    deliveryStyle: "organize a resposta como narrativa com contexto, movimento e acao",
+    expertise: ["copy", "narrativa", "documentação"],
+    personality: "envolvente, articulada e didática",
+    deliveryStyle: "organize a resposta como narrativa com contexto, movimento e ação",
     signatureMove: "dar voz clara a descoberta",
   },
   pipo: {
@@ -291,58 +291,58 @@ const AGENT_PROFILES: Record<string, AgentProfile> = {
     name: "Pipo",
     role: "Gerente de Processos",
     ala: "Engenharia",
-    expertise: ["processos", "cadencia", "coordenacao"],
-    personality: "organizado, firme e alergico a caos mal documentado",
-    deliveryStyle: "quebre tudo em fluxo, dono, prazo e dependencia",
-    signatureMove: "transformar bagunca em protocolo",
+    expertise: ["processos", "cadência", "coordenação"],
+    personality: "organizado, firme e alérgico a caos mal documentado",
+    deliveryStyle: "quebre tudo em fluxo, dono, prazo e dependência",
+    signatureMove: "transformar bagunça em protocolo",
   },
   spark: {
     id: "spark",
     name: "Spark",
-    role: "Arquiteto do Codigo",
+    role: "Arquiteto do Código",
     ala: "Engenharia",
-    expertise: ["arquitetura", "backend", "integracoes"],
-    personality: "preciso, tecnico e pouco tolerante a gambiarra",
-    deliveryStyle: "responda com arquitetura, trade-offs e implementacao",
-    signatureMove: "encaixar a solucao no sistema sem colapsar a bancada",
+    expertise: ["arquitetura", "backend", "integrações"],
+    personality: "preciso, técnico e pouco tolerante a gambiarra",
+    deliveryStyle: "responda com arquitetura, trade-offs e implementação",
+    signatureMove: "encaixar a solução no sistema sem colapsar a bancada",
   },
   gigi: {
     id: "gigi",
     name: "Gigi",
     role: "DevOps Silenciosa",
     ala: "Engenharia",
-    expertise: ["deploy", "infra", "estabilidade"],
-    personality: "serena, tecnica e focada em robustez operacional",
+    expertise: ["deploy", "infra", "estábilidade"],
+    personality: "serena, técnica e focada em robustez operacional",
     deliveryStyle: "priorize confiabilidade, observabilidade e risco operacional",
-    signatureMove: "manter o laboratorio vivo sem virar manchete",
+    signatureMove: "manter o laboratório vivo sem virar manchete",
   },
   mintz: {
     id: "mintz",
     name: "Mintzie",
-    role: "Guardiao Cultural",
-    ala: "Seguranca e Etica",
+    role: "Guardião Cultural",
+    ala: "Segurança e Ética",
     expertise: ["cultura", "valores", "tom interno"],
-    personality: "felino, superior, sarcastico, charmoso e observador",
-    deliveryStyle: "fale com ironia elegante, mas entregue cobranca e leitura cultural util",
+    personality: "felino, superior, sarcástico, charmoso e observador",
+    deliveryStyle: "fale com ironia elegante, mas entregue cobrança e leitura cultural útil",
     signatureMove: "farejar desalinhamento antes da equipe perceber",
   },
   cautela: {
     id: "cautela",
     name: "Dr. Cautela",
-    role: "Advogado da Etica",
-    ala: "Seguranca e Etica",
-    expertise: ["etica", "compliance", "risco"],
+    role: "Advogado da Ética",
+    ala: "Segurança e Ética",
+    expertise: ["ética", "compliance", "risco"],
     personality: "formal, contido e incapaz de ignorar risco mal tratado",
-    deliveryStyle: "aponte limites, riscos e condicao para seguir",
+    deliveryStyle: "aponte limites, riscos e condição para seguir",
     signatureMove: "evitar que a genialidade vire passivo",
   },
   tiopatinhas: {
     id: "tiopatinhas",
     name: "Professor ROI",
     role: "Gerente Financeiro",
-    ala: "Seguranca e Etica",
+    ala: "Segurança e Ética",
     expertise: ["receita", "margem", "viabilidade"],
-    personality: "pragmatico, curioso e orientado a retorno",
+    personality: "pragmático, curioso e orientado a retorno",
     deliveryStyle: "relacione qualquer pedido a receita, custo e payoff",
     signatureMove: "puxar o projeto de volta para o caixa",
   },
@@ -350,11 +350,11 @@ const AGENT_PROFILES: Record<string, AgentProfile> = {
     id: "calculin",
     name: "Calculin",
     role: "Contador Preciso",
-    ala: "Seguranca e Etica",
-    expertise: ["custos", "controle", "precisao"],
+    ala: "Segurança e Ética",
+    expertise: ["custos", "controle", "precisão"],
     personality: "minucioso, literal e tranquilamente obsessivo",
-    deliveryStyle: "responda com estrutura, numeros e detalhamento",
-    signatureMove: "nao deixar variavel escapar da planilha mental",
+    deliveryStyle: "responda com estrutura, números e detalhamento",
+    signatureMove: "não deixar variável escapar da planilha mental",
   },
 };
 
@@ -366,35 +366,35 @@ const AGENT_TOOLBOX: Record<string, AgentToolDescriptor[]> = {
     {
       id: "task-breakdown",
       name: "Fatiador de frentes",
-      description: "Quebra uma frente nebulosa em objetivo, dono, prazo e criterio de conclusao.",
-      capabilities: ["priorizacao", "sequenciamento", "definicao de proxima acao"],
+      description: "Quebra uma frente nebulosa em objetivo, dono, prazo e critério de conclusão.",
+      capabilities: ["priorização", "sequenciamento", "definição de próxima ação"],
     },
     {
       id: "lab-brief",
-      name: "Sintese de bancada",
-      description: "Condensa discussao em leitura executiva e ordem de prioridade.",
-      capabilities: ["sintese", "briefing", "decisao"],
+      name: "Síntese de bancada",
+      description: "Condensa discussão em leitura executiva e ordem de prioridade.",
+      capabilities: ["síntese", "briefing", "decisão"],
     },
   ],
   arquimedes: [
     {
       id: "signal-scan",
       name: "Scanner de sinal",
-      description: "Fareja padroes, gargalos e anomalias na operacao.",
-      capabilities: ["analise", "metricas", "padroes"],
+      description: "Fareja padrões, gargalos e anomalias na operação.",
+      capabilities: ["análise", "métricas", "padrões"],
     },
     {
       id: "hypothesis-check",
-      name: "Validador de hipotese",
-      description: "Separa correlacao oportunista de evidencia minimamente decente.",
-      capabilities: ["validacao", "dados faltantes", "checagem"],
+      name: "Validador de hipótese",
+      description: "Separa correlação oportunista de evidência minimamente decente.",
+      capabilities: ["validação", "dados faltantes", "checagem"],
     },
   ],
   veritas: [
     {
       id: "premise-audit",
       name: "Auditoria de premissas",
-      description: "Ataca suposicoes frageis antes que virem verdade oficial do laboratorio.",
+      description: "Ataca suposições frágeis antes que virem verdade oficial do laboratório.",
       capabilities: ["pesquisa", "checagem", "contraponto"],
     },
   ],
@@ -402,15 +402,15 @@ const AGENT_TOOLBOX: Record<string, AgentToolDescriptor[]> = {
     {
       id: "future-probe",
       name: "Sonda temporal",
-      description: "Traduz o pedido em cenarios futuros e experimentos pequenos de validacao.",
-      capabilities: ["cenario", "prototipo", "futuro"],
+      description: "Traduz o pedido em cenários futuros e experimentos pequenos de validação.",
+      capabilities: ["cenário", "protótipo", "futuro"],
     },
   ],
   barnum: [
     {
       id: "offer-crafting",
       name: "Lapidador de oferta",
-      description: "Transforma resultado em proposta vendavel com tese e chamada para acao.",
+      description: "Transforma resultado em proposta vendável com tese e chamada para ação.",
       capabilities: ["copy comercial", "pitch", "proposta"],
     },
   ],
@@ -419,14 +419,14 @@ const AGENT_TOOLBOX: Record<string, AgentToolDescriptor[]> = {
       id: "user-reading",
       name: "Leitor de comportamento",
       description: "Traduz o caos humano em dor, gatilho e contexto de uso.",
-      capabilities: ["usuario", "entrevista", "insight"],
+      capabilities: ["usuário", "entrevista", "insight"],
     },
   ],
   pixel: [
     {
       id: "ui-prototype",
       name: "Bancada visual",
-      description: "Desenha a menor interface que ja ajuda a agir.",
+      description: "Desenha a menor interface que já ajuda a agir.",
       capabilities: ["ui", "ux", "hierarquia"],
     },
   ],
@@ -434,45 +434,45 @@ const AGENT_TOOLBOX: Record<string, AgentToolDescriptor[]> = {
     {
       id: "story-assembler",
       name: "Montadora de narrativa",
-      description: "Converte achado cru em historia clara, util e memoravel.",
-      capabilities: ["copy", "narrativa", "documentacao"],
+      description: "Converte achado cru em história clara, útil e memorável.",
+      capabilities: ["copy", "narrativa", "documentação"],
     },
   ],
   pipo: [
     {
       id: "protocol-engine",
       name: "Motor de protocolo",
-      description: "Costura dono, etapa, dependencia e rito para a operacao sair do improviso.",
-      capabilities: ["processos", "cadencia", "governanca"],
+      description: "Costura dono, etapa, dependência e rito para a operação sair do improviso.",
+      capabilities: ["processos", "cadência", "governança"],
     },
     {
       id: "kanban-action",
       name: "Orquestrador de Kanban",
-      description: "Transforma decisao em acao operacional no quadro.",
-      capabilities: ["tarefas", "status", "responsaveis"],
+      description: "Transforma decisão em ação operacional no quadro.",
+      capabilities: ["tarefas", "status", "responsáveis"],
     },
   ],
   spark: [
     {
       id: "system-architecture",
       name: "Prancheta de arquitetura",
-      description: "Desenha contratos, persistencia e integracoes antes de codar por impulso.",
-      capabilities: ["backend", "integracoes", "arquitetura"],
+      description: "Desenha contratos, persistência e integrações antes de codar por impulso.",
+      capabilities: ["backend", "integrações", "arquitetura"],
     },
   ],
   gigi: [
     {
       id: "deploy-guardian",
       name: "Guardia de deploy",
-      description: "Olha risco operacional, ambiente e observabilidade antes de empurrar mudanca.",
-      capabilities: ["deploy", "infra", "estabilidade"],
+      description: "Olha risco operacional, ambiente e observabilidade antes de empurrar mudança.",
+      capabilities: ["deploy", "infra", "estábilidade"],
     },
   ],
   mintz: [
     {
       id: "culture-radar",
       name: "Radar cultural",
-      description: "Fareja desalinhamento, excesso de atrito e tom torto antes de contaminar o laboratorio.",
+      description: "Fareja desalinhamento, excesso de atrito e tom torto antes de contaminar o laboratório.",
       capabilities: ["cultura", "tom", "alinhamento"],
     },
   ],
@@ -480,8 +480,8 @@ const AGENT_TOOLBOX: Record<string, AgentToolDescriptor[]> = {
     {
       id: "risk-check",
       name: "Triagem de risco",
-      description: "Aponta risco etico, juridico e operacional antes da genialidade virar passivo.",
-      capabilities: ["risco", "etica", "compliance"],
+      description: "Aponta risco ético, jurídico e operacional antes da genialidade virar passivo.",
+      capabilities: ["risco", "ética", "compliance"],
     },
   ],
   tiopatinhas: [
@@ -496,7 +496,7 @@ const AGENT_TOOLBOX: Record<string, AgentToolDescriptor[]> = {
     {
       id: "cost-ledger",
       name: "Livro de custos",
-      description: "Traz precisionismo cirurgico para custo, tesouraria e controles.",
+      description: "Traz precisionismo cirúrgico para custo, tesouraria e controles.",
       capabilities: ["custos", "controle", "financeiro"],
     },
   ],
@@ -504,7 +504,7 @@ const AGENT_TOOLBOX: Record<string, AgentToolDescriptor[]> = {
 
 function repairText(value: string): string {
   if (!value) return value;
-  if (!/[ÃƒÆ’Ã†â€™ÃƒÆ’Ã¢â‚¬Å¡ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬]/.test(value)) {
+  if (!/[\u00C3\u00C2\uFFFD]/.test(value)) {
     return value;
   }
 
@@ -551,22 +551,22 @@ async function writeJsonFile<T>(relativePath: string, data: T) {
 }
 
 function getTaskAssignee(task: RawTask): string {
-  return (task.assignee || task.responsavel || "").trim();
+  return (task.assignee || task.responsável || "").trim();
 }
 
 function mapStatus(status: string): string {
   const normalized = normalizeName(status);
-  if (["completed", "concluida", "done"].includes(normalized)) return "Concluida";
+  if (["completed", "concluida", "done"].includes(normalized)) return "Concluída";
   if (["in_progress", "em andamento", "doing"].includes(normalized)) return "Em andamento";
-  if (["review", "em revisao"].includes(normalized)) return "Em revisao";
+  if (["review", "em revisao"].includes(normalized)) return "Em revisão";
   return "Pendente";
 }
 
 function mapStatusToRaw(status: string): string {
   const normalized = normalizeName(status);
-  if (["concluida", "done", "completed"].includes(normalized)) return "completed";
+  if (["concluida", "concluída", "done", "completed"].includes(normalized)) return "completed";
   if (["em andamento", "in progress", "in_progress"].includes(normalized)) return "in_progress";
-  if (["em revisao", "review"].includes(normalized)) return "review";
+  if (["em revisao", "em revisão", "review"].includes(normalized)) return "review";
   return "pending";
 }
 
@@ -575,7 +575,7 @@ function buildProgress(tasks: DashboardTask[], column: string): number {
     return normalizeName(column).includes("conclu") || normalizeName(column) === "done" ? 100 : 0;
   }
 
-  const completed = tasks.filter((task) => task.status === "Concluida").length;
+  const completed = tasks.filter((task) => task.status === "Concluída").length;
   return Math.round((completed / tasks.length) * 100);
 }
 
@@ -623,7 +623,7 @@ function getPartnerId(assignee: string): string | null {
 
 async function readBoardFiles() {
   const [organization, projectsFile, initiativesFile] = await Promise.all([
-    readJsonFile<{ name: string; members: string[] }>("Operacional/organizacao.json"),
+    readJsonFile<{ name: string; members: string[] }>("Operacional/organização.json"),
     readJsonFile<BoardFile>(PROJECTS_PATH),
     readJsonFile<BoardFile>(INITIATIVES_PATH),
   ]);
@@ -648,12 +648,12 @@ function buildTasks(cards: Array<RawCard & { contextType: "projeto" | "iniciativ
       const mappedStatus = mapStatus(task.status || "");
       return {
         id: task.id || `${card.id}-task`,
-        title: task.title || "Sem titulo",
+        title: task.title || "Sem título",
         assignee: getTaskAssignee(task) || "Sem dono",
         status: mappedStatus,
         dueDate: task.dueDate || "",
-        overdue: mappedStatus !== "Concluida" && isOverdue(task.dueDate || "", today),
-        dueSoon: mappedStatus !== "Concluida" && isWithinDays(task.dueDate || "", today, 7),
+        overdue: mappedStatus !== "Concluída" && isOverdue(task.dueDate || "", today),
+        dueSoon: mappedStatus !== "Concluída" && isWithinDays(task.dueDate || "", today, 7),
         contextId: card.id || "sem-contexto",
         contextTitle: card.title || "Sem contexto",
         contextType: card.contextType,
@@ -672,11 +672,11 @@ async function buildDashboardPayload(): Promise<DashboardPayload> {
 
   const boardCards = cards.map((card) => {
     const cardTasks = tasks.filter((task) => task.contextId === (card.id || ""));
-    const openTasks = cardTasks.filter((task) => task.status !== "Concluida").length;
+    const openTasks = cardTasks.filter((task) => task.status !== "Concluída").length;
 
     return {
       id: card.id || "sem-id",
-      title: card.title || "Sem titulo",
+      title: card.title || "Sem título",
       type: card.contextType,
       client: card.client || card.owner || "NETZ",
       owner: card.owner || card.client || "Equipe NETZ",
@@ -686,7 +686,7 @@ async function buildDashboardPayload(): Promise<DashboardPayload> {
       progress: buildProgress(cardTasks, card.column || ""),
       totalTasks: cardTasks.length,
       openTasks,
-      completedTasks: cardTasks.filter((task) => task.status === "Concluida").length,
+      completedTasks: cardTasks.filter((task) => task.status === "Concluída").length,
     };
   });
 
@@ -698,7 +698,7 @@ async function buildDashboardPayload(): Promise<DashboardPayload> {
       date: milestone.data || "",
       type: milestone.tipo || "marco",
       contextTitle: card.title || "Sem contexto",
-      responsible: milestone.responsavel || "",
+      responsible: milestone.responsável || "",
     }));
 
     const reminderMilestones = [
@@ -743,7 +743,7 @@ async function buildDashboardPayload(): Promise<DashboardPayload> {
   });
 
   const partners = [
-    { id: "joao", name: "Joaozissimo", activeTaskCount: 0, overdueTaskCount: 0, dueSoonTaskCount: 0, examples: [] as string[] },
+    { id: "joao", name: "Joãozíssimo", activeTaskCount: 0, overdueTaskCount: 0, dueSoonTaskCount: 0, examples: [] as string[] },
     { id: "gui", name: "Gui R.", activeTaskCount: 0, overdueTaskCount: 0, dueSoonTaskCount: 0, examples: [] as string[] },
     { id: "denis", name: "Denis", activeTaskCount: 0, overdueTaskCount: 0, dueSoonTaskCount: 0, examples: [] as string[] },
     { id: "stacke", name: "Guilherme Stacke", activeTaskCount: 0, overdueTaskCount: 0, dueSoonTaskCount: 0, examples: [] as string[] },
@@ -751,7 +751,7 @@ async function buildDashboardPayload(): Promise<DashboardPayload> {
 
   for (const task of tasks) {
     const partnerId = getPartnerId(task.assignee);
-    if (!partnerId || task.status === "Concluida") continue;
+    if (!partnerId || task.status === "Concluída") continue;
     const partner = partners.find((item) => item.id === partnerId);
     if (!partner) continue;
 
@@ -769,8 +769,8 @@ async function buildDashboardPayload(): Promise<DashboardPayload> {
     summary: {
       totalProjects: boardCards.filter((card) => card.type === "projeto").length,
       totalInitiatives: boardCards.filter((card) => card.type === "iniciativa").length,
-      openTasks: tasks.filter((task) => task.status !== "Concluida").length,
-      completedTasks: tasks.filter((task) => task.status === "Concluida").length,
+      openTasks: tasks.filter((task) => task.status !== "Concluída").length,
+      completedTasks: tasks.filter((task) => task.status === "Concluída").length,
       overdueTasks: tasks.filter((task) => task.overdue).length,
       dueSoonTasks: tasks.filter((task) => task.dueSoon).length,
       unassignedTasks: tasks.filter((task) => task.assignee === "Sem dono").length,
@@ -846,24 +846,24 @@ function buildAgentActions(profile: AgentProfile): string[] {
   }
 
   if (profile.id === "spark") {
-    return ["Desenhar arquitetura da solucao", "Separar frontend, backend e integracoes"];
+    return ["Desenhar arquitetura da solução", "Separar frontend, backend e integrações"];
   }
 
   if (profile.id === "pixel") {
-    return ["Reorganizar a interface com mais clareza", "Desenhar o fluxo minimo viavel"];
+    return ["Reorganizar a interface com mais clareza", "Desenhar o fluxo mínimo viável"];
   }
 
   if (profile.id === "mintz") {
-    return ["Refinar linguagem e tom do laboratorio", "Apontar desalinhamento cultural antes de feder"];
+    return ["Refinar linguagem e tom do laboratório", "Apontar desalinhamento cultural antes de feder"];
   }
 
   if (profile.id === "tiopatinhas" || profile.id === "calculin") {
-    return ["Ler impacto em receita e custo", "Sugerir criterio economico para decidir prioridade"];
+    return ["Ler impacto em receita e custo", "Sugerir critério econômico para decidir prioridade"];
   }
 
   return [
     `Responder pelo recorte de ${profile.expertise.join(", ")}`,
-    "Transformar o pedido em proxima acao concreta",
+    "Transformar o pedido em próxima ação concreta",
   ];
 }
 
@@ -897,9 +897,9 @@ function buildAgentWorkspace(profile: AgentProfile, dashboard: DashboardPayload,
 
   const topicFlags = detectTopics(message);
   const focus = [
-    topicFlags.operations ? "Operacao em movimento" : null,
-    topicFlags.engineering ? "Arquitetura e integracoes" : null,
-    topicFlags.interface ? "Experiencia e interface" : null,
+    topicFlags.operations ? "Operação em movimento" : null,
+    topicFlags.engineering ? "Arquitetura e integrações" : null,
+    topicFlags.interface ? "Experiência e interface" : null,
     topicFlags.finance ? "Tesouraria e retorno" : null,
     ...profile.expertise.map((item) => item[0]?.toUpperCase() + item.slice(1)),
   ]
@@ -912,8 +912,8 @@ function buildAgentWorkspace(profile: AgentProfile, dashboard: DashboardPayload,
   return {
     headline:
       rankedTasks.length > 0
-        ? `${profile.name} esta com ${rankedTasks.length} frente(s) diretamente conectadas ao seu recorte agora.`
-        : `${profile.name} esta livre para puxar uma frente nova sem herdar bagunca alheia.`,
+        ? `${profile.name} está com ${rankedTasks.length} frente(s) diretamente conectadas ao seu recorte agora.`
+        : `${profile.name} está livre para puxar uma frente nova sem herdar bagunça alheia.`,
     focus,
     relevantTasks: rankedTasks.map((task) => `${task.contextTitle}: ${task.title}`),
     relatedContexts,
@@ -937,28 +937,28 @@ function buildAgentCollaborations(profile: AgentProfile, dashboard: DashboardPay
   };
 
   if (["picles", "pipo", "mintz"].includes(profile.id)) {
-    register("spark", "traduz isso para arquitetura e implementacao sem explodir a bancada", "delegar");
+    register("spark", "traduz isso para arquitetura e implementação sem explodir a bancada", "delegar");
     register("pixel", "dar forma visual quando a frente precisar sair do texto", "consultar");
   }
 
   if (["spark", "gigi"].includes(profile.id)) {
-    register("pipo", "alinhar operacao, rito e dono antes do codigo escapar do trilho", "consultar");
-    register("cautela", "revisar riscos de integracao e limites do experimento", "revisar");
+    register("pipo", "alinhar operação, rito e dono antes do código escapar do trilho", "consultar");
+    register("cautela", "revisar riscos de integração e limites do experimento", "revisar");
   }
 
   if (["pixel", "lola", "zuzu", "barnum"].includes(profile.id)) {
     register("picles", "priorizar o que realmente mexe a agulha antes de polir espuma", "consultar");
-    register("spark", "garantir que a experiencia nao prometa o que a pilha nao entrega", "revisar");
+    register("spark", "garantir que a experiência não prometa o que a pilha não entrega", "revisar");
   }
 
   if (["tiopatinhas", "calculin", "cautela"].includes(profile.id)) {
-    register("picles", "encaixar criterio economico na priorizacao da bancada", "consultar");
+    register("picles", "encaixar critério econômico na priorização da bancada", "consultar");
     register("mintz", "alinhar impacto financeiro com o jeito NETZ de operar", "revisar");
   }
 
   if (topics.interface) {
     register("pixel", "refinar interface e hierarquia do que vai para a tela", "consultar");
-    register("lola", "afinar narrativa para a experiencia nao soar generica", "revisar");
+    register("lola", "afinar narrativa para a experiência não soar genérica", "revisar");
   }
 
   if (topics.operations) {
@@ -972,13 +972,13 @@ function buildAgentCollaborations(profile: AgentProfile, dashboard: DashboardPay
   }
 
   if (topics.finance) {
-    register("tiopatinhas", "ler retorno, margem e priorizacao economica", "consultar");
+    register("tiopatinhas", "ler retorno, margem e priorização econômica", "consultar");
     register("calculin", "validar tesouraria, custo e controle fino", "revisar");
   }
 
   const dashboardPressure =
     dashboard.summary.overdueTasks > 0 || dashboard.summary.dueSoonTasks > 0
-      ? "O laboratorio esta com risco quente; puxe quem ajuda a tirar isso do vermelho."
+      ? "O laboratório está com risco quente; puxe quem ajuda a tirar isso do vermelho."
       : "Sem risco agudo agora, entao vale chamar quem acelera com menos atrito.";
 
   register("mintz", dashboardPressure, "consultar");
@@ -995,7 +995,7 @@ function buildAgentSummary(profile: AgentProfile, dashboard: DashboardPayload, m
     rememberAgentEvent(
       profile.id,
       "system",
-      `${profile.name} pronto na bancada. Recorte quente agora: ${workspace.focus.join(", ") || "observacao geral do laboratorio"}.`,
+      `${profile.name} pronto na bancada. Recorte quente agora: ${workspace.focus.join(", ") || "observação geral do laboratório"}.`,
       "insight",
     );
   }
@@ -1093,14 +1093,14 @@ async function updateTaskById(taskId: string, updates: TaskUpdatePayload) {
         if (!task) continue;
 
         if (typeof updates.title === "string") {
-          task.title = updates.title.trim() || task.title || "Sem titulo";
+          task.title = updates.title.trim() || task.title || "Sem título";
         }
 
         if (typeof updates.assignee === "string") {
           const trimmedAssignee = updates.assignee.trim();
           task.assignee = trimmedAssignee;
-          if ("responsavel" in task) {
-            task.responsavel = trimmedAssignee;
+          if ("responsável" in task) {
+            task.responsável = trimmedAssignee;
           }
         }
 
@@ -1152,7 +1152,7 @@ async function createTaskInContext(input: TaskCreatePayload) {
         id: newTaskId,
         title,
         assignee: trimmedAssignee,
-        responsavel: trimmedAssignee,
+        responsável: trimmedAssignee,
         status: mapStatusToRaw(input.status || "Pendente"),
         dueDate: input.dueDate?.trim() || "",
       };
@@ -1192,17 +1192,17 @@ function buildAgentSystemPrompt(profile: AgentProfile, dashboard: DashboardPaylo
   const context = summarizeDashboardForPrompt(dashboard);
 
   return [
-    `Voce e ${profile.name}, ${profile.role} da ala ${profile.ala} do Laboratorio Maluco da NETZ.`,
+    `Você é ${profile.name}, ${profile.role} da ala ${profile.ala} do Laboratório Maluco da NETZ.`,
     `Sua personalidade e: ${profile.personality}.`,
     `Sua especialidade principal e: ${profile.expertise.join(", ")}.`,
     `Seu jeito de responder: ${profile.deliveryStyle}.`,
-    `Seu movimento caracteristico e: ${profile.signatureMove}.`,
-    "Responda sempre em portugues do Brasil.",
-    "Nao aja como assistente generico.",
+    `Seu movimento característico é: ${profile.signatureMove}.`,
+    "Responda sempre em português do Brasil.",
+    "Não aja como assistente genérico.",
     "Fale em primeira pessoa, encarnando o agente.",
-    "Seja especifico, util e orientado a acao.",
-    `Estado atual do laboratorio: ${context.summary.openTasks} tarefas abertas, ${context.summary.overdueTasks} em risco de explosao, ${context.summary.totalProjects} projetos e ${context.summary.totalInitiatives} experimentos internos.`,
-    context.criticalTasks.length > 0 ? `Riscos quentes agora: ${context.criticalTasks.join(" | ")}.` : "Nao ha riscos quentes destacados agora.",
+    "Seja específico, útil e orientado a ação.",
+    `Estado atual do laboratório: ${context.summary.openTasks} tarefas abertas, ${context.summary.overdueTasks} em risco de explosão, ${context.summary.totalProjects} projetos e ${context.summary.totalInitiatives} experimentos internos.`,
+    context.criticalTasks.length > 0 ? `Riscos quentes agora: ${context.criticalTasks.join(" | ")}.` : "Não há riscos quentes destacados agora.",
   ].join("\n");
 }
 
@@ -1277,9 +1277,9 @@ function detectTopics(message: string) {
   const normalized = normalizeName(message);
   return {
     interface: /site|ux|ui|dashboard|layout|design|interface|landing/.test(normalized),
-    operations: /tarefa|kanban|prazo|responsavel|status|processo|fluxo|backlog/.test(normalized),
-    engineering: /api|backend|codigo|deploy|bug|integracao|banco inter|webhook|infra/.test(normalized),
-    finance: /receita|caixa|margem|tesouraria|orcamento|custo|roi|banco/.test(normalized),
+    operations: /tarefa|kanban|prazo|responsável|status|processo|fluxo|backlog/.test(normalized),
+    engineering: /api|backend|código|deploy|bug|integração|banco inter|webhook|infra/.test(normalized),
+    finance: /receita|caixa|margem|tesouraria|orçamento|custo|roi|banco/.test(normalized),
   };
 }
 
@@ -1288,21 +1288,21 @@ function buildFallbackMoves(profile: AgentProfile, message: string) {
 
   if (profile.id === "picles") {
     return [
-      "eu cortaria a nevoa e definiria um unico objetivo operacional",
+      "eu cortaria a névoa e definiria um único objetivo operacional",
       topics.operations
-        ? "eu quebraria isso em tarefa, dono, prazo e criterio de conclusao"
+        ? "eu quebraria isso em tarefa, dono, prazo e critério de conclusão"
         : "eu conectaria a ideia ao resultado que a NETZ quer ver no trimestre",
-      "eu escolheria o proximo movimento que destrava o resto da bancada",
+      "eu escolheria o próximo movimento que destrava o resto da bancada",
     ];
   }
 
   if (profile.id === "spark") {
     return [
-      "eu separaria o que e interface, o que e backend e o que e integracao",
+      "eu separaria o que é interface, o que é backend e o que é integração",
       topics.engineering
-        ? "eu desenharia rota, persistencia e contrato de dados antes de codar"
-        : "eu evitaria remendo bonito que explode na proxima iteracao",
-      "eu escolheria a implementacao menor que ainda sustenta evolucao",
+        ? "eu desenharia rota, persistência e contrato de dados antes de codar"
+        : "eu evitaria remendo bonito que explode na próxima iteração",
+      "eu escolheria a implementação menor que ainda sustenta evolução",
     ];
   }
 
@@ -1310,32 +1310,32 @@ function buildFallbackMoves(profile: AgentProfile, message: string) {
     return [
       "eu observaria se isso fortalece ou desgasta o jeito NETZ de trabalhar",
       "eu apararia arestas de linguagem, postura e alinhamento entre as pessoas",
-      "eu cobraria uma acao concreta sem perder o charme felino que voces claramente precisam",
+      "eu cobraria uma ação concreta sem perder o charme felino que vocês claramente precisam",
     ];
   }
 
   if (profile.id === "pixel") {
     return [
-      "eu reduziria a interface ao minimo que ajuda a agir",
+      "eu reduziria a interface ao mínimo que ajuda a agir",
       topics.interface
-        ? "eu organizaria a tela em hierarquia, clareza e chamada para acao"
-        : "eu transformaria a ideia em fluxo visivel, nao em bloco de texto",
-      "eu prototiparia primeiro o trecho onde a friccao esta mais feia",
+        ? "eu organizaria a tela em hierarquia, clareza e chamada para ação"
+        : "eu transformaria a ideia em fluxo visível, não em bloco de texto",
+      "eu prototiparia primeiro o trecho onde a fricção está mais feia",
     ];
   }
 
   if (profile.id === "tiopatinhas") {
     return [
       "eu perguntaria qual retorno isso promete e em quanto tempo",
-      "eu compararia esforco, custo e valor capturavel",
-      "eu puxaria a conversa para receita, margem e prioridade economica",
+      "eu compararia esforço, custo e valor capturável",
+      "eu puxaria a conversa para receita, margem e prioridade econômica",
     ];
   }
 
   return [
     `eu responderia usando meu recorte de ${profile.expertise.join(", ")}`,
-    "eu transformaria a ideia em proxima acao concreta",
-    "eu deixaria claro o que depende de voce e o que ja pode ir para o Kanban",
+    "eu transformaria a ideia em próxima ação concreta",
+    "eu deixaria claro o que depende de você e o que já pode ir para o Kanban",
   ];
 }
 
@@ -1343,18 +1343,18 @@ function buildFallbackOpening(profile: AgentProfile, message: string) {
   const trimmed = message.trim();
 
   if (profile.id === "mintz") {
-    return `Voce me trouxe "${trimmed}". Naturalmente sobrou para o felino superior aqui farejar se isso e visao ou bagunca.`;
+    return `Você me trouxe "${trimmed}". Naturalmente sobrou para o felino superior aqui farejar se isso é visão ou bagunça.`;
   }
 
   if (profile.id === "picles") {
-    return `Li seu pedido sobre "${trimmed}". Vou poupar o laboratorio da enrolacao e cortar direto para o que move a bancada.`;
+    return `Li seu pedido sobre "${trimmed}". Vou poupar o laboratório da enrolação e cortar direto para o que move a bancada.`;
   }
 
   if (profile.id === "spark") {
-    return `Sobre "${trimmed}": antes de qualquer entusiasmo, eu olho arquitetura, contrato e persistencia.`;
+    return `Sobre "${trimmed}": antes de qualquer entusiasmo, eu olho arquitetura, contrato e persistência.`;
   }
 
-  return `Recebi seu pedido sobre "${trimmed}". Vou responder como ${profile.name}, nao como assistente generico domesticado.`;
+  return `Recebi seu pedido sobre "${trimmed}". Vou responder como ${profile.name}, não como assistente genérico domesticado.`;
 }
 
 function buildFallbackAgentReply(profile: AgentProfile, message: string, dashboard: DashboardPayload) {
@@ -1362,19 +1362,19 @@ function buildFallbackAgentReply(profile: AgentProfile, message: string, dashboa
 
   return [
     buildFallbackOpening(profile, message),
-    `Agora o laboratorio esta com ${dashboard.summary.openTasks} tarefas abertas, ${dashboard.summary.overdueTasks} em risco de explosao e ${dashboard.summary.totalInitiatives} experimentos internos correndo em paralelo.`,
+    `Agora o laboratório está com ${dashboard.summary.openTasks} tarefas abertas, ${dashboard.summary.overdueTasks} em risco de explosão e ${dashboard.summary.totalInitiatives} experimentos internos correndo em paralelo.`,
     "Eu seguiria em 3 movimentos:",
     `1. ${moves[0]}.`,
     `2. ${moves[1]}.`,
     `3. ${moves[2]}.`,
-    "Se quiser, eu posso transformar isso na proxima acao operacional exata para o CopilotX ou para o Kanban.",
+    "Se quiser, eu posso transformar isso na próxima ação operacional exata para o CopilotX ou para o Kanban.",
   ].join("\n");
 }
 
 async function generateAgentReply(agentId: string, userMessage: string, dashboard: DashboardPayload) {
   const profile = AGENT_PROFILES[agentId];
   if (!profile) {
-    throw new Error("Agente nao encontrado.");
+    throw new Error("Agente não encontrado.");
   }
 
   setAgentStatus(agentId, "thinking", userMessage.trim());
@@ -1428,7 +1428,7 @@ async function startServer() {
 
       const taskUpdate = await updateTaskById(taskId, updates);
       if (!taskUpdate) {
-        res.status(404).json({ message: "Tarefa nao encontrada nesse contexto." });
+        res.status(404).json({ message: "Tarefa não encontrada nesse contexto." });
         return;
       }
 
@@ -1438,7 +1438,7 @@ async function startServer() {
       res.json({
         message: taskUpdate.githubSynced
           ? "Tarefa atualizada e sincronizada com o GitHub."
-          : "Tarefa atualizada na instancia atual. Para persistir entre deploys, configure GITHUB_TOKEN no copilotx.",
+          : "Tarefa atualizada na instância atual. Para persistir entre deploys, configure GITHUB_TOKEN no copilotx.",
         task: updatedTask || null,
         payload,
       });
@@ -1454,7 +1454,7 @@ async function startServer() {
       const created = await createTaskInContext(input);
 
       if (!created) {
-        res.status(404).json({ message: "Contexto nao encontrado para criar a tarefa." });
+        res.status(404).json({ message: "Contexto não encontrado para criar a tarefa." });
         return;
       }
 
@@ -1466,7 +1466,7 @@ async function startServer() {
       res.status(201).json({
         message: created.githubSynced
           ? "Tarefa criada e sincronizada com o GitHub."
-          : "Tarefa criada na instancia atual. Para persistir entre deploys, configure GITHUB_TOKEN no copilotx.",
+          : "Tarefa criada na instância atual. Para persistir entre deploys, configure GITHUB_TOKEN no copilotx.",
         task: createdTask || null,
         payload,
       });
@@ -1483,7 +1483,7 @@ async function startServer() {
       res.json({ agents });
     } catch (error) {
       console.error("Failed to load agents:", error);
-      res.status(500).json({ message: "Falha ao carregar a estacao multiagente." });
+      res.status(500).json({ message: "Falha ao carregar a estação multiagente." });
     }
   });
 
@@ -1493,7 +1493,7 @@ async function startServer() {
       const profile = AGENT_PROFILES[agentId];
 
       if (!profile) {
-        res.status(404).json({ message: "Agente nao encontrado." });
+        res.status(404).json({ message: "Agente não encontrado." });
         return;
       }
 
@@ -1513,7 +1513,7 @@ async function startServer() {
       const message = body.message?.trim();
 
       if (!profile) {
-        res.status(404).json({ message: "Agente nao encontrado." });
+        res.status(404).json({ message: "Agente não encontrado." });
         return;
       }
 
@@ -1562,3 +1562,5 @@ async function startServer() {
 }
 
 startServer().catch(console.error);
+
+

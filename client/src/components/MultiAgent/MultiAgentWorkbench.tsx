@@ -46,7 +46,7 @@ export function MultiAgentWorkbench() {
       }
     } catch (loadError) {
       console.error(loadError);
-      setError(loadError instanceof Error ? loadError.message : "Falha ao abrir a estacao multiagente.");
+      setError(loadError instanceof Error ? loadError.message : "Falha ao abrir a estação multiagente.");
     } finally {
       setIsLoading(false);
     }
@@ -79,7 +79,7 @@ export function MultiAgentWorkbench() {
   }, [selectedAgentId]);
 
   const stationLabel = useMemo(
-    () => (selectedAgent ? `${selectedAgent.name} · ultima atividade ${formatActivity(selectedAgent.lastActivity)}` : "Sem agente aberto"),
+    () => (selectedAgent ? `${selectedAgent.name} · última atividade ${formatActivity(selectedAgent.lastActivity)}` : "Sem agente aberto"),
     [selectedAgent],
   );
 
@@ -120,9 +120,9 @@ export function MultiAgentWorkbench() {
         <CardHeader>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <CardTitle>Estacao multiagente</CardTitle>
+              <CardTitle>Estação multiagente</CardTitle>
               <CardDescription>
-                Um painel unico para conversar com os agentes, ler memoria, abrir colaboracoes e puxar ferramentas especializadas.
+                Um painel único para conversar com os agentes, ler memória, abrir colaborações e puxar ferramentas especializadas.
               </CardDescription>
             </div>
             <Badge variant="outline" className="border-cyan-300/20 text-cyan-100">
@@ -144,8 +144,8 @@ export function MultiAgentWorkbench() {
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[320px_1fr]">
         <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
           <CardHeader>
-            <CardTitle className="text-lg">Agentes do laboratorio</CardTitle>
-            <CardDescription>{agents.length} agentes disponiveis na bancada.</CardDescription>
+            <CardTitle className="text-lg">Agentes do laboratório</CardTitle>
+            <CardDescription>{agents.length} agentes disponíveis na bancada.</CardDescription>
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -163,7 +163,7 @@ export function MultiAgentWorkbench() {
             <CardHeader>
               <CardTitle>Converse e peça ajuda</CardTitle>
               <CardDescription>
-                A conversa alimenta a memoria do agente e reorganiza o foco dele dentro da sala de controle.
+                A conversa alimenta a memória do agente e reorganiza o foco dele dentro da sala de controle.
               </CardDescription>
             </CardHeader>
             <CardContent>

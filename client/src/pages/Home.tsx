@@ -40,7 +40,7 @@ type TaskFormState = {
   contextType: "projeto" | "iniciativa";
 };
 
-const TASK_STATUS_OPTIONS = ["Pendente", "Em andamento", "Em revisao", "Concluida"];
+const TASK_STATUS_OPTIONS = ["Pendente", "Em andamento", "Em revisão", "Concluída"];
 
 function formatDate(date: string) {
   if (!date) return "Sem data";
@@ -109,7 +109,7 @@ export default function Home() {
       setData(payload);
     } catch (loadError) {
       console.error(loadError);
-      setError("Nao consegui carregar os dados reais do laboratorio agora.");
+      setError("Não consegui carregar os dados reais do laboratório agora.");
     } finally {
       setIsLoading(false);
     }
@@ -149,7 +149,7 @@ export default function Home() {
       total: filteredTasks.length,
       overdue: filteredTasks.filter((task) => task.overdue).length,
       dueSoon: filteredTasks.filter((task) => task.dueSoon).length,
-      done: filteredTasks.filter((task) => task.status === "Concluida").length,
+      done: filteredTasks.filter((task) => task.status === "Concluída").length,
     }),
     [filteredTasks],
   );
@@ -287,16 +287,16 @@ export default function Home() {
                 className="h-10 w-auto object-contain opacity-95 lg:h-12"
               />
               <div className="flex flex-wrap items-center gap-2">
-                <Badge className="bg-cyan-400/15 text-cyan-200 hover:bg-cyan-400/15">Laboratorio NETZ</Badge>
+                <Badge className="bg-cyan-400/15 text-cyan-200 hover:bg-cyan-400/15">Laboratório NETZ</Badge>
                 <Badge variant="outline" className="border-emerald-300/30 text-emerald-200">
                   Painel operacional vivo
                 </Badge>
               </div>
             </div>
-            <h1 className="text-4xl font-semibold tracking-tight lg:text-5xl">Sala de controle do laboratorio</h1>
+            <h1 className="text-4xl font-semibold tracking-tight lg:text-5xl">Sala de controle do laboratório</h1>
             <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-300">
-              Agora o CopilotX ja opera a bancada: conversa com agentes, edita tarefas e abre um Kanban visual para mover
-              o laboratorio sem sair da tela.
+              Agora o CopilotX já opera a bancada: conversa com agentes, edita tarefas e abre um Kanban visual para mover
+              o laboratório sem sair da tela.
             </p>
           </div>
 
@@ -361,14 +361,14 @@ export default function Home() {
 
           <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
             <CardHeader className="pb-2">
-              <CardDescription>Risco de explosao</CardDescription>
+              <CardDescription>Risco de explosão</CardDescription>
               <CardTitle className="flex items-center gap-2 text-2xl">
                 <Siren className="h-5 w-5 text-amber-300" />
                 {isLoading || !data ? "..." : data.summary.overdueTasks}
               </CardTitle>
             </CardHeader>
             <CardContent className="text-sm text-slate-300">
-              {isLoading || !data ? "Varrendo o laboratorio..." : `${data.summary.dueSoonTasks} vencem nos proximos 7 dias.`}
+              {isLoading || !data ? "Varrendo o laboratório..." : `${data.summary.dueSoonTasks} vencem nos próximos 7 dias.`}
             </CardContent>
           </Card>
 
@@ -386,9 +386,9 @@ export default function Home() {
 
         <Tabs defaultValue="visao-geral" className="mt-8">
           <TabsList className="grid h-auto w-full grid-cols-2 gap-2 border border-white/10 bg-white/5 p-2 lg:grid-cols-7">
-            <TabsTrigger value="visao-geral">Visao geral</TabsTrigger>
+            <TabsTrigger value="visao-geral">Visão geral</TabsTrigger>
             <TabsTrigger value="agentes">Agentes</TabsTrigger>
-            <TabsTrigger value="socios">Socios</TabsTrigger>
+            <TabsTrigger value="socios">Sócios</TabsTrigger>
             <TabsTrigger value="kanban">Kanban</TabsTrigger>
             <TabsTrigger value="tarefas">Tarefas</TabsTrigger>
             <TabsTrigger value="iniciativas">Experimentos internos</TabsTrigger>
@@ -399,7 +399,7 @@ export default function Home() {
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_1fr]">
               <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
                 <CardHeader>
-                  <CardTitle>Risco de explosao</CardTitle>
+                  <CardTitle>Risco de explosão</CardTitle>
                   <CardDescription>Tarefas vencidas ou prestes a explodir.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -415,17 +415,17 @@ export default function Home() {
 
               <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
                 <CardHeader>
-                  <CardTitle>Radar do laboratorio</CardTitle>
-                  <CardDescription>Leitura rapida do estado operacional.</CardDescription>
+                  <CardTitle>Radar do laboratório</CardTitle>
+                  <CardDescription>Leitura rápida do estado operacional.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4 text-sm text-slate-300">
                   <p>
-                    Ha <span className="font-semibold text-white">{experimentCards.length}</span> experimentos internos visiveis e{" "}
+                    Há <span className="font-semibold text-white">{experimentCards.length}</span> experimentos internos visíveis e{" "}
                     <span className="font-semibold text-white">{projectCards.length}</span> projetos.
                   </p>
-                  <p>A bancada agora aceita conversa com agentes, criacao de tarefa e movimentacao visual por status.</p>
+                  <p>A bancada agora aceita conversa com agentes, criação de tarefa e movimentação visual por status.</p>
                   <div className="rounded-2xl border border-dashed border-cyan-300/20 bg-cyan-400/5 p-4">
-                    O proximo salto natural e trazer filtros, automacoes e sincronizacao mais inteligente com GitHub.
+                    O próximo salto natural é trazer filtros, automações e sincronização mais inteligente com GitHub.
                   </div>
                 </CardContent>
               </Card>
@@ -442,7 +442,7 @@ export default function Home() {
                 <Card key={partner.id} className="border-white/10 bg-white/5 backdrop-blur-xl">
                   <CardHeader>
                     <CardTitle className="text-lg">{partner.name}</CardTitle>
-                    <CardDescription>Pressao operacional atual</CardDescription>
+                    <CardDescription>Pressão operacional atual</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
@@ -454,7 +454,7 @@ export default function Home() {
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <Badge variant="outline">{partner.overdueTaskCount} atrasadas</Badge>
-                      <Badge variant="outline">{partner.dueSoonTaskCount} com prazo proximo</Badge>
+                      <Badge variant="outline">{partner.dueSoonTaskCount} com prazo próximo</Badge>
                     </div>
                   </CardContent>
                 </Card>
@@ -531,7 +531,7 @@ export default function Home() {
             <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
               <CardHeader>
                 <CardTitle>Experimentos internos</CardTitle>
-                <CardDescription>Todos os experimentos internos do laboratorio.</CardDescription>
+                <CardDescription>Todos os experimentos internos do laboratório.</CardDescription>
               </CardHeader>
               <CardContent className="grid grid-cols-1 gap-6 xl:grid-cols-2">
                 {experimentCards.map((card: DashboardCard) => (
@@ -544,7 +544,7 @@ export default function Home() {
                       <Badge variant="outline">{card.column}</Badge>
                     </div>
                     <div className="mt-4 text-sm text-slate-300">
-                      {card.openTasks} abertas · {card.completedTasks} concluidas
+                      {card.openTasks} abertas · {card.completedTasks} concluídas
                     </div>
                   </div>
                 ))}
@@ -556,7 +556,7 @@ export default function Home() {
             <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
               <CardHeader>
                 <CardTitle>Projetos</CardTitle>
-                <CardDescription>Projetos ativos monitorados pelo laboratorio.</CardDescription>
+                <CardDescription>Projetos ativos monitorados pelo laboratório.</CardDescription>
               </CardHeader>
               <CardContent className="grid grid-cols-1 gap-6 xl:grid-cols-2">
                 {projectCards.map((card: DashboardCard) => (
@@ -569,7 +569,7 @@ export default function Home() {
                       <Badge variant="outline">{card.column}</Badge>
                     </div>
                     <div className="mt-4 text-sm text-slate-300">
-                      {card.openTasks} abertas · {card.completedTasks} concluidas
+                      {card.openTasks} abertas · {card.completedTasks} concluídas
                     </div>
                   </div>
                 ))}
@@ -586,7 +586,7 @@ export default function Home() {
             <DialogDescription className="text-slate-400">
               {taskDialogMode === "create"
                 ? "Adicione uma nova tarefa na bancada e escolha onde ela entra."
-                : "Ajuste titulo, responsavel, status e prazo sem sair da sala de controle."}
+                : "Ajuste título, responsável, status e prazo sem sair da sala de controle."}
             </DialogDescription>
           </DialogHeader>
 
@@ -700,7 +700,7 @@ export default function Home() {
               disabled={isSavingTask || !taskForm.title.trim() || !taskForm.contextId}
               className="bg-cyan-400 text-slate-950 hover:bg-cyan-300"
             >
-              {isSavingTask ? "Salvando..." : taskDialogMode === "create" ? "Criar tarefa" : "Salvar alteracoes"}
+              {isSavingTask ? "Salvando..." : taskDialogMode === "create" ? "Criar tarefa" : "Salvar alterações"}
             </Button>
           </DialogFooter>
         </DialogContent>
