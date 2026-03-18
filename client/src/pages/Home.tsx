@@ -124,9 +124,13 @@ export default function Home() {
     setSaveMessage(null);
 
     try {
-      const response = await updateDashboardTask(editingTask.id, taskForm);
+      const response = await updateDashboardTask(editingTask.id, {
+        ...taskForm,
+        contextId: editingTask.contextId,
+        contextType: editingTask.contextType,
+      });
       setData(response.payload);
-      setSaveMessage("Tarefa atualizada com sucesso.");
+      setSaveMessage(response.message);
 
       if (response.task) {
         setEditingTask(response.task);

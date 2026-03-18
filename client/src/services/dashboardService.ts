@@ -73,6 +73,8 @@ export interface TaskUpdateInput {
   assignee?: string;
   status?: string;
   dueDate?: string;
+  contextId?: string;
+  contextType?: "projeto" | "iniciativa";
 }
 
 export async function fetchDashboard(): Promise<DashboardPayload> {
