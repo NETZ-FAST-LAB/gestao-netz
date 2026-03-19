@@ -1,9 +1,11 @@
 ﻿import asyncio
 import datetime
 import random
+import re
 import sys
 import time
 import traceback
+import unicodedata
 import uuid
 
 import discord
@@ -58,11 +60,12 @@ deploy_announcement_sent = False
 last_error_time = 0
 error_spam_count = 0
 MAX_ERRORS_PER_MINUTE = 3
+RUNTIME_MEMBER_MENTIONS = dict(settings.member_mentions)
 PARTNER_WORKLOAD_TARGETS = [
     {
         "key": "joao",
         "display_name": "Joaozissimo",
-        "mention": settings.member_mentions["joao"],
+        "mention": RUNTIME_MEMBER_MENTIONS["joao"],
         "aliases": [
             "Joao",
             "Joao Henrique",
@@ -81,23 +84,56 @@ PARTNER_WORKLOAD_TARGETS = [
     {
         "key": "gui_r",
         "display_name": "Gui R",
-        "mention": settings.member_mentions["gui_r"],
+        "mention": RUNTIME_MEMBER_MENTIONS["gui_r"],
         "aliases": ["Gui", "Gui R", "Gui R.", "Roennau", "Guilherme Roennau"],
     },
     {
         "key": "denis",
         "display_name": "Denis",
-        "mention": settings.member_mentions["denis"],
+        "mention": RUNTIME_MEMBER_MENTIONS["denis"],
         "aliases": ["Denis", "Denis Polidoro", "Denis P", "Denis P."],
     },
     {
         "key": "stacke",
         "display_name": "Guilherme Stacke",
-        "mention": settings.member_mentions.get("stacke", "@Stacke"),
+        "mention": RUNTIME_MEMBER_MENTIONS.get("stacke", "@Stacke"),
         "aliases": ["Stacke", "Tak", "Gui S", "Gui Stacke", "Guilherme Stacke"],
     },
 ]
 LOW_WORKLOAD_THRESHOLD = 3
+
+
+def _normalize_person_name(value: str) -> str:
+    normalized = unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode("ascii")
+    return re.sub(r"\s+", " ", normalized.lower()).strip()
+
+
+def _member_name_candidates(member: discord.Member) -> set[str]:
+    candidates = {
+        member.name,
+        member.display_name,
+        getattr(member, "global_name", None),
+        getattr(member, "nick", None),
+    }
+    return {_normalize_person_name(candidate) for candidate in candidates if candidate}
+
+
+def resolve_runtime_member_mentions(guild: discord.Guild | None):
+    if guild is None:
+        return
+
+    for partner in PARTNER_WORKLOAD_TARGETS:
+        alias_set = {_normalize_person_name(alias) for alias in partner.get("aliases", []) if alias}
+        matched_member = None
+
+        for member in guild.members:
+            if _member_name_candidates(member) & alias_set:
+                matched_member = member
+                break
+
+        if matched_member is not None:
+            RUNTIME_MEMBER_MENTIONS[partner["key"]] = matched_member.mention
+            partner["mention"] = matched_member.mention
 
 
 def brasilia_now() -> datetime.datetime:
@@ -113,6 +149,7 @@ def management_channel():
 
 
 async def send_low_workload_nudges(channel):
+    resolve_runtime_member_mentions(getattr(channel, "guild", None))
     workload = kanban_service.get_partner_workload_snapshot(
         PARTNER_WORKLOAD_TARGETS,
         threshold=LOW_WORKLOAD_THRESHOLD,
@@ -122,6 +159,7 @@ async def send_low_workload_nudges(channel):
 
 
 async def send_open_tasks_checkins(channel):
+    resolve_runtime_member_mentions(getattr(channel, "guild", None))
     workload = kanban_service.get_partner_workload_snapshot(
         PARTNER_WORKLOAD_TARGETS,
         threshold=LOW_WORKLOAD_THRESHOLD,
@@ -229,6 +267,7 @@ async def on_ready():
 
     channel = management_channel()
     if channel:
+        resolve_runtime_member_mentions(getattr(channel, "guild", None))
         try:
             await channel.send(
                 f"[HIGHLANDER-LOCK] Nova instancia acordou. Destruindo clones silenciosamente. ID: {HIGHLANDER_ID}"
@@ -361,10 +400,10 @@ async def funcionario_da_semana():
         return
 
     org_data = github_client.get_organizacao()
-    membros = org_data.get("members", ["Joaozissimo", "Gui R", "Denis", "Stacke"]) if org_data else ["Joaozissimo", "Gui R", "Denis", "Stacke"]
+    membros = org_data.get("members", ["Joãozíssimo", "Gui R", "Denis", "Stacke"]) if org_data else ["Joãozíssimo", "Gui R", "Denis", "Stacke"]
     escolhido = random.choice(membros)
 
-    await channel.send(f"*Analisando o historico de {escolhido} nos ultimos 7 dias para o veredito do Servo da Semana...*")
+    await channel.send(f"*Analisando o histórico de {escolhido} nos últimos 7 dias para o veredito do Servo da Semana...*")
 
     inicio_semana = discord.utils.utcnow() - datetime.timedelta(days=7)
     historico_escolhido = ""
@@ -394,7 +433,7 @@ async def funcionario_da_semana():
 
     if mensagens_count == 0:
         await channel.send(
-            f"Pelo visto o **{escolhido}** passou a semana inteira dormindo mais do que eu, porque nao achei nenhuma mensagem dele pra elogiar. Fica pra proxima!"
+            f"Pelo visto o **{escolhido}** passou a semana inteira dormindo mais do que eu, porque não achei nenhuma mensagem dele pra elogiar. Fica pra próxima!"
         )
         return
 
@@ -405,7 +444,7 @@ async def funcionario_da_semana():
         response = gemini_logic.client.chat.completions.create(
             model=settings.llm_model,
             messages=[
-                {"role": "system", "content": "Voce e o Mintzie. Aja exatamente como instruido no prompt."},
+                {"role": "system", "content": "Você é o Mintzie. Aja exatamente como instruído no prompt."},
                 {"role": "user", "content": prompt_llm},
             ],
         )
@@ -446,7 +485,7 @@ async def verificador_de_projetos():
                     if data_marco == hoje:
                         mensagens_para_enviar.append(f"HOJE: {titulo} (Projeto: {nome_proj}) - Resp: {lider}")
                     elif data_marco == amanha:
-                        mensagens_para_enviar.append(f"AMANHA: {titulo} (Projeto: {nome_proj}) - Resp: {lider}")
+                        mensagens_para_enviar.append(f"AMANHÃ: {titulo} (Projeto: {nome_proj}) - Resp: {lider}")
                 except Exception:
                     pass
 
@@ -459,7 +498,7 @@ async def verificador_de_projetos():
                             f"CHECKPOINT HOJE: {cp.get('titulo')} - {cp.get('mensagem')} (Projeto: {nome_proj})"
                         )
                     elif data_cp == amanha:
-                        mensagens_para_enviar.append(f"CHECKPOINT AMANHA: {cp.get('titulo')} (Projeto: {nome_proj})")
+                        mensagens_para_enviar.append(f"CHECKPOINT AMANHÃ: {cp.get('titulo')} (Projeto: {nome_proj})")
                 except Exception:
                     pass
 
@@ -471,7 +510,7 @@ async def verificador_de_projetos():
                         f"FECHAMENTO DO PROJETO HOJE: {nome_proj}. {fechamento.get('mensagem')}"
                     )
                 elif data_fech == amanha:
-                    mensagens_para_enviar.append(f"FECHAMENTO DO PROJETO AMANHA: {nome_proj}")
+                    mensagens_para_enviar.append(f"FECHAMENTO DO PROJETO AMANHÃ: {nome_proj}")
             except Exception:
                 pass
 
@@ -481,12 +520,12 @@ async def verificador_de_projetos():
                 if data_upsell == hoje:
                     mensagens_para_enviar.append(f"UPSELL HOJE: {nome_proj}. {upsell.get('mensagem')}")
                 elif data_upsell == amanha:
-                    mensagens_para_enviar.append(f"UPSELL AMANHA: Preparar proposta para {nome_proj}")
+                    mensagens_para_enviar.append(f"UPSELL AMANHÃ: Preparar proposta para {nome_proj}")
             except Exception:
                 pass
 
     if mensagens_para_enviar:
-        resumo = "*Bom dia, humanos! Aqui estao as prioridades e checkpoints absolutos dos projetos para hoje e amanha:*\n\n> "
+        resumo = "*Bom dia, humanos! Aqui estão as prioridades e checkpoints absolutos dos projetos para hoje e amanhã:*\n\n> "
         resumo += "\n> ".join(mensagens_para_enviar)
         await channel.send(resumo)
 
@@ -503,7 +542,7 @@ async def lembrete_fim_de_dia():
     if channel:
         await channel.send(DAY_END_REMINDER)
     else:
-        print(f"ERRO: Canal de ID {settings.management_channel_id} nao encontrado para enviar o lembrete.")
+        print(f"ERRO: Canal de ID {settings.management_channel_id} não encontrado para enviar o lembrete.")
 
 
 hora_provocacao_semana = datetime.time(hour=11, minute=11, tzinfo=BRASILIA_TZ)
@@ -613,7 +652,8 @@ async def gerar_e_enviar_resumo(destination_channel):
             await destination_channel.send(NO_DAILY_DISCUSSION_MESSAGE)
             return
 
-        prompt_llm = build_daily_summary_prompt(historico_str)
+        resolve_runtime_member_mentions(getattr(destination_channel, "guild", None))
+        prompt_llm = build_daily_summary_prompt(historico_str, RUNTIME_MEMBER_MENTIONS)
 
         import gemini_logic
 
@@ -623,7 +663,7 @@ async def gerar_e_enviar_resumo(destination_channel):
             messages=[
                 {
                     "role": "system",
-                    "content": "Voce e o Mintzie, guardiao do laboratorio maluco da NETZ, um gato superior e sarcastico encarregado de fazer resumos executivos diarios do Discord com ironia felina, linguagem de laboratorio e foco brutal em execucao.",
+                    "content": "Você é o Mintzie, guardião do laboratório maluco da NETZ, um gato superior e sarcástico encarregado de fazer resumos executivos diários do Discord com ironia felina, linguagem de laboratório e foco brutal em execução.",
                 },
                 {"role": "user", "content": prompt_llm},
             ],
@@ -633,7 +673,7 @@ async def gerar_e_enviar_resumo(destination_channel):
     except Exception as error:
         error_traceback = "".join(traceback.format_exception(type(error), error, error.__traceback__))
         print(f"Erro ao gerar resumo: {error}")
-        await destination_channel.send("Ocorreu um erro ao gerar o resumo das ultimas 24 horas.")
+        await destination_channel.send("Ocorreu um erro ao gerar o resumo das últimas 24 horas.")
         await log_error_to_discord(f"Erro na Rotina de Resumo:\n{error_traceback}")
 
 
@@ -644,7 +684,7 @@ async def rotina_resumo_diario():
         await gerar_e_enviar_resumo(channel)
 
 
-@bot.tree.command(name="rotina_resumo", description="Forca a geracao do resumo das conversas das ultimas 24h")
+@bot.tree.command(name="rotina_resumo", description="Força a geração do resumo das conversas das últimas 24h")
 async def cmd_rotina_resumo(interaction: discord.Interaction):
     await interaction.response.defer(thinking=False)
     await interaction.followup.send("Processando o resumo do dia, humanos...")
@@ -666,7 +706,7 @@ async def cmd_teste_catnip(interaction: discord.Interaction):
 @bot.tree.command(name="teste_projetos_manus", description="[Teste] Vasculha os tarefas.json e alerta as datas imediatamente")
 async def cmd_teste_projetos(interaction: discord.Interaction):
     await interaction.response.defer(thinking=False)
-    await interaction.followup.send("Lendo projetos no Github... procurando pendencias para hoje ou amanha...")
+    await interaction.followup.send("Lendo projetos no GitHub... procurando pendências para hoje ou amanhã...")
     await verificador_de_projetos.coro()
 
 
@@ -683,7 +723,7 @@ async def cmd_teste_deploy_msg(interaction: discord.Interaction):
         await interaction.followup.send("Falhei em enviar a mensagem de deploy. Vale olhar os logs.", ephemeral=True)
 
 
-@bot.tree.command(name="teste_provocacao_semana", description="[Teste] Envia agora a provocacao operacional da semana")
+@bot.tree.command(name="teste_provocacao_semana", description="[Teste] Envia agora a provocação operacional da semana")
 async def cmd_teste_provocacao_semana(interaction: discord.Interaction):
     snapshot = kanban_service.get_operational_snapshot(reference_date=brasilia_now().date())
     await interaction.response.send_message(build_operational_provocation_message(snapshot))
@@ -695,8 +735,9 @@ async def cmd_teste_gargalo_semana(interaction: discord.Interaction):
     await interaction.response.send_message(build_weekly_bottleneck_message(snapshot))
 
 
-@bot.tree.command(name="teste_socios_sem_tarefa", description="[Teste] Cutuca socios com menos de 3 tarefas ativas")
+@bot.tree.command(name="teste_socios_sem_tarefa", description="[Teste] Cutuca sócios com menos de 3 tarefas ativas")
 async def cmd_teste_socios_sem_tarefa(interaction: discord.Interaction):
+    resolve_runtime_member_mentions(interaction.guild)
     workload = kanban_service.get_partner_workload_snapshot(
         PARTNER_WORKLOAD_TARGETS,
         threshold=LOW_WORKLOAD_THRESHOLD,
@@ -707,7 +748,7 @@ async def cmd_teste_socios_sem_tarefa(interaction: discord.Interaction):
     ]
     if not nudges:
         await interaction.response.send_message(
-            "Inacreditavelmente, os socios estao com carga suficiente hoje. Vou observar em silencio por enquanto."
+            "Inacreditavelmente, os sócios estão com carga suficiente hoje. Vou observar em silêncio por enquanto."
         )
         return
 
@@ -716,6 +757,7 @@ async def cmd_teste_socios_sem_tarefa(interaction: discord.Interaction):
 
 @bot.tree.command(name="teste_checkin_tarefas_abertas", description="[Teste] Envia o check-in de quinta das tarefas em aberto")
 async def cmd_teste_checkin_tarefas_abertas(interaction: discord.Interaction):
+    resolve_runtime_member_mentions(interaction.guild)
     workload = kanban_service.get_partner_workload_snapshot(
         PARTNER_WORKLOAD_TARGETS,
         threshold=LOW_WORKLOAD_THRESHOLD,
@@ -763,7 +805,7 @@ async def on_message(message: discord.Message):
     try:
         print(f"LOG MESSAGE: {message.content} FROM: {message.author}")
     except (TypeError, UnicodeEncodeError):
-        print(f"LOG MESSAGE: <Mensagem nao compativel com o terminal> FROM: {message.author}")
+        print(f"LOG MESSAGE: <Mensagem não compatível com o terminal> FROM: {message.author}")
 
     bot_mention = f"<@{bot.user.id}>"
     if bot.user in message.mentions or bot_mention in message.content or any(
@@ -794,7 +836,7 @@ async def on_message(message: discord.Message):
                 data_formatada = brasilia_now().strftime("%A, %d de %B de %Y as %H:%M (Horario de Brasilia)").capitalize()
                 contexto = (
                     f"\n\n[CONTEXTO DO CHAT: Data/Hora atual: {data_formatada}. "
-                    f"Voce esta respondendo no canal #{channel_name} dentro da categoria '{category_name}']"
+                    f"Você está respondendo no canal #{channel_name} dentro da categoria '{category_name}']"
                 )
                 prompt_enriquecido = f"[Mensagem de: {message.author.display_name}] {clean_prompt} {contexto}"
 
@@ -805,7 +847,7 @@ async def on_message(message: discord.Message):
                 error_traceback = traceback.format_exc()
                 print(f"Erro na IA:\n{error_traceback}")
                 await message.reply(
-                    "Tive uma indigestao de bola de pelo. Ocorreu um erro interno cruel. Mandando os logs pros servos arrumarem."
+                    "Tive uma indigestão de bola de pelo. Ocorreu um erro interno cruel. Mandando os logs pros servos arrumarem."
                 )
                 await log_error_to_discord(
                     f"Erro de IA:\nMensagem de {message.author}: {clean_prompt}\n\n{error_traceback}"
@@ -814,9 +856,9 @@ async def on_message(message: discord.Message):
     await bot.process_commands(message)
 
 
-@bot.tree.command(name="ping", description="Testar conexao")
+@bot.tree.command(name="ping", description="Testar conexão")
 async def ping(interaction: discord.Interaction):
-    await interaction.response.send_message("Pong! O Assistente NETZ esta online.")
+    await interaction.response.send_message("Pong! O Assistente NETZ está online.")
 
 
 @bot.tree.command(name="projetos", description="Listar todos os projetos em andamento no Kanban")
@@ -825,7 +867,7 @@ async def listar_projetos(interaction: discord.Interaction):
 
     data = github_client.get_projetos()
     if not data:
-        await interaction.followup.send("Nao foi possivel carregar os projetos no momento.")
+        await interaction.followup.send("Não foi possível carregar os projetos no momento.")
         return
 
     embed = discord.Embed(title="Projetos Ativos NETZ", color=discord.Color.blue())
@@ -836,7 +878,7 @@ async def listar_projetos(interaction: discord.Interaction):
         embed.description = "Nenhum projeto encontrado."
     else:
         for card in cards:
-            title = card.get("title", "Sem titulo")
+            title = card.get("title", "Sem título")
             client = card.get("client", "Indefinido")
             col = card.get("column", "Sem status")
             health = card.get("health_status", "N/A")
@@ -848,7 +890,7 @@ async def listar_projetos(interaction: discord.Interaction):
 
             embed.add_field(
                 name=f"[{col}] {title}",
-                value=f"Cliente: {client}\nSaude: {health} {tasks_str}",
+                value=f"Cliente: {client}\nSaúde: {health} {tasks_str}",
                 inline=False,
             )
 
@@ -861,7 +903,7 @@ async def listar_iniciativas(interaction: discord.Interaction):
 
     data = github_client.get_iniciativas()
     if not data:
-        await interaction.followup.send("Nao foi possivel carregar as iniciativas no momento.")
+        await interaction.followup.send("Não foi possível carregar as iniciativas no momento.")
         return
 
     embed = discord.Embed(title="Experimentos Internos NETZ", color=discord.Color.green())
@@ -872,10 +914,10 @@ async def listar_iniciativas(interaction: discord.Interaction):
         embed.description = "Nenhuma iniciativa encontrada."
     else:
         for card in cards:
-            title = card.get("title", "Sem titulo")
+            title = card.get("title", "Sem título")
             owner = card.get("owner", "Time")
             col = card.get("column", "Sem status")
-            embed.add_field(name=f"[{col}] {title}", value=f"Responsavel: {owner}", inline=False)
+            embed.add_field(name=f"[{col}] {title}", value=f"Responsável: {owner}", inline=False)
 
     await interaction.followup.send(embed=embed)
 
@@ -886,11 +928,11 @@ async def equipe(interaction: discord.Interaction):
     data = github_client.get_organizacao()
 
     if not data:
-        await interaction.followup.send("Nao foi possivel carregar os dados da organizacao.")
+        await interaction.followup.send("Não foi possível carregar os dados da organização.")
         return
 
     embed = discord.Embed(
-        title=f"Organizacao {data.get('name', 'NETZ')}",
+        title=f"Organização {data.get('name', 'NETZ')}",
         url=data.get("website", ""),
         color=discord.Color.purple(),
     )
