@@ -1,4 +1,4 @@
-// Dados das metas trimestrais da NETZ
+﻿// Dados das metas trimestrais da NETZ
 
 export interface Goal {
   id: string;
@@ -49,7 +49,9 @@ export interface TrimestreTotals {
   forecastQuarters: TrimestreProjection[];
 }
 
-const MONTHLY_TARGET = 48_000;
+const QUARTER_TARGET = 192_000;
+const QUARTER_MONTHS = 3;
+const MONTHLY_TARGET = Math.round(QUARTER_TARGET / QUARTER_MONTHS);
 const COST_PERCENTAGE = 0.15;
 const FORECAST_QUARTERS = 3;
 
@@ -87,31 +89,20 @@ export const goals: Goal[] = [
     currentCosts: 0,
     status: "planejamento",
   },
-  {
-    id: "goal-4",
-    month: 4,
-    monthName: "Abril",
-    targetRevenue: MONTHLY_TARGET,
-    targetCosts: Math.round(MONTHLY_TARGET * COST_PERCENTAGE),
-    targetNetRevenue: Math.round(MONTHLY_TARGET * (1 - COST_PERCENTAGE)),
-    currentRevenue: 0,
-    currentCosts: 0,
-    status: "planejamento",
-  },
 ];
 
 export const milestones: Milestone[] = [
   {
     id: "milestone-1",
-    title: "Lançamento SEBRAE Unio",
-    description: "Parceria oficial com SEBRAE para programas de inovação",
+    title: "LanÃ§amento SEBRAE Unio",
+    description: "Parceria oficial com SEBRAE para programas de inovaÃ§Ã£o",
     date: "2026-03-31",
     type: "sebrae",
     status: "em-progresso",
   },
   {
     id: "milestone-2",
-    title: "Submissão FINEP",
+    title: "SubmissÃ£o FINEP",
     description: "Envio de propostas para o programa FINEP (R$300M)",
     date: "2026-04-15",
     type: "finep",
@@ -120,15 +111,15 @@ export const milestones: Milestone[] = [
   {
     id: "milestone-3",
     title: "Projeto CORSAN/AEGEA",
-    description: "Implementação de IA para gestão de infraestrutura",
+    description: "ImplementaÃ§Ã£o de IA para gestÃ£o de infraestrutura",
     date: "2026-05-31",
     type: "projeto",
     status: "em-progresso",
   },
   {
     id: "milestone-4",
-    title: "Lançamento Squad as a Service",
-    description: "Formalização do modelo de squads dedicados",
+    title: "LanÃ§amento Squad as a Service",
+    description: "FormalizaÃ§Ã£o do modelo de squads dedicados",
     date: "2026-06-15",
     type: "interno",
     status: "planejado",
@@ -136,7 +127,7 @@ export const milestones: Milestone[] = [
   {
     id: "milestone-5",
     title: "Resultado FINEP",
-    description: "Divulgação dos resultados da submissão FINEP",
+    description: "DivulgaÃ§Ã£o dos resultados da submissÃ£o FINEP",
     date: "2026-08-31",
     type: "finep",
     status: "planejado",
@@ -144,7 +135,7 @@ export const milestones: Milestone[] = [
 ];
 
 function getQuarterName(quarter: number) {
-  return `${quarter}º trimestre`;
+  return `${quarter}Âº trimestre`;
 }
 
 function getCycleDates(referenceDate = new Date()) {
@@ -159,6 +150,13 @@ function getCycleDates(referenceDate = new Date()) {
   endDate.setHours(0, 0, 0, 0);
 
   return { startDate, endDate };
+}
+
+function getRemainingCycleMonths(referenceDate: Date, endDate: Date) {
+  const yearDiff = endDate.getFullYear() - referenceDate.getFullYear();
+  const monthDiff = endDate.getMonth() - referenceDate.getMonth() + yearDiff * 12;
+
+  return Math.max(1, monthDiff + 1);
 }
 
 function getExpectedProgressPercentage(referenceDate: Date, startDate: Date, endDate: Date) {
@@ -228,7 +226,7 @@ export const getTrimestreTotals = (referenceDate = new Date()): TrimestreTotals 
   const msRemaining = Math.max(0, endDate.getTime() - today.getTime());
   const daysRemaining = Math.max(0, Math.ceil(msRemaining / (1000 * 60 * 60 * 24)));
   const remainingRevenue = Math.max(0, totalTarget - totalCurrent);
-  const remainingMonths = goals.filter((goal) => goal.currentRevenue < goal.targetRevenue).length || 1;
+  const remainingMonths = getRemainingCycleMonths(today, endDate);
 
   return {
     targetRevenue: totalTarget,
@@ -256,3 +254,4 @@ export const getMonthProgress = (monthId: string) => {
   if (!goal) return 0;
   return Math.round((goal.currentRevenue / goal.targetRevenue) * 100);
 };
+
