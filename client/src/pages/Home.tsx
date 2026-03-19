@@ -282,10 +282,81 @@ export default function Home() {
     );
   }
 
+  function renderRevenueReactor() {
+    return (
+      <Card className="border-cyan-300/15 bg-white/5 shadow-[0_20px_80px_rgba(0,0,0,0.2)] backdrop-blur-xl">
+        <CardHeader className="pb-4">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <CardDescription className="text-xs uppercase tracking-[0.28em] text-slate-400">Reator de receita</CardDescription>
+              <CardTitle className="mt-3 text-4xl font-semibold text-white">{formatCurrency(trimestre.targetRevenue)}</CardTitle>
+              <p className="mt-1 text-sm text-slate-500">{trimestre.cycleLabel}</p>
+            </div>
+            <div className="flex flex-col items-end gap-3">
+              <Rocket className="h-8 w-8 text-cyan-300" />
+              <Badge className={trimestreToneClasses(trimestre.statusTone)}>{trimestre.statusLabel}</Badge>
+            </div>
+          </div>
+          <p className="mt-4 text-sm leading-6 text-slate-300">
+            Meta trimestral com tesouraria-alvo de {formatCurrency(trimestre.targetCosts)} e leitura comparada contra o ritmo
+            esperado do ciclo.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div>
+            <div className="mb-2 flex items-center justify-between text-xs text-slate-400">
+              <span>Progresso do trimestre</span>
+              <span>
+                {trimestre.progressPercentage}% real vs {trimestre.expectedProgressPercentage}% esperado
+              </span>
+            </div>
+            <Progress value={trimestre.progressPercentage} className="h-2.5" />
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="rounded-2xl border border-white/10 bg-black/15 p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Tempo restante</p>
+              <p className="mt-2 text-3xl font-semibold text-white">{trimestre.daysRemaining} dias</p>
+              <p className="mt-1 text-sm text-slate-400">até o fim do ciclo atual.</p>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-black/15 p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Ritmo mínimo</p>
+              <p className="mt-2 text-3xl font-semibold text-white">{formatCurrency(trimestre.requiredDailyRevenue)}/dia</p>
+              <p className="mt-1 text-sm text-slate-400">{formatCurrency(trimestre.requiredMonthlyRevenue)}/mês restante.</p>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-black/15 p-4 text-sm text-slate-300">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-lg font-medium text-white">Falta capturar {formatCurrency(trimestre.remainingRevenue)}</p>
+              <p className="text-xs text-slate-400">
+                {trimestre.gapToPacePercentage >= 0 ? "+" : ""}
+                {trimestre.gapToPacePercentage} pts vs ritmo
+              </p>
+            </div>
+            <p className="mt-3 text-xs leading-5 text-slate-400">
+              Se esta meta virar cadência, os próximos trimestres acumulam o seguinte reator:
+            </p>
+            <div className="mt-3 space-y-2">
+              {trimestre.forecastQuarters.map((quarter) => (
+                <div key={quarter.label} className="flex items-center justify-between gap-4 text-xs">
+                  <span className="text-slate-300">{quarter.label}</span>
+                  <span className="text-right text-slate-400">
+                    {formatCurrency(quarter.targetRevenue)} por trimestre • acumulado {formatCurrency(quarter.cumulativeRevenue)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.22),_transparent_28%),radial-gradient(circle_at_15%_20%,_rgba(16,185,129,0.18),_transparent_24%),radial-gradient(circle_at_85%_12%,_rgba(251,191,36,0.12),_transparent_22%),linear-gradient(155deg,_#06131c_0%,_#091018_40%,_#120d14_100%)] text-white">
       <div className="border-b border-white/10 bg-black/20 backdrop-blur-xl">
-        <div className="mx-auto grid max-w-7xl gap-8 px-6 py-10 lg:grid-cols-[minmax(0,1.15fr)_430px] lg:items-center">
+        <div className="mx-auto max-w-7xl px-6 py-10">
           <div className="space-y-6">
             <div className="flex flex-wrap items-center gap-3">
               <img
@@ -340,67 +411,6 @@ export default function Home() {
                   <Badge className={trimestreToneClasses(trimestre.statusTone)}>{trimestre.statusLabel}</Badge>
                 </div>
                 <p className="mt-1 text-sm text-slate-300">{trimestre.daysRemaining} dias até o fim do trimestre atual.</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-[2rem] border border-cyan-300/15 bg-white/5 p-5 shadow-[0_20px_80px_rgba(0,0,0,0.25)] backdrop-blur-xl">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs uppercase tracking-[0.28em] text-slate-400">Reator de receita</p>
-                <p className="mt-3 text-4xl font-semibold text-white">{formatCurrency(trimestre.targetRevenue)}</p>
-                <p className="mt-1 text-sm text-slate-500">{trimestre.cycleLabel}</p>
-              </div>
-              <div className="flex flex-col items-end gap-3">
-                <Rocket className="h-8 w-8 text-cyan-300" />
-                <Badge className={trimestreToneClasses(trimestre.statusTone)}>{trimestre.statusLabel}</Badge>
-              </div>
-            </div>
-            <p className="mt-4 text-sm leading-6 text-slate-300">
-              Meta trimestral com tesouraria-alvo de {formatCurrency(trimestre.targetCosts)} e leitura comparada contra o
-              ritmo esperado do ciclo.
-            </p>
-            <div className="mt-5">
-              <div className="mb-2 flex items-center justify-between text-xs text-slate-400">
-                <span>Progresso do trimestre</span>
-                <span>
-                  {trimestre.progressPercentage}% real vs {trimestre.expectedProgressPercentage}% esperado
-                </span>
-              </div>
-              <Progress value={trimestre.progressPercentage} className="h-2.5" />
-            </div>
-            <div className="mt-5 grid gap-3 text-sm text-slate-300 md:grid-cols-2">
-              <div className="rounded-2xl border border-white/10 bg-black/15 p-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Tempo restante</p>
-                <p className="mt-2 text-3xl font-semibold text-white">{trimestre.daysRemaining} dias</p>
-                <p className="mt-1 text-sm text-slate-400">até o fim do ciclo atual.</p>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-black/15 p-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Ritmo mínimo</p>
-                <p className="mt-2 text-3xl font-semibold text-white">{formatCurrency(trimestre.requiredDailyRevenue)}/dia</p>
-                <p className="mt-1 text-sm text-slate-400">{formatCurrency(trimestre.requiredMonthlyRevenue)}/mês restante.</p>
-              </div>
-            </div>
-            <div className="mt-5 rounded-2xl border border-white/10 bg-black/15 p-4 text-sm text-slate-300">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-lg font-medium text-white">Falta capturar {formatCurrency(trimestre.remainingRevenue)}</p>
-                <p className="text-xs text-slate-400">
-                  {trimestre.gapToPacePercentage >= 0 ? "+" : ""}
-                  {trimestre.gapToPacePercentage} pts vs ritmo
-                </p>
-              </div>
-              <p className="mt-3 text-xs leading-5 text-slate-400">
-                Se esta meta virar cadência, os próximos trimestres acumulam o seguinte reator:
-              </p>
-              <div className="mt-3 space-y-2">
-                {trimestre.forecastQuarters.map((quarter) => (
-                  <div key={quarter.label} className="flex items-center justify-between gap-4 text-xs">
-                    <span className="text-slate-300">{quarter.label}</span>
-                    <span className="text-right text-slate-400">
-                      {formatCurrency(quarter.targetRevenue)} por trimestre • acumulado {formatCurrency(quarter.cumulativeRevenue)}
-                    </span>
-                  </div>
-                ))}
               </div>
             </div>
           </div>
@@ -481,7 +491,7 @@ export default function Home() {
           </TabsList>
 
           <TabsContent value="visao-geral" className="mt-6">
-            <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_1fr]">
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.1fr_0.9fr]">
               <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
                 <CardHeader>
                   <CardTitle>Risco de explosÃ£o</CardTitle>
@@ -498,22 +508,26 @@ export default function Home() {
                 </CardContent>
               </Card>
 
-              <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
-                <CardHeader>
-                  <CardTitle>Radar do laboratÃ³rio</CardTitle>
-                  <CardDescription>Leitura rÃ¡pida do estado operacional.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4 text-sm text-slate-300">
-                  <p>
-                    HÃ¡ <span className="font-semibold text-white">{experimentCards.length}</span> experimentos internos visÃ­veis e{" "}
-                    <span className="font-semibold text-white">{projectCards.length}</span> projetos.
-                  </p>
-                  <p>A bancada agora aceita conversa com agentes, criaÃ§Ã£o de tarefa e movimentaÃ§Ã£o visual por status.</p>
-                  <div className="rounded-2xl border border-dashed border-cyan-300/20 bg-cyan-400/5 p-4">
-                    O prÃ³ximo salto natural Ã© trazer filtros, automaÃ§Ãµes e sincronizaÃ§Ã£o mais inteligente com GitHub.
-                  </div>
-                </CardContent>
-              </Card>
+              <div className="space-y-6">
+                {renderRevenueReactor()}
+
+                <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
+                  <CardHeader>
+                    <CardTitle>Radar do laboratÃ³rio</CardTitle>
+                    <CardDescription>Leitura rÃ¡pida do estado operacional.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4 text-sm text-slate-300">
+                    <p>
+                      HÃ¡ <span className="font-semibold text-white">{experimentCards.length}</span> experimentos internos visÃ­veis e{" "}
+                      <span className="font-semibold text-white">{projectCards.length}</span> projetos.
+                    </p>
+                    <p>A bancada agora aceita conversa com agentes, criaÃ§Ã£o de tarefa e movimentaÃ§Ã£o visual por status.</p>
+                    <div className="rounded-2xl border border-dashed border-cyan-300/20 bg-cyan-400/5 p-4">
+                      O prÃ³ximo salto natural Ã© trazer filtros, automaÃ§Ãµes e sincronizaÃ§Ã£o mais inteligente com GitHub.
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           </TabsContent>
 
