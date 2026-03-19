@@ -64,7 +64,7 @@ RUNTIME_MEMBER_MENTIONS = dict(settings.member_mentions)
 PARTNER_WORKLOAD_TARGETS = [
     {
         "key": "joao",
-        "display_name": "Joaozissimo",
+        "display_name": "Joãozíssimo",
         "mention": RUNTIME_MEMBER_MENTIONS["joao"],
         "aliases": [
             "Joao",
@@ -83,21 +83,21 @@ PARTNER_WORKLOAD_TARGETS = [
     },
     {
         "key": "gui_r",
-        "display_name": "Gui R",
+        "display_name": "Gui R.",
         "mention": RUNTIME_MEMBER_MENTIONS["gui_r"],
         "aliases": ["Gui", "Gui R", "Gui R.", "Roennau", "Guilherme Roennau"],
     },
     {
         "key": "denis",
-        "display_name": "Denis",
+        "display_name": "Dênis Polidoro",
         "mention": RUNTIME_MEMBER_MENTIONS["denis"],
-        "aliases": ["Denis", "Denis Polidoro", "Denis P", "Denis P."],
+        "aliases": ["Denis", "Dênis", "Denis Polidoro", "Dênis Polidoro", "Denis P", "Denis P."],
     },
     {
         "key": "stacke",
-        "display_name": "Guilherme Stacke",
+        "display_name": "tak",
         "mention": RUNTIME_MEMBER_MENTIONS.get("stacke", "@Stacke"),
-        "aliases": ["Stacke", "Tak", "Gui S", "Gui Stacke", "Guilherme Stacke"],
+        "aliases": ["tak", "Tak", "Stacke", "Gui S", "Gui Stacke", "Guilherme Stacke", "Guilherme Stack"],
     },
 ]
 LOW_WORKLOAD_THRESHOLD = 3
