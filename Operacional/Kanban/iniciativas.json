@@ -62,6 +62,14 @@
               "status": "pending",
               "dueDate": "",
               "reminders": []
+            },
+            {
+              "id": "task-sebrae-eddb0f0d",
+              "title": "Facilitar reunião de continuação do SEBRAE, dia 27/03 com Ketely",
+              "assignee": "Gui R.",
+              "status": "pending",
+              "dueDate": "",
+              "reminders": []
             }
           ]
         },
