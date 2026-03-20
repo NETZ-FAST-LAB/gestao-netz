@@ -15,8 +15,6 @@ import github_client
 import kanban_service
 from config import settings
 from mintzie_persona import (
-    CATNIP_MESSAGE,
-    DAY_END_REMINDER,
     EMPTY_PROMPT_REPLY,
     GOSSIP_MESSAGES,
     MORNING_NUDGE_MESSAGE,
@@ -34,7 +32,6 @@ from mintzie_persona import (
     build_weekly_bottleneck_message,
 )
 from rituals import (
-    should_run_catnip_ritual,
     should_run_employee_of_week_ritual,
     should_run_general_ritual,
     should_run_night_watch_ritual,
@@ -240,10 +237,8 @@ async def ensure_deploy_announcement():
 
 async def ensure_background_tasks():
     for loop in (
-        lembrete_fim_de_dia,
         rotina_resumo_diario,
         reclamacao_10am,
-        hora_do_catnip,
         ronronado_surpresa,
         funcionario_da_semana,
         verificador_de_projetos,
@@ -360,19 +355,6 @@ async def reclamacao_10am():
     messages = [msg async for msg in channel.history(limit=50, after=inicio_dia) if msg.author != bot.user]
     if not messages:
         await channel.send(MORNING_NUDGE_MESSAGE)
-
-
-hora_1620 = datetime.time(hour=16, minute=20, tzinfo=BRASILIA_TZ)
-
-
-@tasks.loop(time=hora_1620)
-async def hora_do_catnip():
-    if not should_run_catnip_ritual(brasilia_now()):
-        return
-
-    channel = management_channel()
-    if channel:
-        await channel.send(CATNIP_MESSAGE)
 
 
 @tasks.loop(minutes=1)
@@ -530,21 +512,6 @@ async def verificador_de_projetos():
         await channel.send(resumo)
 
 
-hora_rotina = datetime.time(hour=19, minute=19, tzinfo=BRASILIA_TZ)
-
-
-@tasks.loop(time=hora_rotina)
-async def lembrete_fim_de_dia():
-    if not rituals_enabled_now():
-        return
-
-    channel = management_channel()
-    if channel:
-        await channel.send(DAY_END_REMINDER)
-    else:
-        print(f"ERRO: Canal de ID {settings.management_channel_id} não encontrado para enviar o lembrete.")
-
-
 hora_provocacao_semana = datetime.time(hour=11, minute=11, tzinfo=BRASILIA_TZ)
 
 
@@ -696,11 +663,6 @@ async def cmd_teste_funcionario(interaction: discord.Interaction):
     await interaction.response.defer(thinking=False)
     await interaction.followup.send("Processando a leitura semanal... Preparem os petiscos.")
     await funcionario_da_semana.coro()
-
-
-@bot.tree.command(name="teste_catnip", description="[Teste] Roda a mensagem das 16:20 do Catnip")
-async def cmd_teste_catnip(interaction: discord.Interaction):
-    await interaction.response.send_message(CATNIP_MESSAGE)
 
 
 @bot.tree.command(name="teste_projetos_manus", description="[Teste] Vasculha os tarefas.json e alerta as datas imediatamente")
