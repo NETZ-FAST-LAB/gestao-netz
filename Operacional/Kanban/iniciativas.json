@@ -144,6 +144,14 @@
               "status": "in_progress",
               "dueDate": "2026-03-20",
               "reminders": []
+            },
+            {
+              "id": "task-4-479a2117",
+              "title": "Enviar sugestão de alteração do plano de trabalho do projeto da residência tecnológica até 23/03",
+              "assignee": "Stacke",
+              "status": "pending",
+              "dueDate": "",
+              "reminders": []
             }
           ]
         },
