@@ -1,8 +1,9 @@
-import { CalendarClock, Pencil, UserRound } from "lucide-react";
+﻿import { CalendarClock, Pencil, UserRound } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { DashboardTask } from "@/services/dashboardService";
+import { canonicalizeAssigneeLabel } from "@/services/filterService";
 
 interface KanbanCardProps {
   task: DashboardTask;
@@ -29,7 +30,7 @@ export function KanbanCard({ task, onEditTask, onDragStart, isDragging = false }
         <div>
           <p className="text-sm font-medium leading-6 text-white">{task.title}</p>
           <p className="mt-1 text-xs text-slate-400">
-            {task.contextType === "projeto" ? "Projeto" : "Experimento interno"} · {task.contextTitle}
+            {task.contextType === "projeto" ? "Projeto" : "Experimento interno"} | {task.contextTitle}
           </p>
         </div>
         <Button
@@ -43,16 +44,14 @@ export function KanbanCard({ task, onEditTask, onDragStart, isDragging = false }
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
-        <Badge variant={task.overdue ? "destructive" : task.dueSoon ? "secondary" : "outline"}>
-          {task.status}
-        </Badge>
+        <Badge variant={task.overdue ? "destructive" : task.dueSoon ? "secondary" : "outline"}>{task.status}</Badge>
         {task.overdue && <Badge variant="destructive">Risco de explosão</Badge>}
       </div>
 
       <div className="mt-4 space-y-2 text-xs text-slate-300">
         <div className="flex items-center gap-2">
           <UserRound className="h-3.5 w-3.5 text-slate-500" />
-          <span>{task.assignee}</span>
+          <span>{canonicalizeAssigneeLabel(task.assignee)}</span>
         </div>
         <div className="flex items-center gap-2">
           <CalendarClock className="h-3.5 w-3.5 text-slate-500" />

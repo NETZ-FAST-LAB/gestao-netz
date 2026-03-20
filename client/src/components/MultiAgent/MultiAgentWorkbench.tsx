@@ -1,12 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
-import { AlertCircle, Send } from "lucide-react";
+﻿import { useEffect, useMemo, useState } from "react";
+import { AlertCircle } from "lucide-react";
 
-import { AgentList } from "@/components/MultiAgent/AgentList";
 import { AgentDetail } from "@/components/MultiAgent/AgentDetail";
+import { AgentList } from "@/components/MultiAgent/AgentList";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import {
   fetchAgentDetail,
   fetchAgents,
@@ -79,7 +77,10 @@ export function MultiAgentWorkbench() {
   }, [selectedAgentId]);
 
   const stationLabel = useMemo(
-    () => (selectedAgent ? `${selectedAgent.name} · última atividade ${formatActivity(selectedAgent.lastActivity)}` : "Sem agente aberto"),
+    () =>
+      selectedAgent
+        ? `${selectedAgent.name} | última atividade ${formatActivity(selectedAgent.lastActivity)}`
+        : "Sem agente aberto",
     [selectedAgent],
   );
 
@@ -120,9 +121,9 @@ export function MultiAgentWorkbench() {
         <CardHeader>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <CardTitle>Estação multiagente</CardTitle>
+              <CardTitle>Estação de agentes</CardTitle>
               <CardDescription>
-                Um painel único para conversar com os agentes, ler memória, abrir colaborações e puxar ferramentas especializadas.
+                Abra um agente, mantenha o histórico vivo da conversa e peça ajuda com contexto real da bancada.
               </CardDescription>
             </div>
             <Badge variant="outline" className="border-cyan-300/20 text-cyan-100">
@@ -158,42 +159,13 @@ export function MultiAgentWorkbench() {
           </CardContent>
         </Card>
 
-        <div className="space-y-6">
-          <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
-            <CardHeader>
-              <CardTitle>Converse e peça ajuda</CardTitle>
-              <CardDescription>
-                A conversa alimenta a memória do agente e reorganiza o foco dele dentro da sala de controle.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col gap-3 lg:flex-row">
-                <Input
-                  value={draft}
-                  onChange={(event) => setDraft(event.target.value)}
-                  placeholder={selectedAgent ? `Fale com ${selectedAgent.name}...` : "Selecione um agente primeiro"}
-                  className="border-white/10 bg-white/5 text-white placeholder:text-slate-500"
-                  disabled={!selectedAgent || isSending}
-                />
-                <Button
-                  type="button"
-                  disabled={!selectedAgent || isSending || !draft.trim()}
-                  className="bg-cyan-400 text-slate-950 hover:bg-cyan-300"
-                  onClick={() => void handleSendMessage()}
-                >
-                  <Send className="mr-2 h-4 w-4" />
-                  {isSending ? "Enviando..." : "Acionar agente"}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <AgentDetail
-            agent={selectedAgent}
-            onSelectCollaborator={setSelectedAgentId}
-            onUseAction={(action) => setDraft(`Preciso da sua ajuda para ${action.toLowerCase()}.`)}
-          />
-        </div>
+        <AgentDetail
+          agent={selectedAgent}
+          draft={draft}
+          isSending={isSending}
+          onDraftChange={setDraft}
+          onSend={() => void handleSendMessage()}
+        />
       </div>
     </div>
   );

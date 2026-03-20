@@ -4,6 +4,7 @@ import { AlertCircle, FolderKanban, Pencil, RefreshCcw, Rocket, Siren, Users } f
 import { KanbanBoard } from "@/components/Kanban/Board";
 import { KanbanFilterPanel } from "@/components/Kanban/FilterPanel";
 import { MultiAgentWorkbench } from "@/components/MultiAgent/MultiAgentWorkbench";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,14 +17,14 @@ import { getTrimestreTotals } from "@/data/goals";
 import {
   createDashboardTask,
   fetchDashboard,
+  updateDashboardTask,
   type DashboardCard,
-  type DashboardPartner,
   type DashboardPayload,
   type DashboardTask,
-  updateDashboardTask,
 } from "@/services/dashboardService";
 import {
   applyKanbanFilters,
+  canonicalizeAssigneeLabel,
   DEFAULT_KANBAN_FILTERS,
   getTaskAssigneeOptions,
   type KanbanFilterQuery,
@@ -34,16 +35,16 @@ type TaskDialogMode = "edit" | "create";
 type TaskFormState = {
   title: string;
   assignee: string;
-  status: string;
   dueDate: string;
-  contextId: string;
+  status: string;
   contextType: "projeto" | "iniciativa";
+  contextId: string;
 };
 
-const TASK_STATUS_OPTIONS = ["Pendente", "Em andamento", "Em revisÃ£o", "ConcluÃ­da"];
+const TASK_STATUS_OPTIONS = ["Pendente", "Em andamento", "Em revisão", "Concluída"];
 
 function formatDate(date: string) {
-  if (!date) return "Sem data";
+  if (!date) return "Sem prazo";
   return new Date(`${date}T00:00:00`).toLocaleDateString("pt-BR");
 }
 
@@ -55,57 +56,47 @@ function formatCurrency(value: number) {
   });
 }
 
-function statusTone(task: DashboardTask) {
-  if (task.overdue) return "destructive" as const;
-  if (task.dueSoon) return "secondary" as const;
-  return "outline" as const;
-}
+function taskFormFromState(cards: DashboardCard[], task?: DashboardTask | null, status = "Pendente"): TaskFormState {
+  if (task) {
+    return {
+      title: task.title,
+      assignee: canonicalizeAssigneeLabel(task.assignee),
+      dueDate: task.dueDate,
+      status: task.status,
+      contextType: task.contextType,
+      contextId: task.contextId,
+    };
+  }
 
-function trimestreToneClasses(tone: "emerald" | "cyan" | "amber" | "rose") {
-  if (tone === "emerald") return "border-emerald-400/30 bg-emerald-400/15 text-emerald-100";
-  if (tone === "amber") return "border-amber-400/30 bg-amber-400/15 text-amber-100";
-  if (tone === "rose") return "border-rose-400/30 bg-rose-400/15 text-rose-100";
-  return "border-cyan-400/30 bg-cyan-400/15 text-cyan-100";
-}
-
-function buildTaskForm(task: DashboardTask): TaskFormState {
-  return {
-    title: task.title,
-    assignee: task.assignee === "Sem dono" ? "" : task.assignee,
-    status: task.status,
-    dueDate: task.dueDate,
-    contextId: task.contextId,
-    contextType: task.contextType,
-  };
-}
-
-function getDefaultTaskContext(data: DashboardPayload | null) {
-  const cards = data?.cards || [];
-  const preferredContext = cards.find((card) => card.type === "iniciativa") || cards[0] || null;
+  const defaultCard = cards.find((card) => card.type === "iniciativa") || cards[0];
 
   return {
-    contextId: preferredContext?.id || "",
-    contextType: (preferredContext?.type || "iniciativa") as "projeto" | "iniciativa",
+    title: "",
+    assignee: "Sem dono",
+    dueDate: "",
+    status,
+    contextType: defaultCard?.type || "iniciativa",
+    contextId: defaultCard?.id || "",
   };
 }
 
 export default function Home() {
   const [data, setData] = useState<DashboardPayload | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [editingTask, setEditingTask] = useState<DashboardTask | null>(null);
   const [taskDialogMode, setTaskDialogMode] = useState<TaskDialogMode>("edit");
-  const [kanbanFilters, setKanbanFilters] = useState<KanbanFilterQuery>(DEFAULT_KANBAN_FILTERS);
   const [taskForm, setTaskForm] = useState<TaskFormState>({
     title: "",
-    assignee: "",
-    status: "Pendente",
+    assignee: "Sem dono",
     dueDate: "",
-    contextId: "",
+    status: "Pendente",
     contextType: "iniciativa",
+    contextId: "",
   });
-  const [isSavingTask, setIsSavingTask] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [isSavingTask, setIsSavingTask] = useState(false);
+  const [kanbanFilters, setKanbanFilters] = useState<KanbanFilterQuery>(DEFAULT_KANBAN_FILTERS);
 
   async function loadDashboard() {
     setIsLoading(true);
@@ -116,7 +107,7 @@ export default function Home() {
       setData(payload);
     } catch (loadError) {
       console.error(loadError);
-      setError("NÃ£o consegui carregar os dados reais do laboratÃ³rio agora.");
+      setError(loadError instanceof Error ? loadError.message : "Falha ao carregar os dados do laboratório.");
     } finally {
       setIsLoading(false);
     }
@@ -126,64 +117,34 @@ export default function Home() {
     void loadDashboard();
   }, []);
 
-  const trimestre = useMemo(() => getTrimestreTotals(), []);
-  const experimentCards = useMemo(
-    () => (data?.cards || []).filter((card) => card.type === "iniciativa"),
-    [data],
-  );
-  const projectCards = useMemo(
-    () => (data?.cards || []).filter((card) => card.type === "projeto"),
-    [data],
-  );
-  const criticalTasks = useMemo(
-    () => (data?.tasks || []).filter((task) => task.overdue || task.dueSoon).slice(0, 8),
-    [data],
-  );
-  const currentContextCards = useMemo(
-    () => (data?.cards || []).filter((card) => card.type === taskForm.contextType),
-    [data, taskForm.contextType],
-  );
-  const filteredTasks = useMemo(
-    () => applyKanbanFilters(data?.tasks || [], kanbanFilters),
-    [data, kanbanFilters],
-  );
-  const assigneeOptions = useMemo(
-    () => getTaskAssigneeOptions(data?.tasks || []),
-    [data],
-  );
-  const filteredSummary = useMemo(
-    () => ({
-      total: filteredTasks.length,
-      overdue: filteredTasks.filter((task) => task.overdue).length,
-      dueSoon: filteredTasks.filter((task) => task.dueSoon).length,
-      done: filteredTasks.filter((task) => task.status === "ConcluÃ­da").length,
-    }),
-    [filteredTasks],
+  const trimestre = useMemo(() => getTrimestreTotals(new Date()), []);
+  const tasks = data?.tasks || [];
+  const cards = data?.cards || [];
+  const filteredTasks = useMemo(() => applyKanbanFilters(tasks, kanbanFilters), [tasks, kanbanFilters]);
+  const assigneeOptions = useMemo(() => getTaskAssigneeOptions(tasks), [tasks]);
+  const criticalTasks = useMemo(() => tasks.filter((task) => task.overdue || task.dueSoon), [tasks]);
+  const projectCards = useMemo(() => cards.filter((card) => card.type === "projeto"), [cards]);
+  const initiativeCards = useMemo(() => cards.filter((card) => card.type === "iniciativa"), [cards]);
+  const contextCards = useMemo(
+    () => cards.filter((card) => card.type === taskForm.contextType),
+    [cards, taskForm.contextType],
   );
 
-  function openTaskEditor(task: DashboardTask) {
+  function openEditor(task: DashboardTask) {
     setTaskDialogMode("edit");
     setEditingTask(task);
-    setTaskForm(buildTaskForm(task));
+    setTaskForm(taskFormFromState(cards, task));
     setSaveMessage(null);
   }
 
-  function openTaskCreator(initialStatus: string) {
-    const defaultContext = getDefaultTaskContext(data);
+  function openCreator(status: DashboardTask["status"]) {
     setTaskDialogMode("create");
     setEditingTask(null);
-    setTaskForm({
-      title: "",
-      assignee: "",
-      status: initialStatus,
-      dueDate: "",
-      contextId: defaultContext.contextId,
-      contextType: defaultContext.contextType,
-    });
+    setTaskForm(taskFormFromState(cards, null, status));
     setSaveMessage(null);
   }
 
-  function closeTaskEditor() {
+  function closeDialog() {
     setEditingTask(null);
     setTaskDialogMode("edit");
     setSaveMessage(null);
@@ -197,501 +158,398 @@ export default function Home() {
         contextType: task.contextType,
       });
       setData(response.payload);
-      setSaveMessage(response.message);
     } catch (moveError) {
-      console.error(moveError);
-      setSaveMessage(moveError instanceof Error ? moveError.message : "Falha ao mover a tarefa.");
+      setError(moveError instanceof Error ? moveError.message : "Falha ao mover a tarefa.");
     }
   }
 
   async function handleSaveTask() {
+    if (!taskForm.title.trim() || !taskForm.contextId) {
+      setSaveMessage("Preencha título e contexto antes de salvar.");
+      return;
+    }
+
     setIsSavingTask(true);
-    setSaveMessage(null);
 
     try {
-      if (taskDialogMode === "create") {
-        const response = await createDashboardTask({
-          title: taskForm.title,
-          assignee: taskForm.assignee,
-          status: taskForm.status,
-          dueDate: taskForm.dueDate,
-          contextId: taskForm.contextId,
-          contextType: taskForm.contextType,
-        });
-        setData(response.payload);
-        setSaveMessage(response.message);
-        closeTaskEditor();
-        return;
-      }
-
-      if (!editingTask) return;
-
-      const response = await updateDashboardTask(editingTask.id, {
-        title: taskForm.title,
+      const payload = {
+        title: taskForm.title.trim(),
         assignee: taskForm.assignee,
-        status: taskForm.status,
         dueDate: taskForm.dueDate,
-        contextId: taskForm.contextId,
+        status: taskForm.status,
         contextType: taskForm.contextType,
-      });
+        contextId: taskForm.contextId,
+      } as const;
+
+      const response =
+        taskDialogMode === "edit" && editingTask
+          ? await updateDashboardTask(editingTask.id, payload)
+          : await createDashboardTask(payload);
 
       setData(response.payload);
       setSaveMessage(response.message);
-
-      if (response.task) {
-        setEditingTask(response.task);
-        setTaskForm(buildTaskForm(response.task));
-      }
     } catch (saveError) {
-      console.error(saveError);
       setSaveMessage(saveError instanceof Error ? saveError.message : "Falha ao salvar a tarefa.");
     } finally {
       setIsSavingTask(false);
     }
   }
 
-  function renderTaskCard(task: DashboardTask) {
-    return (
-      <div key={`${task.contextId}-${task.id}`} className="rounded-2xl border border-white/10 bg-black/20 p-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <p className="font-medium">{task.title}</p>
-            <p className="mt-1 text-sm text-slate-400">
-              {task.contextTitle} Â· {task.assignee}
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-300">
-              <span>{task.contextType === "projeto" ? "Projeto" : "Experimento interno"}</span>
-              <span>â€¢</span>
-              <span>{task.dueDate ? `Prazo ${formatDate(task.dueDate)}` : "Sem prazo definido"}</span>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant={statusTone(task)}>{task.status}</Badge>
-            <Button
-              variant="outline"
-              size="sm"
-              className="border-cyan-300/20 bg-transparent text-cyan-100 hover:bg-cyan-400/10"
-              onClick={() => openTaskEditor(task)}
-            >
-              <Pencil className="mr-2 h-4 w-4" />
-              Editar
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  function renderRevenueReactor() {
-    return (
-      <Card className="border-cyan-300/15 bg-white/5 shadow-[0_20px_80px_rgba(0,0,0,0.2)] backdrop-blur-xl">
-        <CardHeader className="pb-4">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <CardDescription className="text-xs uppercase tracking-[0.28em] text-slate-400">Reator de receita</CardDescription>
-              <CardTitle className="mt-3 text-4xl font-semibold text-white">{formatCurrency(trimestre.targetRevenue)}</CardTitle>
-              <p className="mt-1 text-sm text-slate-500">{trimestre.cycleLabel}</p>
-            </div>
-            <div className="flex flex-col items-end gap-3">
-              <Rocket className="h-8 w-8 text-cyan-300" />
-              <Badge className={trimestreToneClasses(trimestre.statusTone)}>{trimestre.statusLabel}</Badge>
-            </div>
-          </div>
-          <p className="mt-4 text-sm leading-6 text-slate-300">
-            Meta trimestral com tesouraria-alvo de {formatCurrency(trimestre.targetCosts)} e leitura comparada contra o ritmo
-            esperado do ciclo.
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-5">
-          <div>
-            <div className="mb-2 flex items-center justify-between text-xs text-slate-400">
-              <span>Progresso do trimestre</span>
-              <span>
-                {trimestre.progressPercentage}% real vs {trimestre.expectedProgressPercentage}% esperado
-              </span>
-            </div>
-            <Progress value={trimestre.progressPercentage} className="h-2.5" />
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-2">
-            <div className="rounded-2xl border border-white/10 bg-black/15 p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Tempo restante</p>
-              <p className="mt-2 text-3xl font-semibold text-white">{trimestre.daysRemaining} dias</p>
-              <p className="mt-1 text-sm text-slate-400">até o fim do ciclo atual.</p>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-black/15 p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Ritmo mínimo</p>
-              <p className="mt-2 text-3xl font-semibold text-white">{formatCurrency(trimestre.requiredDailyRevenue)}/dia</p>
-              <p className="mt-1 text-sm text-slate-400">{formatCurrency(trimestre.requiredMonthlyRevenue)}/mês restante.</p>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-white/10 bg-black/15 p-4 text-sm text-slate-300">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-lg font-medium text-white">Falta capturar {formatCurrency(trimestre.remainingRevenue)}</p>
-              <p className="text-xs text-slate-400">
-                {trimestre.gapToPacePercentage >= 0 ? "+" : ""}
-                {trimestre.gapToPacePercentage} pts vs ritmo
-              </p>
-            </div>
-            <p className="mt-3 text-xs leading-5 text-slate-400">
-              Se esta meta virar cadência, os próximos trimestres acumulam o seguinte reator:
-            </p>
-            <div className="mt-3 space-y-2">
-              {trimestre.forecastQuarters.map((quarter) => (
-                <div key={quarter.label} className="flex items-center justify-between gap-4 text-xs">
-                  <span className="text-slate-300">{quarter.label}</span>
-                  <span className="text-right text-slate-400">
-                    {formatCurrency(quarter.targetRevenue)} por trimestre • acumulado {formatCurrency(quarter.cumulativeRevenue)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.22),_transparent_28%),radial-gradient(circle_at_15%_20%,_rgba(16,185,129,0.18),_transparent_24%),radial-gradient(circle_at_85%_12%,_rgba(251,191,36,0.12),_transparent_22%),linear-gradient(155deg,_#06131c_0%,_#091018_40%,_#120d14_100%)] text-white">
-      <div className="border-b border-white/10 bg-black/20 backdrop-blur-xl">
-        <div className="mx-auto max-w-7xl px-6 py-10">
-          <div className="space-y-6">
+    <div className="min-h-screen bg-[#07111a] text-slate-100">
+      <div className="mx-auto max-w-7xl px-6 py-8 lg:px-10">
+        <section className="rounded-[2rem] border border-cyan-400/10 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.15),transparent_42%),linear-gradient(90deg,rgba(10,34,45,0.95),rgba(12,14,18,0.92))] p-8 lg:p-10">
+          <div className="space-y-8">
             <div className="flex flex-wrap items-center gap-3">
-              <img
-                src="/brand/logo1-branco.png"
-                alt="NETZ"
-                className="h-6 w-auto object-contain opacity-95 lg:h-[1.8rem]"
-              />
-              <Badge className="bg-cyan-400/15 text-cyan-200 hover:bg-cyan-400/15">Laboratório NETZ</Badge>
-              <Badge variant="outline" className="border-emerald-300/30 text-emerald-200">
+              <div className="text-5xl font-black tracking-tight text-white">netz</div>
+              <Badge className="bg-cyan-400/10 text-cyan-100 hover:bg-cyan-400/10">Laboratório NETZ</Badge>
+              <Badge variant="outline" className="border-emerald-300/20 text-emerald-100">
                 Painel operacional vivo
               </Badge>
             </div>
 
-            <div className="max-w-4xl space-y-4">
-              <p className="text-xs uppercase tracking-[0.26em] text-cyan-200/70">Bancada central</p>
-              <h1 className="max-w-4xl text-4xl font-semibold tracking-tight text-white lg:text-6xl">
+            <div>
+              <p className="text-xs uppercase tracking-[0.35em] text-cyan-200/70">Bancada central</p>
+              <h1 className="mt-3 text-5xl font-semibold tracking-tight text-white lg:text-6xl">
                 Sala de controle do laboratório
               </h1>
-              <p className="max-w-3xl text-base leading-8 text-slate-300">
-                Agora o CopilotX já opera a bancada: conversa com agentes, edita tarefas, move o Kanban e mantém o
+              <p className="mt-5 max-w-4xl text-lg leading-9 text-slate-300">
+                Agora o CopilotX já opera a bancada: conversa com agentes, edita tarefas, move a fila e mantém o
                 laboratório em fluxo sem depender de planilhas espalhadas ou lembretes perdidos.
               </p>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-2xl border border-cyan-300/15 bg-cyan-400/8 p-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-cyan-100/60">Projetos vivos</p>
-                <p className="mt-2 text-2xl font-semibold text-white">
-                  {isLoading || !data ? "..." : data.summary.totalProjects + data.summary.totalInitiatives}
-                </p>
-                <p className="mt-1 text-sm text-slate-300">
-                  {isLoading || !data
-                    ? "Lendo a bancada..."
-                    : `${data.summary.totalProjects} projetos e ${data.summary.totalInitiatives} experimentos.`}
-                </p>
-              </div>
+            <div className="grid gap-4 md:grid-cols-3">
+              <Card className="border-cyan-300/15 bg-cyan-400/10">
+                <CardContent className="py-6">
+                  <p className="text-xs uppercase tracking-[0.2em] text-cyan-100/70">Projetos vivos</p>
+                  <p className="mt-2 text-4xl font-semibold text-white">{data ? data.summary.totalProjects : "..."}</p>
+                  <p className="mt-2 text-sm text-slate-300">
+                    {data
+                      ? `${data.summary.totalProjects} projetos e ${data.summary.totalInitiatives} experimentos.`
+                      : "Carregando frentes..."}
+                  </p>
+                </CardContent>
+              </Card>
 
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Fila viva</p>
-                <p className="mt-2 text-2xl font-semibold text-white">{isLoading || !data ? "..." : data.summary.openTasks}</p>
-                <p className="mt-1 text-sm text-slate-300">
-                  {isLoading || !data
-                    ? "Contando reagentes..."
-                    : `${data.summary.unassignedTasks} sem dono e ${data.summary.overdueTasks} em risco.`}
-                </p>
-              </div>
+              <Card className="border-white/10 bg-white/5">
+                <CardContent className="py-6">
+                  <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Fila viva</p>
+                  <p className="mt-2 text-4xl font-semibold text-white">{data ? data.summary.openTasks : "..."}</p>
+                  <p className="mt-2 text-sm text-slate-300">
+                    {data
+                      ? `${data.summary.unassignedTasks} sem dono e ${data.summary.overdueTasks} em risco.`
+                      : "Contando reagentes..."}
+                  </p>
+                </CardContent>
+              </Card>
 
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Status do ciclo</p>
-                <div className="mt-2 flex items-center gap-2">
-                  <p className="text-2xl font-semibold text-white">{trimestre.progressPercentage}%</p>
-                  <Badge className={trimestreToneClasses(trimestre.statusTone)}>{trimestre.statusLabel}</Badge>
-                </div>
-                <p className="mt-1 text-sm text-slate-300">{trimestre.daysRemaining} dias até o fim do trimestre atual.</p>
-              </div>
+              <Card className="border-white/10 bg-white/5">
+                <CardContent className="py-6">
+                  <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Status do ciclo</p>
+                  <div className="mt-2 flex items-center gap-3">
+                    <p className="text-4xl font-semibold text-white">{trimestre.progressPercentage}%</p>
+                    <Badge variant="outline" className="border-rose-300/15 text-rose-100">
+                      {trimestre.statusLabel}
+                    </Badge>
+                  </div>
+                  <p className="mt-2 text-sm text-slate-300">{trimestre.daysRemaining} dias até o fim do trimestre atual.</p>
+                </CardContent>
+              </Card>
             </div>
           </div>
-        </div>
-      </div>
+        </section>
 
-      <main className="mx-auto max-w-7xl px-6 py-8">
-        {error && (
-          <Card className="mb-6 border-red-400/30 bg-red-500/10 text-red-50">
-            <CardContent className="flex items-center gap-3 py-4">
-              <AlertCircle className="h-5 w-5" />
-              <p>{error}</p>
-            </CardContent>
-          </Card>
-        )}
+        <div className="mt-8 space-y-8">
+          {error && (
+            <Alert variant="destructive" className="border-red-400/20 bg-red-500/10 text-red-50">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
-            <CardHeader className="pb-2">
-              <CardDescription>Projetos + experimentos internos</CardDescription>
-              <CardTitle className="flex items-center gap-2 text-2xl">
-                <FolderKanban className="h-5 w-5 text-cyan-300" />
-                {isLoading || !data ? "..." : data.summary.totalProjects + data.summary.totalInitiatives}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm text-slate-300">
-              {isLoading || !data ? "Lendo os experimentos..." : `${data.summary.openTasks} tarefas abertas.`}
-            </CardContent>
-          </Card>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <Card className="border-white/10 bg-white/5">
+              <CardContent className="space-y-4 py-6">
+                <p className="text-sm text-slate-400">Projetos + experimentos internos</p>
+                <div className="flex items-center gap-3 text-cyan-300">
+                  <FolderKanban className="h-5 w-5" />
+                  <span className="text-4xl font-semibold text-white">
+                    {data ? data.summary.totalProjects + data.summary.totalInitiatives : "..."}
+                  </span>
+                </div>
+                <p className="text-sm text-slate-300">
+                  {data ? `${data.summary.openTasks} tarefas abertas.` : "Lendo o laboratório..."}
+                </p>
+              </CardContent>
+            </Card>
 
-          <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
-            <CardHeader className="pb-2">
-              <CardDescription>Fila viva</CardDescription>
-              <CardTitle className="flex items-center gap-2 text-2xl">
-                <Users className="h-5 w-5 text-emerald-300" />
-                {isLoading || !data ? "..." : data.summary.openTasks}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm text-slate-300">
-              {isLoading || !data ? "Contando reagentes..." : `${data.summary.unassignedTasks} sem dono.`}
-            </CardContent>
-          </Card>
+            <Card className="border-white/10 bg-white/5">
+              <CardContent className="space-y-4 py-6">
+                <p className="text-sm text-slate-400">Fila viva</p>
+                <div className="flex items-center gap-3 text-emerald-300">
+                  <Users className="h-5 w-5" />
+                  <span className="text-4xl font-semibold text-white">{data ? data.summary.openTasks : "..."}</span>
+                </div>
+                <p className="text-sm text-slate-300">
+                  {data ? `${data.summary.unassignedTasks} sem dono.` : "Contando reagentes..."}
+                </p>
+              </CardContent>
+            </Card>
 
-          <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
-            <CardHeader className="pb-2">
-              <CardDescription>Risco de explosÃ£o</CardDescription>
-              <CardTitle className="flex items-center gap-2 text-2xl">
-                <Siren className="h-5 w-5 text-amber-300" />
-                {isLoading || !data ? "..." : data.summary.overdueTasks}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm text-slate-300">
-              {isLoading || !data ? "Varrendo o laboratÃ³rio..." : `${data.summary.dueSoonTasks} vencem nos prÃ³ximos 7 dias.`}
-            </CardContent>
-          </Card>
+            <Card className="border-white/10 bg-white/5">
+              <CardContent className="space-y-4 py-6">
+                <p className="text-sm text-slate-400">Risco de explosão</p>
+                <div className="flex items-center gap-3 text-amber-300">
+                  <Siren className="h-5 w-5" />
+                  <span className="text-4xl font-semibold text-white">{data ? data.summary.overdueTasks : "..."}</span>
+                </div>
+                <p className="text-sm text-slate-300">
+                  {data ? `${data.summary.dueSoonTasks} vencem nos próximos 7 dias.` : "Varrendo prazos..."}
+                </p>
+              </CardContent>
+            </Card>
 
-          <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
-            <CardHeader className="pb-2">
-              <CardDescription>Tesouraria</CardDescription>
-              <CardTitle className="flex items-center gap-2 text-2xl">
-                <RefreshCcw className="h-5 w-5 text-fuchsia-300" />
-                {formatCurrency(trimestre.targetCosts)}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm text-slate-300">15% do trimestre reservados para custos.</CardContent>
-          </Card>
-        </div>
+            <Card className="border-white/10 bg-white/5">
+              <CardContent className="space-y-4 py-6">
+                <p className="text-sm text-slate-400">Tesouraria</p>
+                <p className="text-4xl font-semibold text-white">{formatCurrency(trimestre.targetCosts)}</p>
+                <p className="text-sm text-slate-300">15% do trimestre reservados para custos.</p>
+              </CardContent>
+            </Card>
+          </div>
 
-        <Tabs defaultValue="visao-geral" className="mt-8">
-          <TabsList className="grid h-auto w-full grid-cols-2 gap-2 border border-white/10 bg-white/5 p-2 lg:grid-cols-7">
-            <TabsTrigger value="visao-geral">VisÃ£o geral</TabsTrigger>
-            <TabsTrigger value="agentes">Agentes</TabsTrigger>
-            <TabsTrigger value="socios">SÃ³cios</TabsTrigger>
-            <TabsTrigger value="kanban">Kanban</TabsTrigger>
-            <TabsTrigger value="tarefas">Tarefas</TabsTrigger>
-            <TabsTrigger value="iniciativas">Experimentos internos</TabsTrigger>
-            <TabsTrigger value="projetos">Projetos</TabsTrigger>
-          </TabsList>
+          <Tabs defaultValue="visao-geral" className="space-y-6">
+            <TabsList className="grid h-auto w-full grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-white/5 p-2 md:grid-cols-3 xl:grid-cols-6">
+              <TabsTrigger value="visao-geral" className="rounded-xl">
+                Visão geral
+              </TabsTrigger>
+              <TabsTrigger value="tarefas" className="rounded-xl">
+                Tarefas
+              </TabsTrigger>
+              <TabsTrigger value="projetos" className="rounded-xl">
+                Projetos
+              </TabsTrigger>
+              <TabsTrigger value="iniciativas" className="rounded-xl">
+                Iniciativas
+              </TabsTrigger>
+              <TabsTrigger value="socios" className="rounded-xl">
+                Sócios
+              </TabsTrigger>
+              <TabsTrigger value="agentes" className="rounded-xl">
+                Agentes
+              </TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="visao-geral" className="mt-6">
-            <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-              <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
+            <TabsContent value="visao-geral" className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+              <Card className="border-white/10 bg-white/5">
                 <CardHeader>
-                  <CardTitle>Risco de explosÃ£o</CardTitle>
+                  <CardTitle>Risco de explosão</CardTitle>
                   <CardDescription>Tarefas vencidas ou prestes a explodir.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {criticalTasks.length > 0 ? (
-                    criticalTasks.map((task) => renderTaskCard(task))
+                    criticalTasks.slice(0, 5).map((task) => (
+                      <div key={`${task.contextId}-${task.id}`} className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                          <div>
+                            <p className="text-lg font-medium text-white">{task.title}</p>
+                            <p className="mt-2 text-sm text-slate-400">
+                              {task.contextTitle} | {canonicalizeAssigneeLabel(task.assignee)}
+                            </p>
+                            <p className="mt-2 text-sm text-slate-300">
+                              {task.contextType === "projeto" ? "Projeto" : "Experimento interno"} | Prazo {formatDate(task.dueDate)}
+                            </p>
+                          </div>
+                          <Button
+                            variant="outline"
+                            className="border-white/10 bg-transparent text-white"
+                            onClick={() => openEditor(task)}
+                          >
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Editar
+                          </Button>
+                        </div>
+                      </div>
+                    ))
                   ) : (
-                    <div className="rounded-2xl border border-dashed border-white/10 px-4 py-8 text-center text-slate-400">
-                      Nenhum experimento prestes a explodir agora.
+                    <div className="rounded-2xl border border-dashed border-white/10 px-6 py-10 text-center text-slate-400">
+                      Nada com pressão crítica no momento.
                     </div>
                   )}
                 </CardContent>
               </Card>
 
               <div className="space-y-6">
-                {renderRevenueReactor()}
-
-                <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
+                <Card className="border-white/10 bg-white/5">
                   <CardHeader>
-                    <CardTitle>Radar do laboratÃ³rio</CardTitle>
-                    <CardDescription>Leitura rÃ¡pida do estado operacional.</CardDescription>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.3em] text-cyan-200/70">Reator de receita</p>
+                        <CardTitle className="mt-3 text-5xl">{formatCurrency(trimestre.targetRevenue)}</CardTitle>
+                        <CardDescription className="mt-2">{trimestre.cycleLabel}</CardDescription>
+                      </div>
+                      <Rocket className="h-10 w-10 text-cyan-300" />
+                    </div>
                   </CardHeader>
-                  <CardContent className="space-y-4 text-sm text-slate-300">
-                    <p>
-                      HÃ¡ <span className="font-semibold text-white">{experimentCards.length}</span> experimentos internos visÃ­veis e{" "}
-                      <span className="font-semibold text-white">{projectCards.length}</span> projetos.
+                  <CardContent className="space-y-5">
+                    <p className="text-lg leading-8 text-slate-300">
+                      Meta trimestral com tesouraria-alvo de {formatCurrency(trimestre.targetCosts)} e leitura comparada contra o ritmo esperado do ciclo.
                     </p>
-                    <p>A bancada agora aceita conversa com agentes, criaÃ§Ã£o de tarefa e movimentaÃ§Ã£o visual por status.</p>
-                    <div className="rounded-2xl border border-dashed border-cyan-300/20 bg-cyan-400/5 p-4">
-                      O prÃ³ximo salto natural Ã© trazer filtros, automaÃ§Ãµes e sincronizaÃ§Ã£o mais inteligente com GitHub.
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm text-slate-300">
+                        <span>Progresso do trimestre</span>
+                        <span>
+                          {trimestre.progressPercentage}% real vs {trimestre.expectedProgressPercentage}% esperado
+                        </span>
+                      </div>
+                      <Progress value={trimestre.progressPercentage} className="h-3 bg-white/10" />
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                        <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Tempo restante</p>
+                        <p className="mt-3 text-4xl font-semibold text-white">{trimestre.daysRemaining} dias</p>
+                        <p className="mt-2 text-sm text-slate-400">até o fim do ciclo atual.</p>
+                      </div>
+
+                      <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                        <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Ritmo mínimo</p>
+                        <p className="mt-3 text-4xl font-semibold text-white">{formatCurrency(trimestre.requiredDailyRevenue)}/dia</p>
+                        <p className="mt-2 text-sm text-slate-400">{formatCurrency(trimestre.requiredMonthlyRevenue)}/mês restante.</p>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
-              </div>
-            </div>
-          </TabsContent>
 
-          <TabsContent value="agentes" className="mt-6">
-            <MultiAgentWorkbench />
-          </TabsContent>
-
-          <TabsContent value="socios" className="mt-6">
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-4">
-              {(data?.partners || []).map((partner: DashboardPartner) => (
-                <Card key={partner.id} className="border-white/10 bg-white/5 backdrop-blur-xl">
+                <Card className="border-white/10 bg-white/5">
                   <CardHeader>
-                    <CardTitle className="text-lg">{partner.name}</CardTitle>
-                    <CardDescription>PressÃ£o operacional atual</CardDescription>
+                    <CardTitle>Radar do laboratório</CardTitle>
+                    <CardDescription>Leitura rápida do estado operacional.</CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-4">
+                  <CardContent className="space-y-4 text-slate-300">
+                    <p>
+                      Há {data ? data.summary.totalInitiatives : 0} experimentos internos visíveis e {data ? data.summary.totalProjects : 0} projetos ativos.
+                    </p>
+                    <p>A bancada agora aceita conversa com agentes, criação de tarefa e movimentação visual por status.</p>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="tarefas" className="space-y-6">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <h2 className="text-2xl font-semibold text-white">Tarefas da bancada</h2>
+                  <p className="mt-2 text-slate-400">Kanban e lista unificados na mesma página.</p>
+                </div>
+                <Button variant="outline" className="border-white/10 bg-transparent text-white" onClick={() => void loadDashboard()}>
+                  <RefreshCcw className="mr-2 h-4 w-4" />
+                  Atualizar
+                </Button>
+              </div>
+
+              <KanbanFilterPanel filters={kanbanFilters} assigneeOptions={assigneeOptions} onChange={setKanbanFilters} />
+              <KanbanBoard tasks={filteredTasks} onEditTask={openEditor} onCreateTask={openCreator} onMoveTask={(task, status) => void handleMoveTask(task, status)} />
+            </TabsContent>
+
+            <TabsContent value="projetos" className="grid gap-4 xl:grid-cols-2">
+              {projectCards.map((card) => (
+                <Card key={card.id} className="border-white/10 bg-white/5">
+                  <CardHeader>
+                    <CardTitle>{card.title}</CardTitle>
+                    <CardDescription>{card.client}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <p className="text-sm text-slate-300">Dono: {canonicalizeAssigneeLabel(card.owner)}</p>
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-sm text-slate-300">
-                        <span>Tarefas ativas</span>
-                        <span className="font-semibold text-white">{partner.activeTaskCount}</span>
+                        <span>Progresso</span>
+                        <span>{card.progress}%</span>
                       </div>
-                      <Progress value={Math.min(partner.activeTaskCount * 20, 100)} className="h-2" />
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Badge variant="outline">{partner.overdueTaskCount} atrasadas</Badge>
-                      <Badge variant="outline">{partner.dueSoonTaskCount} com prazo prÃ³ximo</Badge>
+                      <Progress value={card.progress} className="h-2 bg-white/10" />
                     </div>
                   </CardContent>
                 </Card>
               ))}
-            </div>
-          </TabsContent>
+            </TabsContent>
 
-          <TabsContent value="kanban" className="mt-6">
-            <div className="space-y-6">
-              <KanbanFilterPanel filters={kanbanFilters} assigneeOptions={assigneeOptions} onChange={setKanbanFilters} />
-
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-                <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
-                  <CardHeader className="pb-2">
-                    <CardDescription>Recorte atual</CardDescription>
-                    <CardTitle className="text-2xl">{filteredSummary.total}</CardTitle>
+            <TabsContent value="iniciativas" className="grid gap-4 xl:grid-cols-2">
+              {initiativeCards.map((card) => (
+                <Card key={card.id} className="border-white/10 bg-white/5">
+                  <CardHeader>
+                    <CardTitle>{card.title}</CardTitle>
+                    <CardDescription>{card.client}</CardDescription>
                   </CardHeader>
-                  <CardContent className="text-sm text-slate-300">tarefas no filtro ativo.</CardContent>
-                </Card>
-
-                <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
-                  <CardHeader className="pb-2">
-                    <CardDescription>Risco quente</CardDescription>
-                    <CardTitle className="text-2xl text-amber-200">{filteredSummary.overdue}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="text-sm text-slate-300">atrasadas dentro do recorte.</CardContent>
-                </Card>
-
-                <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
-                  <CardHeader className="pb-2">
-                    <CardDescription>Prazo prÃ³ximo</CardDescription>
-                    <CardTitle className="text-2xl text-cyan-200">{filteredSummary.dueSoon}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="text-sm text-slate-300">com vencimento nos prÃ³ximos 7 dias.</CardContent>
-                </Card>
-
-                <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
-                  <CardHeader className="pb-2">
-                    <CardDescription>Fechadas</CardDescription>
-                    <CardTitle className="text-2xl text-emerald-200">{filteredSummary.done}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="text-sm text-slate-300">jÃ¡ concluÃ­das no recorte.</CardContent>
-                </Card>
-              </div>
-
-              <KanbanBoard
-                tasks={filteredTasks}
-                onEditTask={openTaskEditor}
-                onCreateTask={openTaskCreator}
-                onMoveTask={(task, status) => void handleMoveTask(task, status)}
-              />
-            </div>
-          </TabsContent>
-
-          <TabsContent value="tarefas" className="mt-6">
-            <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
-              <CardHeader>
-                <CardTitle>Fila operacional completa</CardTitle>
-                <CardDescription>Leitura viva do mesmo recorte aplicado ao Kanban.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {filteredTasks.length > 0 ? (
-                  filteredTasks.map((task) => renderTaskCard(task))
-                ) : (
-                  <div className="rounded-2xl border border-dashed border-white/10 px-4 py-8 text-center text-slate-400">
-                    Nenhuma tarefa corresponde aos filtros atuais.
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="iniciativas" className="mt-6">
-            <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
-              <CardHeader>
-                <CardTitle>Experimentos internos</CardTitle>
-                <CardDescription>Todos os experimentos internos do laboratÃ³rio.</CardDescription>
-              </CardHeader>
-              <CardContent className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-                {experimentCards.map((card: DashboardCard) => (
-                  <div key={card.id} className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-medium">{card.title}</p>
-                        <p className="mt-1 text-sm text-slate-400">{card.owner}</p>
+                  <CardContent className="space-y-3">
+                    <p className="text-sm text-slate-300">Dono: {canonicalizeAssigneeLabel(card.owner)}</p>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm text-slate-300">
+                        <span>Progresso</span>
+                        <span>{card.progress}%</span>
                       </div>
-                      <Badge variant="outline">{card.column}</Badge>
+                      <Progress value={card.progress} className="h-2 bg-white/10" />
                     </div>
-                    <div className="mt-4 text-sm text-slate-300">
-                      {card.openTasks} abertas Â· {card.completedTasks} concluÃ­das
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          </TabsContent>
+                  </CardContent>
+                </Card>
+              ))}
+            </TabsContent>
 
-          <TabsContent value="projetos" className="mt-6">
-            <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
-              <CardHeader>
-                <CardTitle>Projetos</CardTitle>
-                <CardDescription>Projetos ativos monitorados pelo laboratÃ³rio.</CardDescription>
-              </CardHeader>
-              <CardContent className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-                {projectCards.map((card: DashboardCard) => (
-                  <div key={card.id} className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-medium">{card.title}</p>
-                        <p className="mt-1 text-sm text-slate-400">{card.client}</p>
+            <TabsContent value="socios" className="grid gap-4 xl:grid-cols-2">
+              {(data?.partners || []).map((partner) => (
+                <Card key={partner.id} className="border-white/10 bg-white/5">
+                  <CardHeader>
+                    <CardTitle>{partner.name}</CardTitle>
+                    <CardDescription>{partner.activeTaskCount} tarefas abertas nesta leitura.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm text-slate-300">
+                        <span>Meta pessoal</span>
+                        <span>{formatCurrency(partner.quarterTarget)}</span>
                       </div>
-                      <Badge variant="outline">{card.column}</Badge>
+                      <Progress value={Math.min(partner.achievedPercentage, 100)} className="h-2 bg-white/10" />
                     </div>
-                    <div className="mt-4 text-sm text-slate-300">
-                      {card.openTasks} abertas Â· {card.completedTasks} concluÃ­das
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </main>
 
-      <Dialog open={taskDialogMode === "create" || !!editingTask} onOpenChange={(open) => (!open ? closeTaskEditor() : undefined)}>
-        <DialogContent className="border-white/10 bg-slate-950 text-white sm:max-w-2xl">
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                        <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Realizado</p>
+                        <p className="mt-2 text-lg font-semibold text-white">{formatCurrency(partner.realizedAmount)}</p>
+                      </div>
+                      <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                        <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Provisionado</p>
+                        <p className="mt-2 text-lg font-semibold text-white">{formatCurrency(partner.provisionedAmount)}</p>
+                      </div>
+                      <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                        <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Atingido</p>
+                        <p className="mt-2 text-lg font-semibold text-white">{formatCurrency(partner.achievedAmount)}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </TabsContent>
+
+            <TabsContent value="agentes">
+              <MultiAgentWorkbench />
+            </TabsContent>
+          </Tabs>
+        </div>
+      </div>
+
+      <Dialog open={editingTask !== null || taskDialogMode === "create"} onOpenChange={(open) => !open && closeDialog()}>
+        <DialogContent className="border-white/10 bg-[#0b1020] text-white sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{taskDialogMode === "create" ? "Criar tarefa" : "Editar tarefa"}</DialogTitle>
+            <DialogTitle>{taskDialogMode === "edit" ? "Editar tarefa" : "Criar tarefa"}</DialogTitle>
             <DialogDescription className="text-slate-400">
-              {taskDialogMode === "create"
-                ? "Adicione uma nova tarefa na bancada e escolha onde ela entra."
-                : "Ajuste tÃ­tulo, responsÃ¡vel, status e prazo sem sair da sala de controle."}
+              Ajuste título, responsável, status e prazo sem sair da sala de controle.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-4 py-2">
+          <div className="grid gap-5 py-2">
             <div className="grid gap-2">
-              <label className="text-sm font-medium text-slate-200">TÃ­tulo</label>
+              <label className="text-sm font-medium text-slate-200">Título</label>
               <Input
                 value={taskForm.title}
                 onChange={(event) => setTaskForm((current) => ({ ...current, title: event.target.value }))}
@@ -699,33 +557,26 @@ export default function Home() {
               />
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-5 md:grid-cols-2">
               <div className="grid gap-2">
-                <label className="text-sm font-medium text-slate-200">ResponsÃ¡vel</label>
-                <Select
-                  value={taskForm.assignee || "__sem_dono__"}
-                  onValueChange={(value) =>
-                    setTaskForm((current) => ({
-                      ...current,
-                      assignee: value === "__sem_dono__" ? "" : value,
-                    }))
-                  }
-                >
+                <label className="text-sm font-medium text-slate-200">Responsável</label>
+                <Select value={taskForm.assignee} onValueChange={(value) => setTaskForm((current) => ({ ...current, assignee: value }))}>
                   <SelectTrigger className="w-full border-white/10 bg-white/5 text-white">
-                    <SelectValue placeholder="Selecione um responsÃ¡vel" />
+                    <SelectValue placeholder="Selecione um responsável" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__sem_dono__">Sem dono</SelectItem>
+                    <SelectItem value="Sem dono">Sem dono</SelectItem>
                     {assigneeOptions
-                      .filter((assignee) => assignee !== "todos")
-                      .map((assignee) => (
-                        <SelectItem key={assignee} value={assignee}>
-                          {assignee}
+                      .filter((option) => option !== "todos")
+                      .map((option) => (
+                        <SelectItem key={option} value={option}>
+                          {option}
                         </SelectItem>
                       ))}
                   </SelectContent>
                 </Select>
               </div>
+
               <div className="grid gap-2">
                 <label className="text-sm font-medium text-slate-200">Prazo</label>
                 <Input
@@ -737,12 +588,12 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-5 md:grid-cols-3">
               <div className="grid gap-2">
                 <label className="text-sm font-medium text-slate-200">Status</label>
                 <Select value={taskForm.status} onValueChange={(value) => setTaskForm((current) => ({ ...current, status: value }))}>
                   <SelectTrigger className="w-full border-white/10 bg-white/5 text-white">
-                    <SelectValue placeholder="Selecione um status" />
+                    <SelectValue placeholder="Selecione o status" />
                   </SelectTrigger>
                   <SelectContent>
                     {TASK_STATUS_OPTIONS.map((status) => (
@@ -758,16 +609,17 @@ export default function Home() {
                 <label className="text-sm font-medium text-slate-200">Tipo</label>
                 <Select
                   value={taskForm.contextType}
-                  onValueChange={(value: "projeto" | "iniciativa") =>
+                  onValueChange={(value: "projeto" | "iniciativa") => {
+                    const nextCards = cards.filter((card) => card.type === value);
                     setTaskForm((current) => ({
                       ...current,
                       contextType: value,
-                      contextId: (data?.cards || []).find((card) => card.type === value)?.id || "",
-                    }))
-                  }
+                      contextId: nextCards[0]?.id || "",
+                    }));
+                  }}
                 >
                   <SelectTrigger className="w-full border-white/10 bg-white/5 text-white">
-                    <SelectValue placeholder="Selecione um tipo" />
+                    <SelectValue placeholder="Selecione o tipo" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="iniciativa">Experimento interno</SelectItem>
@@ -778,15 +630,12 @@ export default function Home() {
 
               <div className="grid gap-2">
                 <label className="text-sm font-medium text-slate-200">Contexto</label>
-                <Select
-                  value={taskForm.contextId}
-                  onValueChange={(value) => setTaskForm((current) => ({ ...current, contextId: value }))}
-                >
+                <Select value={taskForm.contextId} onValueChange={(value) => setTaskForm((current) => ({ ...current, contextId: value }))}>
                   <SelectTrigger className="w-full border-white/10 bg-white/5 text-white">
-                    <SelectValue placeholder="Selecione um contexto" />
+                    <SelectValue placeholder="Selecione o contexto" />
                   </SelectTrigger>
                   <SelectContent>
-                    {currentContextCards.map((card) => (
+                    {contextCards.map((card) => (
                       <SelectItem key={card.id} value={card.id}>
                         {card.title}
                       </SelectItem>
@@ -797,26 +646,18 @@ export default function Home() {
             </div>
 
             {saveMessage && (
-              <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-200">
-                {saveMessage}
-              </div>
+              <Alert className="border-white/10 bg-white/5 text-slate-100">
+                <AlertDescription>{saveMessage}</AlertDescription>
+              </Alert>
             )}
           </div>
 
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={closeTaskEditor}
-              className="border-white/10 bg-transparent text-white hover:bg-white/10"
-            >
+            <Button variant="outline" className="border-white/10 bg-transparent text-white" onClick={closeDialog}>
               Fechar
             </Button>
-            <Button
-              onClick={() => void handleSaveTask()}
-              disabled={isSavingTask || !taskForm.title.trim() || !taskForm.contextId}
-              className="bg-cyan-400 text-slate-950 hover:bg-cyan-300"
-            >
-              {isSavingTask ? "Salvando..." : taskDialogMode === "create" ? "Criar tarefa" : "Salvar alteraÃ§Ãµes"}
+            <Button className="bg-cyan-400 text-slate-950 hover:bg-cyan-300" onClick={() => void handleSaveTask()} disabled={isSavingTask}>
+              {isSavingTask ? "Salvando..." : taskDialogMode === "edit" ? "Salvar alterações" : "Criar tarefa"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -824,4 +665,3 @@ export default function Home() {
     </div>
   );
 }
-

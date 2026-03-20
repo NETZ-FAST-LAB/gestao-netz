@@ -1,4 +1,4 @@
-import { ScrollArea } from "@/components/ui/scroll-area";
+﻿import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import type { AgentMemoryEntry } from "@/services/agentService";
 
@@ -37,7 +37,7 @@ export function AgentMemory({ entries }: AgentMemoryProps) {
                 <span>{ROLE_LABEL[entry.role]}</span>
                 <span>{new Date(entry.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
               </div>
-              <p className="text-sm leading-6 whitespace-pre-wrap">{entry.content}</p>
+              <p className="whitespace-pre-wrap text-sm leading-6">{entry.content}</p>
             </div>
           ))
         )}

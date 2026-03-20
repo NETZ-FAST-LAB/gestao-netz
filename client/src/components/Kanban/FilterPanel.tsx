@@ -1,4 +1,4 @@
-import { Search, Siren, UserRoundX, X } from "lucide-react";
+﻿import { Search, Siren, UserRoundX, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -28,7 +28,7 @@ export function KanbanFilterPanel({ filters, assigneeOptions, onChange }: Kanban
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <h3 className="text-base font-semibold text-white">Filtros da bancada</h3>
-          <p className="mt-1 text-sm text-slate-400">Recorte o Kanban por dono, status, tipo e urgência real.</p>
+          <p className="mt-1 text-sm text-slate-400">Recorte as tarefas por dono, status, tipo e urgência real.</p>
         </div>
         <Button
           variant="outline"
