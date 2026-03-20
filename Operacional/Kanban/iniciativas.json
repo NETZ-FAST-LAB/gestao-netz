@@ -289,6 +289,18 @@
             }
           ],
           "owner": "Joãozíssimo"
+        },
+        {
+          "id": "inic-parceria-sebrae",
+          "title": "Parceria SEBRAE",
+          "column": "Ideias",
+          "health_status": "No Prazo",
+          "tags": [
+            "AI-Created"
+          ],
+          "artifacts": [],
+          "tasks": [],
+          "owner": "Gui R."
         }
       ]
     }
