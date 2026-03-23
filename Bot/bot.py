@@ -47,6 +47,7 @@ BRASILIA_TZ = datetime.timezone(datetime.timedelta(hours=-3))
 
 intents = discord.Intents.default()
 intents.message_content = True
+intents.members = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 TOKEN = settings.discord_token
 
@@ -115,8 +116,39 @@ def _member_name_candidates(member: discord.Member) -> set[str]:
     return {_normalize_person_name(candidate) for candidate in candidates if candidate}
 
 
-def resolve_runtime_member_mentions(guild: discord.Guild | None):
+def build_open_tasks_checkin_message(partner_snapshot: dict) -> str:
+    mention = partner_snapshot["mention"]
+    count = partner_snapshot["active_task_count"]
+    tasks = partner_snapshot.get("active_tasks", [])
+
+    if not tasks:
+        return (
+            f"{mention}, fim de tarde de terça ou quinta e eu não achei nenhuma tarefa aberta no seu nome. "
+            "Ou você virou lenda da bancada e zerou tudo, ou tem experimento invisível passeando por aí. "
+            "Se existir ponta solta, registre. Se não existir, me diga o que ainda vai puxar nesta semana para fazer a NETZ andar."
+        )
+
+    highlighted = "; ".join(f"{task['card_title']}: {task['task_title']}" for task in tasks[:3])
+    due_dates = [task["due_date"] for task in tasks if task.get("due_date")]
+    due_hint = ""
+    if due_dates:
+        due_hint = " Aproveita e revisa as datas antes que prazo fictício vire protocolo do laboratório."
+
+    return (
+        f"{mention}, você está com {count} tarefa(s) em aberto. Exemplos: {highlighted}. "
+        "Isso fecha ainda nesta semana ou estamos alimentando mais um risco de explosão? "
+        f"Atualize datas, renegocie o que escapou, conclua o que já deveria ter saído e me diga qual ação concreta você puxa hoje.{due_hint}"
+    )
+
+
+def _partner_fallback_reference(partner: dict) -> str:
+    return partner.get("display_name", "alguem")
+
+
+async def resolve_runtime_member_mentions(guild: discord.Guild | None):
     if guild is None:
+        for partner in PARTNER_WORKLOAD_TARGETS:
+            partner["mention"] = _partner_fallback_reference(partner)
         return
 
     for partner in PARTNER_WORKLOAD_TARGETS:
@@ -128,9 +160,26 @@ def resolve_runtime_member_mentions(guild: discord.Guild | None):
                 matched_member = member
                 break
 
+        if matched_member is None:
+            for alias in partner.get("aliases", []):
+                try:
+                    queried_members = await guild.query_members(alias, limit=10)
+                except Exception:
+                    queried_members = []
+
+                for member in queried_members:
+                    if _member_name_candidates(member) & alias_set:
+                        matched_member = member
+                        break
+
+                if matched_member is not None:
+                    break
+
         if matched_member is not None:
             RUNTIME_MEMBER_MENTIONS[partner["key"]] = matched_member.mention
             partner["mention"] = matched_member.mention
+        else:
+            partner["mention"] = _partner_fallback_reference(partner)
 
 
 def brasilia_now() -> datetime.datetime:
@@ -146,7 +195,7 @@ def management_channel():
 
 
 async def send_low_workload_nudges(channel):
-    resolve_runtime_member_mentions(getattr(channel, "guild", None))
+    await resolve_runtime_member_mentions(getattr(channel, "guild", None))
     workload = kanban_service.get_partner_workload_snapshot(
         PARTNER_WORKLOAD_TARGETS,
         threshold=LOW_WORKLOAD_THRESHOLD,
@@ -156,7 +205,7 @@ async def send_low_workload_nudges(channel):
 
 
 async def send_open_tasks_checkins(channel):
-    resolve_runtime_member_mentions(getattr(channel, "guild", None))
+    await resolve_runtime_member_mentions(getattr(channel, "guild", None))
     workload = kanban_service.get_partner_workload_snapshot(
         PARTNER_WORKLOAD_TARGETS,
         threshold=LOW_WORKLOAD_THRESHOLD,
@@ -262,7 +311,7 @@ async def on_ready():
 
     channel = management_channel()
     if channel:
-        resolve_runtime_member_mentions(getattr(channel, "guild", None))
+        await resolve_runtime_member_mentions(getattr(channel, "guild", None))
         try:
             await channel.send(
                 f"[HIGHLANDER-LOCK] Nova instancia acordou. Destruindo clones silenciosamente. ID: {HIGHLANDER_ID}"
@@ -619,7 +668,7 @@ async def gerar_e_enviar_resumo(destination_channel):
             await destination_channel.send(NO_DAILY_DISCUSSION_MESSAGE)
             return
 
-        resolve_runtime_member_mentions(getattr(destination_channel, "guild", None))
+        await resolve_runtime_member_mentions(getattr(destination_channel, "guild", None))
         prompt_llm = build_daily_summary_prompt(historico_str, RUNTIME_MEMBER_MENTIONS)
 
         import gemini_logic
@@ -699,7 +748,7 @@ async def cmd_teste_gargalo_semana(interaction: discord.Interaction):
 
 @bot.tree.command(name="teste_socios_sem_tarefa", description="[Teste] Cutuca sócios com menos de 3 tarefas ativas")
 async def cmd_teste_socios_sem_tarefa(interaction: discord.Interaction):
-    resolve_runtime_member_mentions(interaction.guild)
+    await resolve_runtime_member_mentions(interaction.guild)
     workload = kanban_service.get_partner_workload_snapshot(
         PARTNER_WORKLOAD_TARGETS,
         threshold=LOW_WORKLOAD_THRESHOLD,
@@ -717,9 +766,9 @@ async def cmd_teste_socios_sem_tarefa(interaction: discord.Interaction):
     await interaction.response.send_message("\n\n".join(nudges))
 
 
-@bot.tree.command(name="teste_checkin_tarefas_abertas", description="[Teste] Envia o check-in de quinta das tarefas em aberto")
+@bot.tree.command(name="teste_checkin_tarefas_abertas", description="[Teste] Envia o check-in de terça e quinta das tarefas em aberto")
 async def cmd_teste_checkin_tarefas_abertas(interaction: discord.Interaction):
-    resolve_runtime_member_mentions(interaction.guild)
+    await resolve_runtime_member_mentions(interaction.guild)
     workload = kanban_service.get_partner_workload_snapshot(
         PARTNER_WORKLOAD_TARGETS,
         threshold=LOW_WORKLOAD_THRESHOLD,

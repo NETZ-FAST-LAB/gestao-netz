@@ -34,4 +34,4 @@ def should_run_partner_workload_nudge_ritual(moment: datetime.datetime) -> bool:
 
 
 def should_run_partner_open_tasks_checkin_ritual(moment: datetime.datetime) -> bool:
-    return is_weekday(moment) and moment.weekday() == 3
+    return is_weekday(moment) and moment.weekday() in {1, 3}
