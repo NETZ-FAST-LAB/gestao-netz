@@ -106,11 +106,9 @@ class ChatSession:
 
         system_message = self.messages[0]
         normalized_messages = [self._normalize_message(message, aggressive=aggressive) for message in self.messages[1:]]
-
-        if len(normalized_messages) > max_non_system_messages:
-            normalized_messages = normalized_messages[-max_non_system_messages:]
-
-        self.messages = [system_message, *normalized_messages]
+        grouped_messages = self._group_messages(normalized_messages)
+        trimmed_messages = self._trim_message_groups(grouped_messages, max_non_system_messages)
+        self.messages = [system_message, *trimmed_messages]
 
     def _normalize_message(self, message, aggressive=False):
         if isinstance(message, dict):
@@ -154,6 +152,66 @@ class ChatSession:
             function_data["arguments"] = self._truncate_text(self._ensure_text(function_data["arguments"]), argument_limit)
 
         return normalized
+
+    def _group_messages(self, messages):
+        groups = []
+        pending_group = None
+        pending_tool_ids = set()
+
+        for message in messages:
+            role = message.get("role")
+
+            if role == "tool":
+                tool_call_id = message.get("tool_call_id")
+                if pending_group and tool_call_id and tool_call_id in pending_tool_ids:
+                    pending_group.append(message)
+                    pending_tool_ids.discard(tool_call_id)
+                continue
+
+            if pending_group:
+                groups.append(pending_group)
+                pending_group = None
+                pending_tool_ids = set()
+
+            if role == "assistant" and message.get("tool_calls"):
+                pending_group = [message]
+                pending_tool_ids = {
+                    tool_call.get("id")
+                    for tool_call in message.get("tool_calls", [])
+                    if isinstance(tool_call, dict) and tool_call.get("id")
+                }
+                if not pending_tool_ids:
+                    groups.append(pending_group)
+                    pending_group = None
+                continue
+
+            groups.append([message])
+
+        if pending_group:
+            groups.append(pending_group)
+
+        return groups
+
+    def _trim_message_groups(self, groups, max_non_system_messages):
+        if not groups:
+            return []
+
+        selected_groups = []
+        selected_count = 0
+
+        for group in reversed(groups):
+            group_size = len(group)
+            if selected_groups and selected_count + group_size > max_non_system_messages:
+                break
+
+            selected_groups.append(group)
+            selected_count += group_size
+
+            if selected_count >= max_non_system_messages:
+                break
+
+        trimmed_groups = list(reversed(selected_groups))
+        return [message for group in trimmed_groups for message in group]
 
     def _get_content_limit(self, role, aggressive=False):
         if role == "user":
