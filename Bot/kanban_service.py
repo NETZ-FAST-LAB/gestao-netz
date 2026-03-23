@@ -67,6 +67,13 @@ def _normalize_task_title(value: str) -> str:
     return _normalize_person_name(value)
 
 
+def _canonical_task_title(value: str) -> str:
+    normalized = _normalize_task_title(value)
+    normalized = re.sub(r"\[[^\]]+\]", " ", normalized)
+    normalized = re.sub(r"[^a-z0-9\s]", " ", normalized)
+    return re.sub(r"\s+", " ", normalized).strip()
+
+
 def _status_to_github(status_value: str) -> str:
     normalized = _normalize_person_name(status_value)
     if normalized in {"concluido", "concluida", "completed", "done"}:
@@ -76,6 +83,55 @@ def _status_to_github(status_value: str) -> str:
     if normalized in {"em revisao", "review"}:
         return "review"
     return "pending"
+
+
+def _parse_brazilian_due_date(value: str | None) -> str:
+    if not value:
+        return ""
+
+    cleaned = value.strip()
+    match = re.match(r"^(?P<day>\d{1,2})[/-](?P<month>\d{1,2})(?:[/-](?P<year>\d{2,4}))?$", cleaned)
+    if not match:
+        return ""
+
+    day = int(match.group("day"))
+    month = int(match.group("month"))
+    year_raw = match.group("year")
+    year = date.today().year if not year_raw else int(year_raw)
+    if year < 100:
+        year += 2000
+
+    try:
+        return date(year, month, day).isoformat()
+    except ValueError:
+        return ""
+
+
+def _find_best_task_matches(tasks: list[dict], requested_title: str) -> list[dict]:
+    normalized_lookup = _normalize_task_title(requested_title)
+    canonical_lookup = _canonical_task_title(requested_title)
+
+    exact_matches = []
+    canonical_matches = []
+    partial_matches = []
+
+    for task in tasks:
+        task_title = task.get("title", "")
+        normalized_title = _normalize_task_title(task_title)
+        canonical_title = _canonical_task_title(task_title)
+
+        if normalized_title == normalized_lookup:
+            exact_matches.append(task)
+            continue
+
+        if canonical_title == canonical_lookup:
+            canonical_matches.append(task)
+            continue
+
+        if canonical_lookup and (canonical_lookup in canonical_title or canonical_title in canonical_lookup):
+            partial_matches.append(task)
+
+    return exact_matches or canonical_matches or partial_matches
 
 
 def _format_task(card_type: str, card_title: str, task: dict) -> str:
@@ -495,6 +551,128 @@ def bulk_update_tasks_from_message(mensagem_status: str) -> str:
                         "status": "error",
                         "message": (
                             f"Encontrei {len(matches)} correspondencia(s) para '{task_update['title']}' em '{contexto}'. "
+                            "Mande o nome exato da tarefa para eu não sair derramando reagente no laboratório."
+                        ),
+                    }
+                )
+
+            task = matches[0]
+            task["status"] = _status_to_github(task_update["status"])
+            if task_update["owner"]:
+                task["assignee"] = task_update["owner"]
+            total_updates += 1
+
+    for file_path, payload in touched_files.items():
+        success = github_client.update_file_content(
+            file_path,
+            payload["data"],
+            payload["sha"],
+            "bot(Mintzie): atualiza tarefas em lote via lista estruturada no Discord",
+        )
+        if not success:
+            return json.dumps({"status": "error", "message": f"Falhei ao gravar atualizacoes em {file_path}."})
+
+    return json.dumps(
+        {
+            "status": "success",
+            "message": f"Atualizei {total_updates} tarefa(s) a partir da lista estruturada.",
+        }
+    )
+
+
+def bulk_update_tasks_from_message_v2(mensagem_status: str) -> str:
+    sections = []
+    current_tipo = None
+    current_context = None
+    current_tasks = []
+
+    for raw_line in mensagem_status.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+
+        match_context = re.match(r"^(Iniciativa|Projeto)\s*:\s*(.+)$", line, re.IGNORECASE)
+        if match_context:
+            if current_tipo and current_context and current_tasks:
+                sections.append((current_tipo, current_context, current_tasks))
+            current_tipo = "iniciativa" if match_context.group(1).lower().startswith("inici") else "projeto"
+            current_context = match_context.group(2).strip()
+            current_tasks = []
+            continue
+
+        match_task = re.match(
+            (
+                r"^\[(?P<status>[^\]]+)\]\s*"
+                r"(?P<title>.+?)"
+                r"(?:\s*\(Respons[a-zA-ZÀ-ÿ]*:\s*(?P<owner>[^)]+)\))?"
+                r"(?:\s+nova\s+data\s*:\s*(?P<due_date>\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?))?$"
+            ),
+            line,
+            re.IGNORECASE,
+        )
+        if match_task and current_tipo and current_context:
+            current_tasks.append(
+                {
+                    "status": match_task.group("status").strip(),
+                    "title": match_task.group("title").strip(),
+                    "owner": (match_task.group("owner") or "").strip(),
+                    "due_date": _parse_brazilian_due_date(match_task.group("due_date")),
+                }
+            )
+
+    if current_tipo and current_context and current_tasks:
+        sections.append((current_tipo, current_context, current_tasks))
+
+    if not sections:
+        return json.dumps(
+            {
+                "status": "error",
+                "message": (
+                    "Nao encontrei uma lista estruturada de status. "
+                    "Use blocos como 'Iniciativa: Nome' e linhas '[Pendente] Tarefa (...)'."
+                ),
+            }
+        )
+
+    total_updates = 0
+    touched_files = {}
+
+    for tipo, contexto, tasks in sections:
+        file_path = _file_for_tipo(tipo)
+        if file_path not in touched_files:
+            data, sha = github_client.get_file_content(file_path)
+            if not data or not sha:
+                return json.dumps({"status": "error", "message": f"Falha ao ler o arquivo de {tipo}s."})
+            touched_files[file_path] = {"data": data, "sha": sha}
+
+        data = touched_files[file_path]["data"]
+        normalized_context = _normalize_person_name(contexto)
+        target_card = None
+        for board in data.get("boards", []):
+            for card in board.get("cards", []):
+                card_name = _normalize_person_name(card.get("title", ""))
+                if card_name == normalized_context:
+                    target_card = card
+                    break
+            if target_card:
+                break
+
+        if not target_card:
+            return json.dumps(
+                {
+                    "status": "error",
+                    "message": f"Nao encontrei o contexto '{contexto}' entre os {tipo}s.",
+                }
+            )
+
+        for task_update in tasks:
+            matches = _find_best_task_matches(target_card.get("tasks", []), task_update["title"])
+            if len(matches) != 1:
+                return json.dumps(
+                    {
+                        "status": "error",
+                        "message": (
+                            f"Encontrei {len(matches)} correspondencia(s) para '{task_update['title']}' em '{contexto}'. "
                             "Mande o nome exato da tarefa para eu nao sair derramando reagente no laboratorio."
                         ),
                     }
@@ -504,6 +682,8 @@ def bulk_update_tasks_from_message(mensagem_status: str) -> str:
             task["status"] = _status_to_github(task_update["status"])
             if task_update["owner"]:
                 task["assignee"] = task_update["owner"]
+            if task_update["due_date"]:
+                task["dueDate"] = task_update["due_date"]
             total_updates += 1
 
     for file_path, payload in touched_files.items():
@@ -631,5 +811,5 @@ available_functions = {
     "assign_all_unassigned_tasks": assign_all_unassigned_tasks,
     "create_github_task": create_github_task,
     "edit_github_task": edit_github_task,
-    "bulk_update_tasks_from_message": bulk_update_tasks_from_message,
+    "bulk_update_tasks_from_message": bulk_update_tasks_from_message_v2,
 }
