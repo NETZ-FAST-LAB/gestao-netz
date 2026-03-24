@@ -47,6 +47,7 @@ class Settings:
     management_channel_id: int
     deploy_channel_id: int
     member_mentions: Dict[str, str]
+    kanban_url: str
 
 
 settings = Settings(
@@ -60,4 +61,5 @@ settings = Settings(
     management_channel_id=_get_int("MINTZIE_MANAGEMENT_CHANNEL_ID", 1479226481782554634),
     deploy_channel_id=_get_int("MINTZIE_DEPLOY_CHANNEL_ID", 1481644523913482472),
     member_mentions=_get_member_mentions(),
+    kanban_url=os.getenv("MINTZIE_KANBAN_URL", ""),
 )

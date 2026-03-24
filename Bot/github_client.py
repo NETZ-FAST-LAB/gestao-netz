@@ -59,6 +59,37 @@ def update_file_content(filepath: str, data: dict, sha: str, commit_message: str
     return False
 
 
+def create_or_update_file_content(filepath: str, data: dict, commit_message: str):
+    """Creates or updates a JSON file in the GitHub repository."""
+    existing_data, sha = get_file_content(filepath)
+    if sha:
+        return update_file_content(filepath, data, sha, commit_message)
+
+    new_content = json.dumps(data, indent=2, ensure_ascii=False)
+
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            repo.create_file(
+                path=filepath,
+                message=commit_message,
+                content=new_content,
+                branch=settings.github_branch or repo.default_branch,
+            )
+            return True
+        except GithubException as e:
+            print(f"Error creating {filepath} (attempt {attempt}/{MAX_RETRIES}): {e}")
+            if e.status == 422 and attempt < MAX_RETRIES:
+                _, refreshed_sha = get_file_content(filepath)
+                if refreshed_sha:
+                    return update_file_content(filepath, data, refreshed_sha, commit_message)
+            time.sleep(0.5 * attempt)
+        except Exception as e:
+            print(f"Error creating {filepath} (attempt {attempt}/{MAX_RETRIES}): {e}")
+            time.sleep(0.5 * attempt)
+
+    return False
+
+
 def get_projetos():
     data, _ = get_file_content("Operacional/Kanban/projetos.json")
     return data

@@ -58,7 +58,9 @@ deploy_announcement_sent = False
 last_error_time = 0
 error_spam_count = 0
 MAX_ERRORS_PER_MINUTE = 3
+PENDING_TASK_UPDATE_TTL_SECONDS = 1800
 RUNTIME_MEMBER_MENTIONS = dict(settings.member_mentions)
+pending_task_update_plans = {}
 PARTNER_WORKLOAD_TARGETS = [
     {
         "key": "joao",
@@ -235,6 +237,153 @@ def chunk_message(text: str, max_size: int = 1900) -> list[str]:
         remaining = remaining[split_index:].lstrip()
 
     return chunks
+
+
+def _task_update_pending_key(message: discord.Message) -> tuple[int, int]:
+    return (message.channel.id, message.author.id)
+
+
+def _has_fresh_pending_task_update(message: discord.Message) -> bool:
+    pending = pending_task_update_plans.get(_task_update_pending_key(message))
+    if not pending:
+        return False
+    if time.time() - pending["created_at"] > PENDING_TASK_UPDATE_TTL_SECONDS:
+        pending_task_update_plans.pop(_task_update_pending_key(message), None)
+        return False
+    return True
+
+
+def _is_confirmation_message(text: str) -> bool:
+    normalized = _normalize_person_name(text)
+    return normalized in {
+        "confirmo",
+        "pode aplicar",
+        "pode salvar",
+        "salva",
+        "ok pode aplicar",
+        "sim pode aplicar",
+        "sim salva",
+        "manda ver",
+    }
+
+
+def _is_cancel_message(text: str) -> bool:
+    normalized = _normalize_person_name(text)
+    return normalized in {"cancela", "cancelar", "descarta", "ignora isso", "nao aplica", "não aplica"}
+
+
+def _looks_like_task_update_request(text: str) -> bool:
+    normalized = _normalize_person_name(text)
+    strong_markers = [
+        "atualiz",
+        "nova data",
+        "prazo",
+        "conclu",
+        "responsavel",
+        "responsável",
+        "marcar",
+        "marca",
+        "adiar",
+        "prorroga",
+        "mudar",
+        "muda",
+    ]
+    if any(marker in normalized for marker in strong_markers):
+        return True
+
+    structured_markers = ["[pendente]", "[concluido]", "[concluído]", "[em andamento]", "projeto:", "iniciativa:"]
+    if any(marker in normalized for marker in structured_markers):
+        return True
+
+    return "status" in normalized and any(
+        verb in normalized for verb in ["atual", "muda", "troca", "altera", "corrige", "ajusta"]
+    )
+
+
+def _extract_json_object_from_text(content: str) -> dict:
+    cleaned = content.strip()
+    fenced_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", cleaned, re.DOTALL)
+    if fenced_match:
+        cleaned = fenced_match.group(1)
+    else:
+        first_brace = cleaned.find("{")
+        last_brace = cleaned.rfind("}")
+        if first_brace != -1 and last_brace != -1 and last_brace > first_brace:
+            cleaned = cleaned[first_brace : last_brace + 1]
+    return json.loads(cleaned)
+
+
+def _build_plan_execution_summary(result: dict) -> str:
+    operations = result.get("operations", [])
+    lines = [f"Apliquei {len(operations)} alteração(ões) confirmadas na base de tarefas:"]
+    for operation in operations:
+        lines.append(
+            (
+                f"- {operation['contexto']}: {operation['task_title']} -> "
+                f"{kanban_service._status_to_display(operation['after']['status'])}, "
+                f"responsável {operation['after']['assignee'] or 'Sem dono'}, "
+                f"prazo {kanban_service._iso_to_display_date(operation['after']['dueDate'])}"
+            )
+        )
+    if settings.kanban_url:
+        lines.append(f"Confira no Kanban: {settings.kanban_url}")
+    return "\n".join(lines)
+
+
+def _build_task_update_parser_prompt(message_text: str, author_display_name: str, catalog_snapshot: str, previous_plan: dict | None = None) -> str:
+    previous_section = ""
+    if previous_plan:
+        previous_lines = []
+        for operation in previous_plan.get("operations", []):
+            previous_lines.append(
+                (
+                    f"- {_display_tipo(operation['tipo'])}: {operation['contexto']} | "
+                    f"{operation['task_title']} | status {kanban_service._status_to_display(operation['after']['status'])} | "
+                    f"responsável {operation['after']['assignee'] or 'Sem dono'} | "
+                    f"prazo {kanban_service._iso_to_display_date(operation['after']['dueDate'])}"
+                )
+            )
+        previous_section = (
+            "\nPlano pendente atual:\n"
+            + "\n".join(previous_lines)
+            + "\nSe a mensagem do humano for um ajuste, devolva a versão COMPLETA revisada do plano, não só o delta.\n"
+        )
+
+    return (
+        "Extraia apenas alterações de tarefas do texto abaixo e devolva JSON puro, sem comentário.\n"
+        "Formato obrigatório: {\"updates\":[{\"tipo\":\"projeto|iniciativa|null\",\"contexto\":\"texto ou null\",\"titulo\":\"texto\",\"status\":\"texto ou null\",\"nova_data\":\"DD/MM ou DD/MM/AAAA ou null\",\"responsavel\":\"texto ou null\"}]}\n"
+        "Regras:\n"
+        f"- Se o humano falar 'eu', 'pra mim' ou equivalente, use '{author_display_name}' como responsável.\n"
+        "- Mantenha o nome da tarefa como o humano disse.\n"
+        "- Só inclua tarefas que realmente parecem mudança de status, prazo ou responsável.\n"
+        "- Se a mensagem não trouxer alteração concreta, devolva {\"updates\":[]}.\n"
+        f"{previous_section}\n"
+        "Catálogo atual do Kanban:\n"
+        f"{catalog_snapshot}\n\n"
+        "Mensagem do humano:\n"
+        f"{message_text}"
+    )
+
+
+def _display_tipo(tipo: str) -> str:
+    return "Projeto" if (tipo or "").lower().startswith("proj") else "Iniciativa"
+
+
+def build_task_update_plan_from_message(message_text: str, author_display_name: str, previous_plan: dict | None = None) -> dict:
+    import gemini_logic
+
+    catalog_snapshot = kanban_service.build_task_catalog_prompt_snippet()
+    prompt = _build_task_update_parser_prompt(message_text, author_display_name, catalog_snapshot, previous_plan=previous_plan)
+    response = gemini_logic.client.chat.completions.create(
+        model=settings.llm_model,
+        messages=[
+            {"role": "system", "content": "Você extrai alterações de tarefas e responde apenas JSON válido."},
+            {"role": "user", "content": prompt},
+        ],
+    )
+    parsed = _extract_json_object_from_text(response.choices[0].message.content or "{}")
+    updates = parsed.get("updates", [])
+    return kanban_service.resolve_task_update_plan(updates, message_text, author_display_name)
 
 
 async def send_chunked(channel, text: str, reply_to=None):
@@ -793,6 +942,61 @@ async def on_message(message: discord.Message):
     if message.author == bot.user:
         return
 
+    if _has_fresh_pending_task_update(message):
+        pending_key = _task_update_pending_key(message)
+        pending_plan = pending_task_update_plans[pending_key]
+        clean_pending_text = message.content.strip()
+
+        if _is_confirmation_message(clean_pending_text):
+            result = kanban_service.execute_task_update_plan(
+                pending_plan,
+                actor_name=message.author.display_name,
+                channel_id=str(message.channel.id),
+                user_id=str(message.author.id),
+            )
+            pending_task_update_plans.pop(pending_key, None)
+            if result.get("status") == "success":
+                await send_chunked(message.channel, _build_plan_execution_summary(result), reply_to=message)
+            else:
+                await message.reply(result.get("message", "Falhei ao aplicar as alteracoes."))
+            await bot.process_commands(message)
+            return
+
+        if _is_cancel_message(clean_pending_text):
+            pending_task_update_plans.pop(pending_key, None)
+            await message.reply("Plano descartado. Nenhuma pata tocou no Kanban.")
+            await bot.process_commands(message)
+            return
+
+        try:
+            revised_plan = build_task_update_plan_from_message(
+                clean_pending_text,
+                message.author.display_name,
+                previous_plan=pending_plan,
+            )
+        except Exception:
+            error_traceback = traceback.format_exc()
+            print(f"Erro ao revisar plano pendente:\n{error_traceback}")
+            await message.reply(
+                "Tentei revisar o plano pendente e derrubei um béquer mental. Reescreva o ajuste de forma mais direta."
+            )
+            await log_error_to_discord(
+                f"Erro ao revisar plano pendente:\nMensagem de {message.author}: {clean_pending_text}\n\n{error_traceback}"
+            )
+            await bot.process_commands(message)
+            return
+
+        if revised_plan.get("status") != "success":
+            await message.reply(revised_plan.get("message", "Nao consegui revisar o plano pendente."))
+            await bot.process_commands(message)
+            return
+
+        revised_plan["created_at"] = time.time()
+        pending_task_update_plans[pending_key] = revised_plan
+        await send_chunked(message.channel, kanban_service.format_task_update_plan(revised_plan), reply_to=message)
+        await bot.process_commands(message)
+        return
+
     rituals_enabled = rituals_enabled_now()
     now = brasilia_now()
     if should_run_night_watch_ritual(now):
@@ -830,6 +1034,33 @@ async def on_message(message: discord.Message):
         if not clean_prompt:
             await message.reply(EMPTY_PROMPT_REPLY)
             return
+
+        if _looks_like_task_update_request(clean_prompt):
+            try:
+                proposed_plan = build_task_update_plan_from_message(clean_prompt, message.author.display_name)
+            except Exception:
+                error_traceback = traceback.format_exc()
+                print(f"Erro ao propor plano de alteracoes:\n{error_traceback}")
+                await message.reply(
+                    "Tentei estruturar as alterações de tarefa e derrubei reagente no parser. Vou precisar que você tente de novo."
+                )
+                await log_error_to_discord(
+                    f"Erro ao propor plano de alteracoes:\nMensagem de {message.author}: {clean_prompt}\n\n{error_traceback}"
+                )
+                await bot.process_commands(message)
+                return
+
+            if proposed_plan.get("status") == "success" and proposed_plan.get("operations"):
+                proposed_plan["created_at"] = time.time()
+                pending_task_update_plans[_task_update_pending_key(message)] = proposed_plan
+                await send_chunked(message.channel, kanban_service.format_task_update_plan(proposed_plan), reply_to=message)
+                await bot.process_commands(message)
+                return
+
+            if proposed_plan.get("status") == "error":
+                await message.reply(proposed_plan.get("message", "Nao consegui estruturar esse pedido de alteracao."))
+                await bot.process_commands(message)
+                return
 
         async with message.channel.typing():
             try:

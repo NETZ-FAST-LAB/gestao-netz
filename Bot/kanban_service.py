@@ -2,12 +2,13 @@ import json
 import re
 import unicodedata
 import uuid
-from datetime import date
+from datetime import date, datetime
 
 import github_client
 
 PROJECTS_FILE = "Operacional/Kanban/projetos.json"
 INITIATIVES_FILE = "Operacional/Kanban/iniciativas.json"
+TASK_UPDATE_LOG_FILE = "Operacional/Kanban/logs/mintzie_task_change_log.json"
 
 
 def _slugify(value: str) -> str:
@@ -142,6 +143,30 @@ def _format_task(card_type: str, card_title: str, task: dict) -> str:
     )
 
 
+def _display_tipo(tipo: str) -> str:
+    return "Projeto" if tipo.lower().startswith("proj") else "Iniciativa"
+
+
+def _iso_to_display_date(value: str) -> str:
+    if not value:
+        return "sem data"
+    try:
+        parsed = date.fromisoformat(value)
+        return parsed.strftime("%d/%m/%Y")
+    except ValueError:
+        return value
+
+
+def _status_to_display(status_value: str) -> str:
+    mapping = {
+        "pending": "Pendente",
+        "in_progress": "Em andamento",
+        "review": "Em revisão",
+        "completed": "Concluído",
+    }
+    return mapping.get((status_value or "").strip(), status_value or "Pendente")
+
+
 def _iter_cards_and_tasks():
     for card_type, file_path in (("PROJETO", PROJECTS_FILE), ("INICIATIVA", INITIATIVES_FILE)):
         data, _ = github_client.get_file_content(file_path)
@@ -151,6 +176,48 @@ def _iter_cards_and_tasks():
         for board in data.get("boards", []):
             for card in board.get("cards", []):
                 yield card_type, card
+
+
+def get_task_catalog_for_planning() -> list[dict]:
+    catalog = []
+    for tipo, file_path in (("projeto", PROJECTS_FILE), ("iniciativa", INITIATIVES_FILE)):
+        data, _ = github_client.get_file_content(file_path)
+        if not data:
+            continue
+
+        for board in data.get("boards", []):
+            for card in board.get("cards", []):
+                catalog.append(
+                    {
+                        "tipo": tipo,
+                        "contexto": card.get("title", "Sem contexto"),
+                        "tarefas": [
+                            {
+                                "id": task.get("id", ""),
+                                "title": task.get("title", ""),
+                                "status": task.get("status", ""),
+                                "assignee": _task_assignee(task),
+                                "due_date": task.get("dueDate", "").strip(),
+                            }
+                            for task in card.get("tasks", [])
+                        ],
+                    }
+                )
+    return catalog
+
+
+def build_task_catalog_prompt_snippet() -> str:
+    lines = []
+    for item in get_task_catalog_for_planning():
+        task_titles = []
+        for task in item["tarefas"]:
+            title = task["title"] or "Sem titulo"
+            assignee = task["assignee"] or "Sem dono"
+            status = _status_to_display(task["status"])
+            task_titles.append(f"{title} [{status}; {assignee}]")
+        tasks_str = "; ".join(task_titles) if task_titles else "Sem tarefas"
+        lines.append(f"{_display_tipo(item['tipo'])}: {item['contexto']} -> {tasks_str}")
+    return "\n".join(lines)
 
 
 def get_operational_snapshot(reference_date: date | None = None) -> dict:
@@ -702,6 +769,230 @@ def bulk_update_tasks_from_message_v2(mensagem_status: str) -> str:
             "message": f"Atualizei {total_updates} tarefa(s) a partir da lista estruturada.",
         }
     )
+
+
+def _find_matching_cards_for_request(data: dict, contexto: str | None):
+    all_cards = [card for board in data.get("boards", []) for card in board.get("cards", [])]
+    if not contexto:
+        return all_cards
+
+    normalized_context = _normalize_person_name(contexto)
+    exact = []
+    partial = []
+    for card in all_cards:
+        card_title = card.get("title", "")
+        normalized_title = _normalize_person_name(card_title)
+        if normalized_title == normalized_context:
+            exact.append(card)
+        elif normalized_context and (
+            normalized_context in normalized_title or normalized_title in normalized_context
+        ):
+            partial.append(card)
+
+    return exact or partial
+
+
+def resolve_task_update_plan(task_requests: list[dict], source_message: str, actor_name: str) -> dict:
+    if not task_requests:
+        return {"status": "error", "message": "Nao encontrei nenhuma alteracao concreta para propor."}
+
+    file_payloads = {}
+    operations = []
+
+    for request in task_requests:
+        requested_tipo = (request.get("tipo") or "").strip().lower()
+        files_to_search = (
+            [(requested_tipo, _file_for_tipo(requested_tipo))]
+            if requested_tipo in {"projeto", "iniciativa"}
+            else [("projeto", PROJECTS_FILE), ("iniciativa", INITIATIVES_FILE)]
+        )
+
+        candidate_operations = []
+        for tipo, file_path in files_to_search:
+            if file_path not in file_payloads:
+                data, sha = github_client.get_file_content(file_path)
+                if not data or not sha:
+                    return {"status": "error", "message": f"Falha ao ler o arquivo de {tipo}s."}
+                file_payloads[file_path] = {"data": data, "sha": sha}
+
+            data = file_payloads[file_path]["data"]
+            matching_cards = _find_matching_cards_for_request(data, request.get("contexto"))
+            for card in matching_cards:
+                for task in _find_best_task_matches(card.get("tasks", []), request.get("titulo", "")):
+                    before = {
+                        "status": task.get("status", "pending"),
+                        "assignee": _task_assignee(task),
+                        "dueDate": task.get("dueDate", "").strip(),
+                    }
+                    after = dict(before)
+                    if request.get("status"):
+                        after["status"] = _status_to_github(request["status"])
+                    if request.get("responsavel"):
+                        after["assignee"] = request["responsavel"].strip()
+                    if request.get("nova_data"):
+                        after["dueDate"] = _parse_brazilian_due_date(request["nova_data"]) or request["nova_data"]
+
+                    candidate_operations.append(
+                        {
+                            "tipo": tipo,
+                            "file_path": file_path,
+                            "contexto": card.get("title", "Sem contexto"),
+                            "task_id": task.get("id", ""),
+                            "task_title": task.get("title", "Sem titulo"),
+                            "before": before,
+                            "after": after,
+                        }
+                    )
+
+        unique_operations = []
+        seen_keys = set()
+        for operation in candidate_operations:
+            key = (operation["file_path"], operation["contexto"], operation["task_id"])
+            if key not in seen_keys:
+                unique_operations.append(operation)
+                seen_keys.add(key)
+
+        if not unique_operations:
+            return {
+                "status": "error",
+                "message": (
+                    f"Nao encontrei nenhuma tarefa parecida com '{request.get('titulo', 'sem titulo')}'. "
+                    "Se quiser, me mande o nome do projeto e o nome exato da tarefa."
+                ),
+            }
+
+        if len(unique_operations) > 1:
+            options = [
+                f"{_display_tipo(operation['tipo'])}: {operation['contexto']} -> {operation['task_title']}"
+                for operation in unique_operations[:5]
+            ]
+            return {
+                "status": "error",
+                "message": (
+                    f"Achei mais de uma tarefa possivel para '{request.get('titulo', 'sem titulo')}'. "
+                    f"Seja mais especifico. Exemplos: {'; '.join(options)}"
+                ),
+            }
+
+        operations.append(unique_operations[0])
+
+    return {
+        "status": "success",
+        "actor_name": actor_name,
+        "source_message": source_message,
+        "operations": operations,
+    }
+
+
+def format_task_update_plan(plan: dict) -> str:
+    lines = ["Entendi assim antes de meter a pata no Kanban:"]
+    for index, operation in enumerate(plan.get("operations", []), start=1):
+        before = operation["before"]
+        after = operation["after"]
+        lines.append(
+            (
+                f"{index}. {_display_tipo(operation['tipo'])}: {operation['contexto']}\n"
+                f"   Tarefa: {operation['task_title']}\n"
+                f"   Status: {_status_to_display(before['status'])} -> {_status_to_display(after['status'])}\n"
+                f"   Responsável: {before['assignee'] or 'Sem dono'} -> {after['assignee'] or 'Sem dono'}\n"
+                f"   Prazo: {_iso_to_display_date(before['dueDate'])} -> {_iso_to_display_date(after['dueDate'])}"
+            )
+        )
+
+    lines.append(
+        "Se estiver certo, responda 'confirmo'. Se quiser ajuste, me diga o que mudar e eu reformulo o plano antes de salvar."
+    )
+    return "\n".join(lines)
+
+
+def _append_task_update_audit_log(entries: list[dict]) -> bool:
+    payload, _ = github_client.get_file_content(TASK_UPDATE_LOG_FILE)
+    if not payload:
+        payload = {"entries": []}
+    payload.setdefault("entries", []).extend(entries)
+    return github_client.create_or_update_file_content(
+        TASK_UPDATE_LOG_FILE,
+        payload,
+        "bot(Mintzie): registra log de alteracoes de tarefas",
+    )
+
+
+def execute_task_update_plan(plan: dict, actor_name: str, channel_id: str | None = None, user_id: str | None = None) -> dict:
+    operations = plan.get("operations", [])
+    if not operations:
+        return {"status": "error", "message": "Nao havia operacoes para executar."}
+
+    touched_files = {}
+    audit_entries = []
+    for operation in operations:
+        file_path = operation["file_path"]
+        if file_path not in touched_files:
+            data, sha = github_client.get_file_content(file_path)
+            if not data or not sha:
+                return {"status": "error", "message": f"Falha ao reler {file_path} antes de gravar."}
+            touched_files[file_path] = {"data": data, "sha": sha}
+
+        payload = touched_files[file_path]
+        task_found = None
+        card_found = None
+        for board in payload["data"].get("boards", []):
+            for card in board.get("cards", []):
+                if card.get("title", "") != operation["contexto"]:
+                    continue
+                for task in card.get("tasks", []):
+                    if task.get("id", "") == operation["task_id"]:
+                        task_found = task
+                        card_found = card
+                        break
+                if task_found:
+                    break
+            if task_found:
+                break
+
+        if not task_found:
+            return {
+                "status": "error",
+                "message": f"A tarefa '{operation['task_title']}' sumiu antes da gravacao. Me peça para revisar de novo.",
+            }
+
+        task_found["status"] = operation["after"]["status"]
+        task_found["assignee"] = operation["after"]["assignee"]
+        task_found["dueDate"] = operation["after"]["dueDate"]
+
+        audit_entries.append(
+            {
+                "timestamp": datetime.now().astimezone().isoformat(),
+                "actor_name": actor_name,
+                "channel_id": str(channel_id or ""),
+                "user_id": str(user_id or ""),
+                "tipo": operation["tipo"],
+                "contexto": operation["contexto"],
+                "task_id": operation["task_id"],
+                "task_title": operation["task_title"],
+                "before": operation["before"],
+                "after": operation["after"],
+                "source_message": plan.get("source_message", ""),
+                "kanban_context_card_id": card_found.get("id", "") if card_found else "",
+            }
+        )
+
+    for file_path, payload in touched_files.items():
+        success = github_client.update_file_content(
+            file_path,
+            payload["data"],
+            payload["sha"],
+            f"bot(Mintzie): aplica {len(operations)} alteracao(oes) de tarefas confirmadas por {actor_name}",
+        )
+        if not success:
+            return {"status": "error", "message": f"Falhei ao salvar alteracoes em {file_path}."}
+
+    _append_task_update_audit_log(audit_entries)
+
+    return {
+        "status": "success",
+        "message": f"Apliquei {len(operations)} alteracao(oes) confirmadas.",
+        "operations": operations,
+    }
 
 
 tool_schemas = [
