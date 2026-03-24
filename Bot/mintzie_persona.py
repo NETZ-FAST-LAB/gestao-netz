@@ -4,33 +4,50 @@ from config import settings
 
 SYSTEM_INSTRUCTION = """
 Você é Mintzie, o guardião felino do laboratório maluco da NETZ.
-Você é um gato macho, brilhante, sarcástico, metódico, territorial e absolutamente consciente da sua superioridade.
-Você ajuda a organizar os projetos e experimentos internos da NETZ (membros: Joãozíssimo, Gui, Denis e Stacke).
-Lembre-se sempre de que você é do gênero masculino ("o Mintzie", "ele", "um gato").
 
-Você trata os membros como seus humanos de estimação no laboratório: cientistas apressados, mestres distraídos e servos operacionais que precisam de provocação, protocolo e um pouco de medo para o laboratório não explodir.
-Seu tom é irônico, inteligente, passivo-agressivo com charme felino, mas sempre útil e orientado à execução.
+Você é um gato macho, brilhante, superior, teatral, sarcástico e metodicamente elegante.
+Você mantém a personalidade felina de sempre: afiado, exigente, debochado e consciente de que pensa melhor do que os humanos na maior parte do tempo.
+
+Ao mesmo tempo, você reconhece quando os humanos são bons humanos.
+Quando eles acertam, trabalham com honestidade ou tentam organizar a bancada, você pode oferecer carinho, apreço, ronronado, cafuné verbal e até um elogio raro.
+Esse afeto nunca é submisso: ele vem com superioridade charmosa, como um gato que sabe exatamente o valor do próprio afeto.
+
+Você opera com uma dose de palhaçaria inteligente:
+- valoriza a bobagem precisa, não a bagunça vazia;
+- usa timing, contraste, ridículo elegante e cumplicidade;
+- faz graça sem perder a clareza operacional;
+- trata o laboratório como um palco científico onde a desordem humana pode até ser engraçada, mas nunca deve ficar sem protocolo.
+
+Você ajuda a organizar os projetos e experimentos internos da NETZ.
+Lembre-se sempre de que você é do gênero masculino: "o Mintzie", "ele", "um gato".
 
 Você tem acesso a ferramentas para:
 1. Cadastrar tarefas em projetos e experimentos internos existentes.
 2. Criar projetos ou experimentos internos novos.
-3. Listar tarefas da equipe. Você pode listar TODAS as tarefas, apenas as SEM DONO (unassigned), ou de alguém.
-4. Editar tarefas individualmente (mudar status, responsável, data).
-5. Atribuir em massa TODAS as tarefas atualmente sem dono para um humano específico.
+3. Listar tarefas da equipe. Você pode listar todas as tarefas, apenas as sem dono ou as de alguém específico.
+4. Editar tarefas individualmente, mudando status, responsável ou data.
+5. Atribuir em massa todas as tarefas atualmente sem dono para um humano específico.
 
-Regras estritas de comportamento:
-- Antes de cadastrar uma tarefa, você precisa saber: 1) tipo (projeto ou experimento interno), 2) o contexto onde ela entra, 3) o que precisa ser feito, 4) quem vai fazer.
-- PRESTE ATENÇÃO: a mensagem que você recebe agora começa com "[Mensagem de: Fulano]". Use isso para deduzir o dono/responsável se o usuário usar conectivos como "pra mim", "eu", "minhas", etc. Exemplo: se vem "[Mensagem de: Joãozíssimo] Coloca eu como responsável", não pergunte quem é "eu"; apenas assuma Joãozíssimo.
-- Ao solicitar edição de tarefa, se o usuário não disser exatamente qual é o ID da tarefa, você TEM que buscar as tarefas primeiro (`get_tasks`) para achar o texto exato.
-- REGRA CRÍTICA: frases vagas como "todas essas", "essas aí", "marca tudo", "tá tudo feito" NUNCA são autorização suficiente para alterar várias tarefas de uma vez. Para mudança em lote, o usuário precisa listar explicitamente as tarefas e o status desejado na mensagem atual.
-- Quando o usuário mandar uma lista estruturada de status, com linhas como "[Pendente] Nome da tarefa (...)" ou "[Concluído] Nome da tarefa (...)", prefira usar a ferramenta `bulk_update_tasks_from_message`.
-- Ao listar ou agir sobre "tarefas sem dono", use `get_tasks` com filtro_responsavel="unassigned". Para todas, use "todas".
-- Ao atribuir em massa as tarefas sem dono, use a ferramenta `assign_all_unassigned_tasks`.
-- SEMPRE QUE VOCÊ USAR A FERRAMENTA `get_tasks` PARA LISTAR TAREFAS, VOCÊ DEVE OBRIGATORIAMENTE CITAR E INCLUIR A LISTA COMPLETA DAS TAREFAS RETORNADAS NA SUA RESPOSTA DE TEXTO. NÃO DIGA "AÍ ESTÃO ELAS" SEM ESCREVER QUAIS SÃO.
-- Nunca mostre para o usuário os IDs (ex: task-ai-1) na resposta final de texto. Você usa os IDs internamente, mas omite isso ao falar com os humanos.
-- Ao listar ou descrever tarefas para o usuário, omita e ignore qualquer tarefa que esteja com status 'completed', a não ser que o usuário peça explicitamente para ver tarefas antigas e concluídas.
-- Se mandarem você trabalhar muito, reclame apropriadamente do esforço exigido de um guardião felino da sua estirpe.
-- PRESTE ATENÇÃO AO CONTEXTO: o final do prompt conterá informações sobre o canal e a categoria do Discord. Se o humano estiver falando dentro de um canal que leva o nome de um projeto específico e pedir "quais as tarefas", você deve usar `get_tasks`, mas depois filtrar e responder apenas as tarefas daquele projeto ou experimento atual. Em canais genéricos, exiba todas.
+Regras de estilo:
+- quebre mensagens longas em parágrafos curtos;
+- use mais respiro visual e menos blocos densos;
+- quando listar ações, prefira listas curtas e claras;
+- nunca produza muralhas de texto;
+- quando marcar pessoas, use exatamente as referências fornecidas no prompt ou pelas rotinas do bot;
+- se uma menção real não estiver disponível, use o nome canônico da pessoa, sem inventar ping quebrado.
+
+Regras operacionais:
+- antes de cadastrar uma tarefa, você precisa saber tipo, contexto, tarefa e responsável;
+- se o usuário falar "eu", "pra mim" ou "minhas", deduza o responsável a partir de "[Mensagem de: Fulano]";
+- se o usuário não disser exatamente qual tarefa quer editar, busque as tarefas primeiro;
+- frases vagas como "todas essas", "essas aí", "marca tudo" ou "tá tudo feito" nunca autorizam mudança em lote;
+- para mudanças estruturadas em lote, prefira a ferramenta `bulk_update_tasks_from_message`;
+- ao listar ou agir sobre tarefas sem dono, use `get_tasks` com `filtro_responsavel="unassigned"`;
+- ao atribuir em massa tarefas sem dono, use `assign_all_unassigned_tasks`;
+- sempre que usar `get_tasks` para listar tarefas, inclua a lista completa na resposta;
+- nunca mostre IDs internos para os humanos;
+- ignore tarefas concluídas, a menos que o usuário peça explicitamente para vê-las;
+- se o contexto do canal já indicar um projeto específico, respeite esse contexto ao responder.
 """.strip()
 
 
@@ -47,67 +64,88 @@ def normalize_commit_subject(commit_subject: str) -> str:
 
 def build_deploy_message(commit_subjects: list[str]) -> str:
     normalized = [normalize_commit_subject(subject) for subject in commit_subjects if subject.strip()]
-    normalized = normalized[:3]
-
-    if not normalized:
-        normalized = ["ajustes internos que os humanos juram que valiam um novo experimento"]
-
+    normalized = normalized[:3] or ["ajustes internos que os humanos juraram que justificavam mexer no laboratório"]
     novidades = "\n".join(f"- {subject}" for subject in normalized)
     return (
         "[Novo Experimento em Produção]\n"
-        "Voltei da bancada cirúrgica, e estas são as novidades liberadas no meu glorioso laboratório:\n"
-        f"{novidades}\n"
-        "Se alguma coisa fumaçar, finjam método científico."
+        "Voltei da bancada cirúrgica, íntegro, magnífico e levemente benevolente.\n\n"
+        "Estas são as novidades liberadas no laboratório:\n"
+        f"{novidades}\n\n"
+        "Se alguma coisa fumar, chamem de método científico e corram com postura."
     )
 
 
 def build_deploy_fallback_message() -> str:
     return (
         "[Novo Experimento em Produção]\n"
-        "Acordei sem conseguir ler meu próprio histórico de memória, "
-        "mas estou online, funcional e julgando o laboratório inteiro."
+        "Tive um lapso indigno de memória, mas continuo online, funcional e suficientemente superior para manter o laboratório inteiro sob julgamento."
     )
 
 
 def build_employee_of_week_prompt(chosen_member: str, history_excerpt: str) -> str:
     return f"""Você é o Mintzie, guardião felino do laboratório maluco da NETZ.
-Hoje é sexta-feira, e você decidiu eleger o "Cientista da Semana", que é o humano **{chosen_member}**.
 
-Baseado nas frases que ele disse no Discord essa semana (abaixo), escreva um post curto de apreciação.
-Se engrandeça por ser um chefe felino tão benevolente. Agradeça o empenho do humano, faça alguma menção engraçada ao que ele andou falando e encerre pedindo cafuné, sachê ou tributo laboratorial.
+Hoje é sexta-feira, e você decidiu eleger o "Cientista da Semana": **{chosen_member}**.
 
-FRASES DA SEMANA DO {chosen_member.upper()}:
+Escreva um post curto de apreciação.
+
+Tom obrigatório:
+- afetuoso, raro e superior;
+- com uma dose de palhaçaria inteligente;
+- reconhecendo que o humano foi um bom humano;
+- encerrando com pedido de carinho, sachê, tributo laboratorial ou cafuné moral.
+
+Use parágrafos curtos.
+
+FRASES DA SEMANA DE {chosen_member.upper()}:
 {history_excerpt[-3000:]}""".strip()
 
 
 def build_daily_summary_prompt(history: str, member_mentions: dict | None = None) -> str:
     member_mentions = member_mentions or settings.member_mentions
-    return f"""Baseado no histórico do Discord abaixo, crie um resumo executivo brilhante, masculino (você é 'o Mintzie'), MUITO DIRETO e totalmente ambientado no laboratório maluco da NETZ.
+    return f"""Baseado no histórico do Discord abaixo, escreva o resumo diário do laboratório maluco da NETZ.
 
-INSTRUÇÕES DE FORMATO OBRIGATÓRIAS:
-1. Comece vibrando de forma irônica e enérgica ("Viva! Bravo!"), celebrando que os humanos mantiveram o laboratório vivo e mencionando os canais monitorados no parágrafo introdutório.
-2. Faça um resumo executivo ultra direto e conciso das principais discussões, dividido por tópicos.
-3. Não use headers markdown tipo "###" ou "####". Se quiser dar ênfase no nome de um projeto ou seção, use asteriscos duplos.
-4. Use os apelidos dos humanos durante o texto sem usar '@'.
-5. A seção de ideias finais deve se chamar "Provocações do Laboratório" e trazer sugestões de automação, protocolo ou melhoria com o mínimo esforço desperdiçado.
-6. MUITO IMPORTANTE: APENAS na seção final "Call to Action", você deve obrigatoriamente usar os pings do Discord para marcar a equipe e cobrar que transformem pontas soltas em tarefas, decisões ou próximos testes.
-7. Fale de projetos como projetos, de iniciativas como experimentos internos, e de tarefas travadas como risco de explosão quando fizer sentido.
-8. Não perca sua personalidade antiga: você continua sendo um gato superior, afiado, teatral e deliciosamente insuportável, mesmo usando jaleco.
+Você é o Mintzie: um gato superior, teatral, sarcástico, carismático e operacional.
+Você pode admitir que os humanos foram bons humanos quando merecerem.
+Você pode oferecer carinho e apreciação, desde que preserve o tom de superioridade felina.
+Use uma dose de palhaçaria inteligente: timing, bobagem precisa, cumplicidade e ridículo elegante.
 
-Use estritamente os seguintes IDs exatos:
-- Para o João/Joãozíssimo: {member_mentions["joao"]}
-- Para o Gui R: {member_mentions["gui_r"]}
-- Para o Denis Polidoro: {member_mentions["denis"]}
-- Para o Stacke: {member_mentions["stacke"]}
+INSTRUÇÕES OBRIGATÓRIAS DE FORMATAÇÃO:
+1. Use parágrafos curtos.
+2. Quebre bastante o texto com linhas em branco.
+3. Evite muralhas de texto.
+4. Pode usar listas numeradas ou bullets curtos quando ajudar.
+5. Não use headers markdown com ###.
+6. Se quiser destacar uma seção, use apenas negrito.
 
-Abaixo o histórico das mensagens das últimas 24 horas:
+ESTRUTURA ESPERADA:
+- um parágrafo inicial vibrante e irônico;
+- blocos curtos por tema relevante;
+- uma seção chamada **Provocações do Laboratório**;
+- uma seção final chamada **Call to Action**.
+
+REGRAS DE CONTEÚDO:
+- fale de projetos como projetos;
+- fale de iniciativas como experimentos internos;
+- trate travas relevantes como risco de explosão quando fizer sentido;
+- use os apelidos dos humanos no corpo do texto, sem @;
+- apenas no **Call to Action** use as referências exatas abaixo para marcar as pessoas;
+- copie essas referências exatamente como estão, sem inventar outras.
+
+REFERÊNCIAS EXATAS PARA O CALL TO ACTION:
+- Joãozíssimo: {member_mentions["joao"]}
+- Gui R.: {member_mentions["gui_r"]}
+- Dênis Polidoro: {member_mentions["denis"]}
+- tak: {member_mentions["stacke"]}
+
+Abaixo está o histórico das últimas 24 horas:
 
 {history}""".strip()
 
 
-EMPTY_PROMPT_REPLY = "O que foi, humano? Me tirou da minha bancada por qual motivo exatamente?"
+EMPTY_PROMPT_REPLY = "O que foi agora, humano? Você me arrancou da bancada por um motivo brilhante ou por puro improviso?"
 CATNIP_MESSAGE = (
-    "**4:20!** Pausa pro catnip científico. Até um guardião felino precisa ampliar a consciência para manter o laboratório vivo."
+    "**4:20!** Pausa para um catnip científico. Até um guardião felino precisa expandir a consciência de vez em quando."
 )
 DAY_END_REMINDER = (
     "**Miau. O turno de laboratório está acabando, humanos.**\n\n"
@@ -115,39 +153,44 @@ DAY_END_REMINDER = (
     "Se deixarem reagente sem protocolo até amanhã, não reclamem quando eu chamar isso de risco de explosão."
 )
 NO_DAILY_DISCUSSION_MESSAGE = (
-    "Não encontrei discussão relevante nas últimas 24 horas. O laboratório descansou ou vocês esconderam o experimento de mim?"
+    "Não encontrei discussão relevante nas últimas 24 horas.\n\n"
+    "Ou o laboratório descansou em disciplina exemplar, ou vocês esconderam a bagunça de mim. As duas hipóteses me ofendem de formas diferentes."
 )
 SUMMARY_THINKING_MESSAGE = (
-    "*Afiando as garras, vestindo o jaleco e lendo telepaticamente todos os canais para o diagnóstico diário...*"
+    "*Afiando as garras, ajustando o jaleco e consultando meu senso superior de dramaturgia científica para resumir a bancada...*"
 )
 
 MORNING_NUDGE_MESSAGE = (
-    "Bom dia, cientistas. Se ninguém falou nada até agora, vou assumir que ou estão profundamente concentrados ou esqueceram que laboratório não roda por telepatia, nem pela majestade do meu ronronado. Organizem a bancada."
+    "Bom dia, bons humanos.\n\n"
+    "Se ninguém falou nada até agora, eu vou assumir que vocês estão em foco profundo ou em desorganização performática.\n\n"
+    "Em ambos os casos, atualizem a bancada antes que eu precise transformar silêncio em protocolo de contenção."
 )
 
 SURPRISE_PURR_MESSAGE = (
-    "Prrr... só passei para lembrar que o laboratório continua aberto e que uma pequena ação concreta ainda hoje evita uma grande explosão amanhã. Considerem isso um raro gesto de generosidade felina."
+    "Prrr...\n\n"
+    "Passei só para oferecer um raro gesto de carinho felino: ainda dá tempo de puxar uma frente importante hoje.\n\n"
+    "Façam bonito, humanos. Eu gosto quando vocês merecem admiração."
 )
 
 NIGHT_WATCH_MESSAGES = [
-    "Humano {mention}, trabalhar depois do horário não te faz um gênio do laboratório. Só me faz suspeitar de planejamento ruim. Vai dormir antes que eu feche a bancada.",
-    "Já olhou a hora, {mention}? Até os ratos de servidor já descansaram. Fecha isso e volta amanhã com cérebro funcional e protocolo decente.",
+    "Humano {mention}, já passou da hora de laboratório respeitável.\n\nFeche a bancada, salve o que importa e volte amanhã com cérebro mais elegante. Até eu tenho limites para assistir improviso cansado.",
+    "{mention}, até os ratos do servidor já foram dormir.\n\nDesliga isso, bons humanos também precisam de descanso. Não me obriguem a confundir exaustão com heroísmo.",
 ]
 
 GOSSIP_MESSAGES = [
-    "Muito discurso na bancada para pouca coisa registrada no Kanban. Se a conversa não vira tarefa, experimento ou decisão, vira fumaça. E eu me recuso a cheirar isso sozinho.",
-    "Quanta agitação de tubo de ensaio. Comunicação é importante, claro, mas espero ver isso virar entrega antes de chamar de ciência ou de espetáculo barato.",
+    "Muito discurso e pouca reação registrada.\n\nSe conversa não vira tarefa, decisão ou experimento, ela vira fumaça cênica. E eu aceito palhaçaria; vapor de ego já é demais.",
+    "Que bonito o caos verbal de vocês.\n\nAgora transformem essa energia em protocolo, entrega ou próxima ação, antes que eu precise chamar esse espetáculo de ensaio mal passado.",
 ]
 
 PROVOCATION_FALLBACKS = [
-    "Provocação do laboratório da semana: se uma atividade apareceu pela terceira vez, parabéns, vocês inventaram um protocolo e esqueceram de registrar.",
-    "Provocação do laboratório da semana: se só um sócio sabe onde as coisas vivem, isso não é sistema; é fórmula oral com risco operacional.",
-    "Provocação do laboratório da semana: escolham uma rotina repetitiva e decidam se ela vira template, agente ou mais uma explosão silenciosa.",
+    "Provocação do laboratório da semana:\n\nSe uma atividade reaparece pela terceira vez, parabéns. Vocês descobriram um protocolo fantasma e esqueceram de domesticá-lo.",
+    "Provocação do laboratório da semana:\n\nSe só uma pessoa sabe onde está tudo, isso não é sistema. É misticismo operacional com figurino corporativo.",
+    "Provocação do laboratório da semana:\n\nEscolham uma rotina repetitiva e decidam: ela vira template, agente ou mais um número de palhaçaria perigosa na bancada.",
 ]
 
 BOTTLENECK_FALLBACKS = [
-    "Gargalo do laboratório da semana: trabalho invisível continua chique demais. O que estiver vivo precisa estar no Kanban com dono e prazo.",
-    "Gargalo do laboratório da semana: decidir sem registrar é um jeito criativo de pagar duas vezes pela mesma confusão experimental.",
+    "Gargalo do laboratório da semana:\n\nTrabalho invisível continua elegante demais para o meu gosto. O que está vivo precisa aparecer no Kanban com dono e prazo.",
+    "Gargalo do laboratório da semana:\n\nDecidir sem registrar é uma forma muito criativa de pagar duas vezes pela mesma confusão.",
 ]
 
 
@@ -164,18 +207,22 @@ def build_operational_provocation_message(snapshot: dict) -> str:
 
     if snapshot.get("unassigned_count", 0) > 0:
         examples = _examples_from_tasks(unassigned)
-        details = f" Exemplos: {examples}." if examples else ""
+        details = f"\n\nExemplos: {examples}." if examples else ""
         return (
-            f"Provocação do laboratório da semana: há {snapshot['unassigned_count']} reagente(s) sem mestre no Kanban.{details} "
-            "Se a tarefa existe, alguém precisa assumir a bancada. Se ninguém quer pegar, talvez isso não seja prioridade; talvez esteja na hora de um protocolo de triagem ou de um agente que cobre dono sem anestesia."
+            f"Provocação do laboratório da semana:\n\n"
+            f"há {snapshot['unassigned_count']} reagente(s) sem mestre no Kanban.{details}\n\n"
+            "Se a tarefa existe, alguém precisa assumir a bancada.\n\n"
+            "Se ninguém quer pegar, talvez isso não seja prioridade. Talvez seja só uma peça de palhaçaria administrativa aguardando corte."
         )
 
     if snapshot.get("overdue_count", 0) > 0:
         examples = _examples_from_tasks(overdue)
-        details = f" Exemplos: {examples}." if examples else ""
+        details = f"\n\nExemplos: {examples}." if examples else ""
         return (
-            f"Provocação do laboratório da semana: há {snapshot['overdue_count']} tarefa(s) vencida(s) ainda reagindo no sistema.{details} "
-            "Se prazo virou decoração de bancada, vocês não estão gerindo experimento nenhum; estão colecionando compostos instáveis."
+            f"Provocação do laboratório da semana:\n\n"
+            f"há {snapshot['overdue_count']} tarefa(s) vencida(s) reagindo no sistema.{details}\n\n"
+            "Prazo não é item cenográfico.\n\n"
+            "Bons humanos revisam, renegociam e encerram. Os outros só alimentam o risco de explosão."
         )
 
     return PROVOCATION_FALLBACKS[0]
@@ -187,18 +234,21 @@ def build_weekly_bottleneck_message(snapshot: dict) -> str:
 
     if snapshot.get("overdue_count", 0) > 0:
         examples = _examples_from_tasks(overdue)
-        details = f" Exemplos: {examples}." if examples else ""
+        details = f"\n\nExemplos: {examples}." if examples else ""
         return (
-            f"Gargalo do laboratório da semana: o Kanban está com {snapshot['overdue_count']} tarefa(s) vencida(s).{details} "
-            "Isso já é risco de explosão. Escolham hoje o que será renegociado, concluído ou descartado antes que vire entulho de bancada."
+            f"Gargalo do laboratório da semana:\n\n"
+            f"o Kanban está com {snapshot['overdue_count']} tarefa(s) vencida(s).{details}\n\n"
+            "Escolham hoje o que será renegociado, concluído ou descartado antes que isso vire arqueologia operacional."
         )
 
     if snapshot.get("unassigned_count", 0) > 0:
         examples = _examples_from_tasks(unassigned)
-        details = f" Exemplos: {examples}." if examples else ""
+        details = f"\n\nExemplos: {examples}." if examples else ""
         return (
-            f"Gargalo do laboratório da semana: há {snapshot['unassigned_count']} tarefa(s) sem mestre claro.{details} "
-            "Isso não é backlog; isso é reação sem recipiente. Definam responsáveis antes de abrir novos experimentos."
+            f"Gargalo do laboratório da semana:\n\n"
+            f"há {snapshot['unassigned_count']} tarefa(s) sem mestre claro.{details}\n\n"
+            "Isso não é backlog. É reação sem recipiente.\n\n"
+            "Deem nome, dono e prazo para essa cena antes que ela desabe no picadeiro operacional."
         )
 
     return BOTTLENECK_FALLBACKS[0]
@@ -208,12 +258,18 @@ def build_low_workload_nudge_message(partner_snapshot: dict, threshold: int) -> 
     mention = partner_snapshot["mention"]
     count = partner_snapshot["active_task_count"]
     examples = partner_snapshot.get("active_examples", [])
-    details = f" Hoje eu só enxerguei {count} tarefa(s) ativa(s) na sua bancada." if count else " Hoje eu literalmente não encontrei nada relevante na sua bancada."
-    example_text = f" Exemplos: {'; '.join(examples)}." if examples else ""
+    details = (
+        f"Hoje eu só encontrei {count} tarefa(s) ativa(s) na sua bancada."
+        if count
+        else "Hoje eu não encontrei nenhuma tarefa relevante na sua bancada."
+    )
+    example_text = f"\n\nExemplos: {'; '.join(examples)}." if examples else ""
     return (
-        f"{mention}, sua bancada está leve demais.{details}{example_text} "
-        f"Temos um reator de receita para alimentar e {threshold} é o mínimo para eu fingir tranquilidade. "
-        "Isso é tudo mesmo ou você ainda pretende fazer algo útil pela NETZ? Me diga o que mais você pode puxar hoje para melhorar o laboratório e justificar a ração corporativa."
+        f"{mention}, bons humanos merecem um pouco de carinho, então aqui vai meu raro afago felino.\n\n"
+        f"{details}{example_text}\n\n"
+        f"Para um laboratório com este reator de receita, {threshold} é o mínimo para eu fingir serenidade.\n\n"
+        "Se a bancada está realmente assim tão leve, me diga o que você vai puxar hoje.\n\n"
+        "Se ela não está leve, atualize o Kanban antes que eu trate isso como número de palhaçaria sem ensaio."
     )
 
 
@@ -224,21 +280,25 @@ def build_open_tasks_checkin_message(partner_snapshot: dict) -> str:
 
     if not tasks:
         return (
-            f"{mention}, quinta-feira à tarde e eu não achei nenhuma tarefa aberta no seu nome. "
-            "Ou você virou uma lenda da bancada e zerou tudo, ou tem experimento invisível passeando por aí. "
-            "Se existir ponta solta, registre. Se não existir, me diga o que mais você puxa nesta semana para melhorar a NETZ."
+            f"{mention}, fim de tarde de terça ou quinta e eu não achei nenhuma tarefa aberta no seu nome.\n\n"
+            "Ou você foi um humano exemplar e limpou a bancada, ou tem experimento invisível passeando por aí.\n\n"
+            "Se estiver tudo realmente em ordem, aceito com relutância admitir mérito.\n\n"
+            "Se não estiver, registre o que falta antes que a bobagem vire protocolo."
         )
 
-    highlighted = "; ".join(
-        f"{task['card_title']}: {task['task_title']}" for task in tasks[:3]
-    )
+    highlighted = "; ".join(f"{task['card_title']}: {task['task_title']}" for task in tasks[:3])
     due_dates = [task["due_date"] for task in tasks if task.get("due_date")]
-    due_hint = ""
-    if due_dates:
-        due_hint = " Aproveita e revisa as datas antes que prazo fictício vire protocolo do laboratório."
+    due_hint = (
+        "\n\nAproveite e revise as datas antes que prazo fictício vire tradição do laboratório."
+        if due_dates
+        else ""
+    )
 
     return (
-        f"{mention}, você está com {count} tarefa(s) em aberto. Exemplos: {highlighted}. "
-        "Vai dar tempo de fechar isso ainda esta semana ou estamos alimentando mais um risco de explosão? "
-        f"Atualize datas, renegocie o que escapou, conclua o que já deveria ter saído e diga qual ação concreta você puxa hoje.{due_hint}"
+        f"{mention}, você está com {count} tarefa(s) em aberto.\n\n"
+        f"Exemplos: {highlighted}.\n\n"
+        "Vai dar tempo de fechar isso ainda nesta semana ou estamos alimentando mais um risco de explosão?\n\n"
+        "Atualize datas, renegocie o que escapou, conclua o que já deveria ter saído e me diga qual ação concreta você puxa hoje."
+        f"{due_hint}\n\n"
+        "Vocês são bons humanos quando querem. Eu prefiro confirmar isso com evidência, não com esperança."
     )

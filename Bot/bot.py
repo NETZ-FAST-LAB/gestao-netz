@@ -97,7 +97,16 @@ PARTNER_WORKLOAD_TARGETS = [
         "key": "stacke",
         "display_name": "tak",
         "mention": RUNTIME_MEMBER_MENTIONS.get("stacke", "@Stacke"),
-        "aliases": ["tak", "Tak", "Stacke", "Gui S", "Gui Stacke", "Guilherme Stacke", "Guilherme Stack"],
+        "aliases": [
+            "tak",
+            "Tak",
+            "tak - Stacke",
+            "Stacke",
+            "Gui S",
+            "Gui Stacke",
+            "Guilherme Stacke",
+            "Guilherme Stack",
+        ],
     },
 ]
 LOW_WORKLOAD_THRESHOLD = 3
@@ -105,6 +114,7 @@ LOW_WORKLOAD_THRESHOLD = 3
 
 def _normalize_person_name(value: str) -> str:
     normalized = unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode("ascii")
+    normalized = re.sub(r"[^a-zA-Z0-9\s]", " ", normalized)
     return re.sub(r"\s+", " ", normalized.lower()).strip()
 
 
@@ -115,7 +125,16 @@ def _member_name_candidates(member: discord.Member) -> set[str]:
         getattr(member, "global_name", None),
         getattr(member, "nick", None),
     }
-    return {_normalize_person_name(candidate) for candidate in candidates if candidate}
+    normalized_candidates = set()
+    for candidate in candidates:
+        if not candidate:
+            continue
+        normalized = _normalize_person_name(candidate)
+        if not normalized:
+            continue
+        normalized_candidates.add(normalized)
+        normalized_candidates.update(part for part in normalized.split(" ") if len(part) >= 3)
+    return normalized_candidates
 
 
 def build_open_tasks_checkin_message(partner_snapshot: dict) -> str:
@@ -147,9 +166,19 @@ def _partner_fallback_reference(partner: dict) -> str:
     return partner.get("display_name", "alguem")
 
 
+def _partner_reference_by_name(name: str) -> str:
+    normalized_name = _normalize_person_name(name)
+    for partner in PARTNER_WORKLOAD_TARGETS:
+        alias_set = {_normalize_person_name(alias) for alias in partner.get("aliases", []) if alias}
+        if normalized_name in alias_set:
+            return partner.get("mention") or partner.get("display_name", name)
+    return name
+
+
 async def resolve_runtime_member_mentions(guild: discord.Guild | None):
     if guild is None:
         for partner in PARTNER_WORKLOAD_TARGETS:
+            RUNTIME_MEMBER_MENTIONS[partner["key"]] = _partner_fallback_reference(partner)
             partner["mention"] = _partner_fallback_reference(partner)
         return
 
@@ -181,6 +210,7 @@ async def resolve_runtime_member_mentions(guild: discord.Guild | None):
             RUNTIME_MEMBER_MENTIONS[partner["key"]] = matched_member.mention
             partner["mention"] = matched_member.mention
         else:
+            RUNTIME_MEMBER_MENTIONS[partner["key"]] = _partner_fallback_reference(partner)
             partner["mention"] = _partner_fallback_reference(partner)
 
 
@@ -651,21 +681,29 @@ async def verificador_de_projetos():
 
     hoje = brasilia_now().date()
     amanha = hoje + datetime.timedelta(days=1)
-    mensagens_para_enviar = []
+    mensagens_hoje = []
+    mensagens_amanha = []
+
+    def registrar_linha(data_alvo: datetime.date, texto: str):
+        if data_alvo == hoje:
+            mensagens_hoje.append(texto)
+        elif data_alvo == amanha:
+            mensagens_amanha.append(texto)
 
     for board in projetos_data.get("boards", []):
         for proj in board.get("cards", []):
             nome_proj = proj.get("title", "Projeto Desconhecido")
             lider = proj.get("owner") or proj.get("client") or "Equipe"
+            lider_ref = _partner_reference_by_name(lider)
 
             for marco in proj.get("marcos_alinhamento", []):
                 try:
                     data_marco = datetime.datetime.strptime(marco.get("data", ""), "%Y-%m-%d").date()
                     titulo = marco.get("titulo", "")
-                    if data_marco == hoje:
-                        mensagens_para_enviar.append(f"HOJE: {titulo} (Projeto: {nome_proj}) - Resp: {lider}")
-                    elif data_marco == amanha:
-                        mensagens_para_enviar.append(f"AMANHÃ: {titulo} (Projeto: {nome_proj}) - Resp: {lider}")
+                    registrar_linha(
+                        data_marco,
+                        f"- **{titulo}**\n  Projeto: {nome_proj}\n  Responsável: {lider_ref}",
+                    )
                 except Exception:
                     pass
 
@@ -673,41 +711,54 @@ async def verificador_de_projetos():
             for cp in lembretes.get("checkpoints", []):
                 try:
                     data_cp = datetime.datetime.strptime(cp.get("data", ""), "%Y-%m-%d").date()
-                    if data_cp == hoje:
-                        mensagens_para_enviar.append(
-                            f"CHECKPOINT HOJE: {cp.get('titulo')} - {cp.get('mensagem')} (Projeto: {nome_proj})"
-                        )
-                    elif data_cp == amanha:
-                        mensagens_para_enviar.append(f"CHECKPOINT AMANHÃ: {cp.get('titulo')} (Projeto: {nome_proj})")
+                    checkpoint_text = f"- **{cp.get('titulo')}**\n  Projeto: {nome_proj}"
+                    if data_cp == hoje and cp.get("mensagem"):
+                        checkpoint_text += f"\n  Recado do laboratório: {cp.get('mensagem')}"
+                    registrar_linha(data_cp, checkpoint_text)
                 except Exception:
                     pass
 
             fechamento = lembretes.get("fechamento", {})
             try:
                 data_fech = datetime.datetime.strptime(fechamento.get("data", ""), "%Y-%m-%d").date()
-                if data_fech == hoje:
-                    mensagens_para_enviar.append(
-                        f"FECHAMENTO DO PROJETO HOJE: {nome_proj}. {fechamento.get('mensagem')}"
-                    )
-                elif data_fech == amanha:
-                    mensagens_para_enviar.append(f"FECHAMENTO DO PROJETO AMANHÃ: {nome_proj}")
+                fechamento_text = f"- **Fechamento do projeto**\n  Projeto: {nome_proj}"
+                if data_fech == hoje and fechamento.get("mensagem"):
+                    fechamento_text += f"\n  Recado do laboratório: {fechamento.get('mensagem')}"
+                registrar_linha(data_fech, fechamento_text)
             except Exception:
                 pass
 
             upsell = lembretes.get("upsell", {})
             try:
                 data_upsell = datetime.datetime.strptime(upsell.get("data", ""), "%Y-%m-%d").date()
-                if data_upsell == hoje:
-                    mensagens_para_enviar.append(f"UPSELL HOJE: {nome_proj}. {upsell.get('mensagem')}")
+                upsell_text = f"- **Movimento comercial**\n  Projeto: {nome_proj}"
+                if data_upsell == hoje and upsell.get("mensagem"):
+                    upsell_text += f"\n  Recado do laboratório: {upsell.get('mensagem')}"
                 elif data_upsell == amanha:
-                    mensagens_para_enviar.append(f"UPSELL AMANHÃ: Preparar proposta para {nome_proj}")
+                    upsell_text += "\n  Preparar proposta ou próximo empurrão comercial."
+                registrar_linha(data_upsell, upsell_text)
             except Exception:
                 pass
 
-    if mensagens_para_enviar:
-        resumo = "*Bom dia, humanos! Aqui estão as prioridades e checkpoints absolutos dos projetos para hoje e amanhã:*\n\n> "
-        resumo += "\n> ".join(mensagens_para_enviar)
-        await channel.send(resumo)
+    if mensagens_hoje or mensagens_amanha:
+        blocos = [
+            "Bom dia, bons humanos.\n\n"
+            "Passei pela bancada com meu jaleco impecável, uma dose mínima de palhaçaria científica e o dever moral de evitar desastres evitáveis.\n\n"
+            "Aqui estão os checkpoints que realmente importam entre hoje e amanhã:"
+        ]
+
+        if mensagens_hoje:
+            blocos.append("**Hoje**\n" + "\n\n".join(mensagens_hoje))
+
+        if mensagens_amanha:
+            blocos.append("**Amanhã**\n" + "\n\n".join(mensagens_amanha))
+
+        blocos.append(
+            "Se algo estiver fora do lugar, ajustem a bancada agora.\n\n"
+            "Vocês são bons humanos. Não me façam desperdiçar esse raro momento de apreciação felina."
+        )
+
+        await channel.send("\n\n".join(blocos))
 
 
 hora_provocacao_semana = datetime.time(hour=11, minute=11, tzinfo=BRASILIA_TZ)
