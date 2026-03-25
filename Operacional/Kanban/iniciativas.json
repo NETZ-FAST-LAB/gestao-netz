@@ -319,6 +319,14 @@
               "status": "completed",
               "dueDate": "",
               "reminders": []
+            },
+            {
+              "id": "task-dallen-55d5669b",
+              "title": "Montar o orçamento para reformulação do site",
+              "assignee": "Gui R.",
+              "status": "pending",
+              "dueDate": "",
+              "reminders": []
             }
           ],
           "owner": "Gui R."
