@@ -311,7 +311,16 @@
             "AI-Created"
           ],
           "artifacts": [],
-          "tasks": [],
+          "tasks": [
+            {
+              "id": "task-dallen-4ee5cdc5",
+              "title": "Reunião sobre ajustes do site com Dallen",
+              "assignee": "Gui R.",
+              "status": "pending",
+              "dueDate": "",
+              "reminders": []
+            }
+          ],
           "owner": "Gui R."
         }
       ]
