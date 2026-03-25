@@ -301,6 +301,18 @@
           "artifacts": [],
           "tasks": [],
           "owner": "Gui R."
+        },
+        {
+          "id": "inic-revisao-site-dallen",
+          "title": "Revisão Site Dallen",
+          "column": "Ideias",
+          "health_status": "No Prazo",
+          "tags": [
+            "AI-Created"
+          ],
+          "artifacts": [],
+          "tasks": [],
+          "owner": "Gui R."
         }
       ]
     }
