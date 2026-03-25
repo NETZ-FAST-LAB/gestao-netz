@@ -48,8 +48,9 @@ function formatDate(date: string) {
   return new Date(`${date}T00:00:00`).toLocaleDateString("pt-BR");
 }
 
-function formatCurrency(value: number) {
-  return value.toLocaleString("pt-BR", {
+function formatCurrency(value?: number | null) {
+  const safeValue = Number.isFinite(value) ? (value as number) : 0;
+  return safeValue.toLocaleString("pt-BR", {
     style: "currency",
     currency: "BRL",
     maximumFractionDigits: 0,
