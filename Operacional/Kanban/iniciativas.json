@@ -62,14 +62,6 @@
               "status": "pending",
               "dueDate": "",
               "reminders": []
-            },
-            {
-              "id": "task-sebrae-eddb0f0d",
-              "title": "Facilitar reunião de continuação do SEBRAE, dia 27/03 com Ketely",
-              "assignee": "Gui R.",
-              "status": "pending",
-              "dueDate": "",
-              "reminders": []
             }
           ]
         },
@@ -151,14 +143,6 @@
               "assignee": "Dênis",
               "status": "in_progress",
               "dueDate": "2026-03-20",
-              "reminders": []
-            },
-            {
-              "id": "task-4-479a2117",
-              "title": "Enviar sugestão de alteração do plano de trabalho do projeto da residência tecnológica até 23/03",
-              "assignee": "Denis",
-              "status": "pending",
-              "dueDate": "",
               "reminders": []
             }
           ]
@@ -275,7 +259,7 @@
               "id": "task-netz-4e959b01",
               "title": "Ampliar o universo visual da marca",
               "assignee": "Gui Stacke",
-              "status": "pending",
+              "status": "in_progress",
               "dueDate": "",
               "reminders": []
             },
@@ -289,59 +273,6 @@
             }
           ],
           "owner": "Joãozíssimo"
-        },
-        {
-          "id": "inic-parceria-sebrae",
-          "title": "Parceria SEBRAE",
-          "column": "Ideias",
-          "health_status": "No Prazo",
-          "tags": [
-            "AI-Created"
-          ],
-          "artifacts": [],
-          "tasks": [],
-          "owner": "Gui R."
-        },
-        {
-          "id": "inic-revisao-site-dallen",
-          "title": "Revisão Site Dallen",
-          "column": "Ideias",
-          "health_status": "No Prazo",
-          "tags": [
-            "AI-Created"
-          ],
-          "artifacts": [],
-          "tasks": [
-            {
-              "id": "task-dallen-4ee5cdc5",
-              "title": "Reunião sobre ajustes do site com Dallen",
-              "assignee": "Gui R.",
-              "status": "completed",
-              "dueDate": "",
-              "reminders": []
-            },
-            {
-              "id": "task-dallen-55d5669b",
-              "title": "Montar o orçamento para reformulação do site",
-              "assignee": "Gui R.",
-              "status": "pending",
-              "dueDate": "",
-              "reminders": []
-            }
-          ],
-          "owner": "Gui R."
-        },
-        {
-          "id": "inic-site-dallen",
-          "title": "Site Dallen",
-          "column": "Ideias",
-          "health_status": "No Prazo",
-          "tags": [
-            "AI-Created"
-          ],
-          "artifacts": [],
-          "tasks": [],
-          "owner": "Gui R."
         }
       ]
     }
