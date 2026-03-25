@@ -322,6 +322,18 @@
             }
           ],
           "owner": "Gui R."
+        },
+        {
+          "id": "inic-site-dallen",
+          "title": "Site Dallen",
+          "column": "Ideias",
+          "health_status": "No Prazo",
+          "tags": [
+            "AI-Created"
+          ],
+          "artifacts": [],
+          "tasks": [],
+          "owner": "Gui R."
         }
       ]
     }
