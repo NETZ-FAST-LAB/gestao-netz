@@ -1110,7 +1110,14 @@ async def on_message(message: discord.Message):
                 return
 
             if proposed_plan.get("status") == "error":
-                await message.reply(proposed_plan.get("message", "Nao consegui estruturar esse pedido de alteracao."))
+                await message.reply(
+                    proposed_plan.get(
+                        "message",
+                        "Não consegui estruturar esse pedido de alteração.\n\n"
+                        "Se quiser que eu aplique mudanças, mande as tarefas no formato estruturado.\n"
+                        "Se a intenção era só avisar, posso registrar um lembrete para o dia combinado.",
+                    )
+                )
                 await bot.process_commands(message)
                 return
 

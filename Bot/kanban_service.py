@@ -794,7 +794,14 @@ def _find_matching_cards_for_request(data: dict, contexto: str | None):
 
 def resolve_task_update_plan(task_requests: list[dict], source_message: str, actor_name: str) -> dict:
     if not task_requests:
-        return {"status": "error", "message": "Nao encontrei nenhuma alteracao concreta para propor."}
+        return {
+            "status": "error",
+            "message": (
+                "Não encontrei nenhuma alteração concreta para propor.\n\n"
+                "Se você quiser que eu atualize algo, mande no formato de tarefa com status, responsável e, se possível, data.\n\n"
+                "Se a ideia é só avisar que vai atualizar depois, diga o dia e eu deixo um lembrete."
+            ),
+        }
 
     file_payloads = {}
     operations = []
