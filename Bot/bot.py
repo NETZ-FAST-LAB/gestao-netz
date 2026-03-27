@@ -421,9 +421,13 @@ async def send_chunked(channel, text: str, reply_to=None):
     chunks = chunk_message(text)
     for index, chunk in enumerate(chunks):
         if index == 0 and reply_to is not None:
-            await reply_to.reply(chunk)
-        else:
-            await channel.send(chunk)
+            try:
+                await reply_to.reply(chunk)
+                continue
+            except Exception:
+                # Fallback to channel send if the original message is unavailable.
+                pass
+        await channel.send(chunk)
 
 
 async def send_deploy_message():
