@@ -144,6 +144,14 @@
               "status": "in_progress",
               "dueDate": "2026-03-20",
               "reminders": []
+            },
+            {
+              "id": "task-4-3ca60476",
+              "title": "Criar grupo do WhatsApp",
+              "assignee": "Joãozíssimo",
+              "status": "pending",
+              "dueDate": "",
+              "reminders": []
             }
           ]
         },
