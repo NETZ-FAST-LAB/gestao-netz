@@ -1,0 +1,246 @@
+{
+  "entries": [
+    {
+      "timestamp": "2026-03-27T13:23:39.013541+00:00",
+      "actor_name": "Joãozíssimo",
+      "channel_id": "1479226481782554634",
+      "user_id": "716080252828254259",
+      "tipo": "projeto",
+      "contexto": "Sicredi - Gestão de Carreiras",
+      "task_id": "task_1_5",
+      "task_title": "[Priorização & Planejamento] Validar integrações técnicas",
+      "before": {
+        "status": "pending",
+        "assignee": "João",
+        "dueDate": "2026-03-20"
+      },
+      "after": {
+        "status": "completed",
+        "assignee": "João",
+        "dueDate": "2026-03-20"
+      },
+      "source_message": "falei sim seu doido! bom dia. dormiu com as patinhas destapadas, foi? quero que vc marque todas as tarefas do projeto sicredi como concluídas",
+      "kanban_context_card_id": "proj-sicredi-carreiras"
+    },
+    {
+      "timestamp": "2026-03-27T13:23:39.013939+00:00",
+      "actor_name": "Joãozíssimo",
+      "channel_id": "1479226481782554634",
+      "user_id": "716080252828254259",
+      "tipo": "projeto",
+      "contexto": "Sicredi - Gestão de Carreiras",
+      "task_id": "task_2_1",
+      "task_title": "[Co-criação com Cooperativas] Mapear agendas de escuta com cooperativas",
+      "before": {
+        "status": "pending",
+        "assignee": "João",
+        "dueDate": "2026-04-15"
+      },
+      "after": {
+        "status": "completed",
+        "assignee": "João",
+        "dueDate": "2026-04-15"
+      },
+      "source_message": "falei sim seu doido! bom dia. dormiu com as patinhas destapadas, foi? quero que vc marque todas as tarefas do projeto sicredi como concluídas",
+      "kanban_context_card_id": "proj-sicredi-carreiras"
+    },
+    {
+      "timestamp": "2026-03-27T13:23:39.013968+00:00",
+      "actor_name": "Joãozíssimo",
+      "channel_id": "1479226481782554634",
+      "user_id": "716080252828254259",
+      "tipo": "projeto",
+      "contexto": "Sicredi - Gestão de Carreiras",
+      "task_id": "task_2_2",
+      "task_title": "[Co-criação com Cooperativas] Desenhar modelo 70/30",
+      "before": {
+        "status": "pending",
+        "assignee": "João",
+        "dueDate": "2026-04-30"
+      },
+      "after": {
+        "status": "completed",
+        "assignee": "João",
+        "dueDate": "2026-04-30"
+      },
+      "source_message": "falei sim seu doido! bom dia. dormiu com as patinhas destapadas, foi? quero que vc marque todas as tarefas do projeto sicredi como concluídas",
+      "kanban_context_card_id": "proj-sicredi-carreiras"
+    },
+    {
+      "timestamp": "2026-03-27T13:23:39.013998+00:00",
+      "actor_name": "Joãozíssimo",
+      "channel_id": "1479226481782554634",
+      "user_id": "716080252828254259",
+      "tipo": "projeto",
+      "contexto": "Sicredi - Gestão de Carreiras",
+      "task_id": "task_2_3",
+      "task_title": "[Co-criação com Cooperativas] Co-criar framework integrado",
+      "before": {
+        "status": "pending",
+        "assignee": "João",
+        "dueDate": "2026-05-15"
+      },
+      "after": {
+        "status": "completed",
+        "assignee": "João",
+        "dueDate": "2026-05-15"
+      },
+      "source_message": "falei sim seu doido! bom dia. dormiu com as patinhas destapadas, foi? quero que vc marque todas as tarefas do projeto sicredi como concluídas",
+      "kanban_context_card_id": "proj-sicredi-carreiras"
+    },
+    {
+      "timestamp": "2026-03-27T13:23:39.014009+00:00",
+      "actor_name": "Joãozíssimo",
+      "channel_id": "1479226481782554634",
+      "user_id": "716080252828254259",
+      "tipo": "projeto",
+      "contexto": "Sicredi - Gestão de Carreiras",
+      "task_id": "task_3_1",
+      "task_title": "[Prototipagem & Entregas Incrementais] Desenvolver demonstrações com dados fora do sistema",
+      "before": {
+        "status": "pending",
+        "assignee": "João",
+        "dueDate": "2026-05-30"
+      },
+      "after": {
+        "status": "completed",
+        "assignee": "João",
+        "dueDate": "2026-05-30"
+      },
+      "source_message": "falei sim seu doido! bom dia. dormiu com as patinhas destapadas, foi? quero que vc marque todas as tarefas do projeto sicredi como concluídas",
+      "kanban_context_card_id": "proj-sicredi-carreiras"
+    },
+    {
+      "timestamp": "2026-03-27T13:23:39.014020+00:00",
+      "actor_name": "Joãozíssimo",
+      "channel_id": "1479226481782554634",
+      "user_id": "716080252828254259",
+      "tipo": "projeto",
+      "contexto": "Sicredi - Gestão de Carreiras",
+      "task_id": "task_3_2",
+      "task_title": "[Prototipagem & Entregas Incrementais] Coordenar entregas incrementais",
+      "before": {
+        "status": "pending",
+        "assignee": "João",
+        "dueDate": "2026-06-15"
+      },
+      "after": {
+        "status": "completed",
+        "assignee": "João",
+        "dueDate": "2026-06-15"
+      },
+      "source_message": "falei sim seu doido! bom dia. dormiu com as patinhas destapadas, foi? quero que vc marque todas as tarefas do projeto sicredi como concluídas",
+      "kanban_context_card_id": "proj-sicredi-carreiras"
+    },
+    {
+      "timestamp": "2026-03-27T13:23:39.014033+00:00",
+      "actor_name": "Joãozíssimo",
+      "channel_id": "1479226481782554634",
+      "user_id": "716080252828254259",
+      "tipo": "projeto",
+      "contexto": "Sicredi - Gestão de Carreiras",
+      "task_id": "task_4_1",
+      "task_title": "[Piloto & Validação] Executar piloto com grupo inicial",
+      "before": {
+        "status": "pending",
+        "assignee": "João",
+        "dueDate": "2026-06-20"
+      },
+      "after": {
+        "status": "completed",
+        "assignee": "João",
+        "dueDate": "2026-06-20"
+      },
+      "source_message": "falei sim seu doido! bom dia. dormiu com as patinhas destapadas, foi? quero que vc marque todas as tarefas do projeto sicredi como concluídas",
+      "kanban_context_card_id": "proj-sicredi-carreiras"
+    },
+    {
+      "timestamp": "2026-03-27T13:23:39.014047+00:00",
+      "actor_name": "Joãozíssimo",
+      "channel_id": "1479226481782554634",
+      "user_id": "716080252828254259",
+      "tipo": "projeto",
+      "contexto": "Sicredi - Gestão de Carreiras",
+      "task_id": "task_4_2",
+      "task_title": "[Piloto & Validação] Coletar feedback e iterar",
+      "before": {
+        "status": "pending",
+        "assignee": "João",
+        "dueDate": "2026-06-28"
+      },
+      "after": {
+        "status": "completed",
+        "assignee": "João",
+        "dueDate": "2026-06-28"
+      },
+      "source_message": "falei sim seu doido! bom dia. dormiu com as patinhas destapadas, foi? quero que vc marque todas as tarefas do projeto sicredi como concluídas",
+      "kanban_context_card_id": "proj-sicredi-carreiras"
+    },
+    {
+      "timestamp": "2026-03-27T13:23:39.014057+00:00",
+      "actor_name": "Joãozíssimo",
+      "channel_id": "1479226481782554634",
+      "user_id": "716080252828254259",
+      "tipo": "projeto",
+      "contexto": "Sicredi - Gestão de Carreiras",
+      "task_id": "task_5_1",
+      "task_title": "[Fechamento & Upsell] Consolidar resultados e lições aprendidas",
+      "before": {
+        "status": "pending",
+        "assignee": "João",
+        "dueDate": "2026-06-15"
+      },
+      "after": {
+        "status": "completed",
+        "assignee": "João",
+        "dueDate": "2026-06-15"
+      },
+      "source_message": "falei sim seu doido! bom dia. dormiu com as patinhas destapadas, foi? quero que vc marque todas as tarefas do projeto sicredi como concluídas",
+      "kanban_context_card_id": "proj-sicredi-carreiras"
+    },
+    {
+      "timestamp": "2026-03-27T13:23:39.014068+00:00",
+      "actor_name": "Joãozíssimo",
+      "channel_id": "1479226481782554634",
+      "user_id": "716080252828254259",
+      "tipo": "projeto",
+      "contexto": "Sicredi - Gestão de Carreiras",
+      "task_id": "task_5_2",
+      "task_title": "[Fechamento & Upsell] Preparar proposta de upsell 3º trimestre",
+      "before": {
+        "status": "pending",
+        "assignee": "João",
+        "dueDate": "2026-06-20"
+      },
+      "after": {
+        "status": "completed",
+        "assignee": "João",
+        "dueDate": "2026-06-20"
+      },
+      "source_message": "falei sim seu doido! bom dia. dormiu com as patinhas destapadas, foi? quero que vc marque todas as tarefas do projeto sicredi como concluídas",
+      "kanban_context_card_id": "proj-sicredi-carreiras"
+    },
+    {
+      "timestamp": "2026-03-27T13:23:39.014079+00:00",
+      "actor_name": "Joãozíssimo",
+      "channel_id": "1479226481782554634",
+      "user_id": "716080252828254259",
+      "tipo": "projeto",
+      "contexto": "Sicredi - Gestão de Carreiras",
+      "task_id": "task_5_3",
+      "task_title": "[Fechamento & Upsell] Apresentar resultados e proposta",
+      "before": {
+        "status": "pending",
+        "assignee": "João",
+        "dueDate": "2026-06-30"
+      },
+      "after": {
+        "status": "completed",
+        "assignee": "João",
+        "dueDate": "2026-06-30"
+      },
+      "source_message": "falei sim seu doido! bom dia. dormiu com as patinhas destapadas, foi? quero que vc marque todas as tarefas do projeto sicredi como concluídas",
+      "kanban_context_card_id": "proj-sicredi-carreiras"
+    }
+  ]
+}
