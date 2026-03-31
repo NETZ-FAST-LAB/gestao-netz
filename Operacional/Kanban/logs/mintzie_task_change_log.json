@@ -241,6 +241,138 @@
       },
       "source_message": "falei sim seu doido! bom dia. dormiu com as patinhas destapadas, foi? quero que vc marque todas as tarefas do projeto sicredi como concluídas",
       "kanban_context_card_id": "proj-sicredi-carreiras"
+    },
+    {
+      "timestamp": "2026-03-31T19:16:53.540419+00:00",
+      "actor_name": "Joãozíssimo",
+      "channel_id": "1479226481782554634",
+      "user_id": "716080252828254259",
+      "tipo": "projeto",
+      "contexto": "Inteligência Jurídica",
+      "task_id": "task-ij-1",
+      "task_title": "Revisar o período de teste",
+      "before": {
+        "status": "pending",
+        "assignee": "Joãozíssimo",
+        "dueDate": "2026-03-30"
+      },
+      "after": {
+        "status": "completed",
+        "assignee": "Joãozíssimo",
+        "dueDate": "2026-03-30"
+      },
+      "source_message": "pode marcar as minhas tarefas como concluídas",
+      "kanban_context_card_id": "proj-int-juridica"
+    },
+    {
+      "timestamp": "2026-03-31T19:16:54.029291+00:00",
+      "actor_name": "Joãozíssimo",
+      "channel_id": "1479226481782554634",
+      "user_id": "716080252828254259",
+      "tipo": "iniciativa",
+      "contexto": "Visita ao Sebrae",
+      "task_id": "task-ai-2",
+      "task_title": "Passar as informações do SEBRAE para o Gui",
+      "before": {
+        "status": "pending",
+        "assignee": "Joãozíssimo",
+        "dueDate": ""
+      },
+      "after": {
+        "status": "completed",
+        "assignee": "Joãozíssimo",
+        "dueDate": ""
+      },
+      "source_message": "pode marcar as minhas tarefas como concluídas",
+      "kanban_context_card_id": "inic-visita-sebrae"
+    },
+    {
+      "timestamp": "2026-03-31T19:16:54.029338+00:00",
+      "actor_name": "Joãozíssimo",
+      "channel_id": "1479226481782554634",
+      "user_id": "716080252828254259",
+      "tipo": "iniciativa",
+      "contexto": "Visita ao Sebrae",
+      "task_id": "task-sebrae-e6f4b40c",
+      "task_title": "Complementar e coordenar cadastro da NETZ na plataforma Unio",
+      "before": {
+        "status": "pending",
+        "assignee": "Joãozíssimo",
+        "dueDate": ""
+      },
+      "after": {
+        "status": "completed",
+        "assignee": "Joãozíssimo",
+        "dueDate": ""
+      },
+      "source_message": "pode marcar as minhas tarefas como concluídas",
+      "kanban_context_card_id": "inic-visita-sebrae"
+    },
+    {
+      "timestamp": "2026-03-31T19:16:54.029783+00:00",
+      "actor_name": "Joãozíssimo",
+      "channel_id": "1479226481782554634",
+      "user_id": "716080252828254259",
+      "tipo": "iniciativa",
+      "contexto": "Visita ao Sebrae",
+      "task_id": "task-sebrae-cf8d7bd5",
+      "task_title": "Coordenar a participação da NETZ em eventos estratégicos",
+      "before": {
+        "status": "pending",
+        "assignee": "Joãozíssimo",
+        "dueDate": ""
+      },
+      "after": {
+        "status": "completed",
+        "assignee": "Joãozíssimo",
+        "dueDate": ""
+      },
+      "source_message": "pode marcar as minhas tarefas como concluídas",
+      "kanban_context_card_id": "inic-visita-sebrae"
+    },
+    {
+      "timestamp": "2026-03-31T19:16:54.029928+00:00",
+      "actor_name": "Joãozíssimo",
+      "channel_id": "1479226481782554634",
+      "user_id": "716080252828254259",
+      "tipo": "iniciativa",
+      "contexto": "Residencia Tecnológica",
+      "task_id": "task-4-3ca60476",
+      "task_title": "Criar grupo do WhatsApp",
+      "before": {
+        "status": "pending",
+        "assignee": "Joãozíssimo",
+        "dueDate": ""
+      },
+      "after": {
+        "status": "completed",
+        "assignee": "Joãozíssimo",
+        "dueDate": ""
+      },
+      "source_message": "pode marcar as minhas tarefas como concluídas",
+      "kanban_context_card_id": "inic-ai-4"
+    },
+    {
+      "timestamp": "2026-03-31T19:16:54.029947+00:00",
+      "actor_name": "Joãozíssimo",
+      "channel_id": "1479226481782554634",
+      "user_id": "716080252828254259",
+      "tipo": "iniciativa",
+      "contexto": "Pesquisas Netz",
+      "task_id": "task-ai-1",
+      "task_title": "Criar um agente de pesquisa de concorrentes, um agente espião",
+      "before": {
+        "status": "pending",
+        "assignee": "Joãozíssimo",
+        "dueDate": ""
+      },
+      "after": {
+        "status": "completed",
+        "assignee": "Joãozíssimo",
+        "dueDate": ""
+      },
+      "source_message": "pode marcar as minhas tarefas como concluídas",
+      "kanban_context_card_id": "inic-ai-6"
     }
   ]
 }
