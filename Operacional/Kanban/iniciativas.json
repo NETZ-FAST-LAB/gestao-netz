@@ -35,7 +35,7 @@
               "id": "task-ai-2",
               "title": "Passar as informações do SEBRAE para o Gui",
               "assignee": "Joãozíssimo",
-              "status": "pending",
+              "status": "completed",
               "dueDate": "",
               "reminders": []
             },
@@ -51,7 +51,7 @@
               "id": "task-sebrae-e6f4b40c",
               "title": "Complementar e coordenar cadastro da NETZ na plataforma Unio",
               "assignee": "Joãozíssimo",
-              "status": "pending",
+              "status": "completed",
               "dueDate": "",
               "reminders": []
             },
@@ -59,7 +59,7 @@
               "id": "task-sebrae-cf8d7bd5",
               "title": "Coordenar a participação da NETZ em eventos estratégicos",
               "assignee": "Joãozíssimo",
-              "status": "pending",
+              "status": "completed",
               "dueDate": "",
               "reminders": []
             }
@@ -149,7 +149,7 @@
               "id": "task-4-3ca60476",
               "title": "Criar grupo do WhatsApp",
               "assignee": "Joãozíssimo",
-              "status": "pending",
+              "status": "completed",
               "dueDate": "",
               "reminders": []
             }
@@ -198,7 +198,7 @@
               "id": "task-ai-1",
               "title": "Criar um agente de pesquisa de concorrentes, um agente espião",
               "assignee": "Joãozíssimo",
-              "status": "pending",
+              "status": "completed",
               "dueDate": "",
               "reminders": []
             }
