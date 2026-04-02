@@ -1,5 +1,6 @@
-﻿import express from "express";
+import express from "express";
 import { createServer } from "http";
+import { pool } from "./db";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -673,15 +674,54 @@ function getPartnerId(assignee: string): string | null {
 }
 
 async function readBoardFiles() {
-  const [organization, projectsFile, initiativesFile, financeMovements] = await Promise.all([
+  const [organization, financeMovements] = await Promise.all([
     readJsonFileWithFallback<{ name: string; members: string[] }>([
       "Operacional/organizacao.json",
       "Operacional/organização.json",
     ]),
-    readJsonFile<BoardFile>(PROJECTS_PATH),
-    readJsonFile<BoardFile>(INITIATIVES_PATH),
     readFinanceMovements(),
   ]);
+
+  const resProjects = await pool.query("SELECT * FROM projects");
+  const resTasks = await pool.query("SELECT * FROM tasks");
+
+  const buildBoard = (prefix: string) => {
+    return {
+      boards: [
+        {
+          cards: resProjects.rows.filter((p: any) => p.id.startsWith(prefix)).map((p: any) => {
+            let meta: any = {};
+            let tags = [];
+            try { meta = typeof p.meta === "string" ? JSON.parse(p.meta) : (p.meta || {}); } catch(e) {}
+            try { tags = typeof p.tags === "string" ? JSON.parse(p.tags) : (p.tags || []); } catch(e) {}
+
+            return {
+              id: p.id,
+              title: p.title,
+              client: p.client,
+              owner: p.owner,
+              column: p.column_status,
+              tags: tags,
+              health_status: meta.health || "",
+              marcos_alinhamento: meta.marcos || [],
+              ...meta,
+              tasks: resTasks.rows.filter((t: any) => t.project_id === p.id).map((t: any) => ({
+                id: t.id,
+                title: t.title,
+                assignee: t.assignee,
+                responsável: t.assignee, // retro
+                status: t.status, // Postgres is raw status
+                dueDate: t.due_date
+              }))
+            };
+          })
+        }
+      ]
+    };
+  };
+
+  const projectsFile = buildBoard("proj-");
+  const initiativesFile = buildBoard("ini-");
 
   return { organization, projectsFile, initiativesFile, financeMovements };
 }
@@ -1197,108 +1237,55 @@ async function syncJsonFileToGithub(relativePath: string, data: BoardFile, commi
 }
 
 async function updateTaskById(taskId: string, updates: TaskUpdatePayload) {
-  const fileTargets = [
-    { relativePath: PROJECTS_PATH, contextType: "projeto" as const },
-    { relativePath: INITIATIVES_PATH, contextType: "iniciativa" as const },
-  ];
+  let queryParts: string[] = [];
+  let values: any[] = [];
+  let paramIdx = 1;
 
-  const prioritizedTargets =
-    updates.contextType != null
-      ? fileTargets.filter((target) => target.contextType === updates.contextType)
-      : fileTargets;
-
-  for (const target of prioritizedTargets) {
-    const boardFile = await readJsonFile<BoardFile>(target.relativePath);
-
-    for (const board of boardFile.boards || []) {
-      for (const card of board.cards || []) {
-        if (updates.contextId && card.id !== updates.contextId) continue;
-
-        const task = (card.tasks || []).find((item) => item.id === taskId);
-        if (!task) continue;
-
-        if (typeof updates.title === "string") {
-          task.title = updates.title.trim() || task.title || "Sem título";
-        }
-
-        if (typeof updates.assignee === "string") {
-          const trimmedAssignee = updates.assignee.trim();
-          task.assignee = trimmedAssignee;
-          if ("responsável" in task) {
-            task.responsável = trimmedAssignee;
-          }
-        }
-
-        if (typeof updates.status === "string") {
-          task.status = mapStatusToRaw(updates.status);
-        }
-
-        if (typeof updates.dueDate === "string") {
-          task.dueDate = updates.dueDate.trim();
-        }
-
-        await writeJsonFile(target.relativePath, boardFile);
-        const githubSynced = await syncJsonFileToGithub(
-          target.relativePath,
-          boardFile,
-          `chore(kanban): atualiza tarefa ${task.id} via copilotx`,
-        ).catch((error) => {
-          console.error("Failed to sync task update to GitHub:", error);
-          return false;
-        });
-
-        return { githubSynced };
-      }
-    }
+  if (typeof updates.title === "string") {
+    queryParts.push(`title = $${paramIdx++}`);
+    values.push(updates.title.trim());
+  }
+  if (typeof updates.assignee === "string") {
+    queryParts.push(`assignee = $${paramIdx++}`);
+    values.push(updates.assignee.trim());
+  }
+  if (typeof updates.status === "string") {
+    queryParts.push(`status = $${paramIdx++}`);
+    values.push(mapStatusToRaw(updates.status));
+  }
+  if (typeof updates.dueDate === "string") {
+    queryParts.push(`due_date = $${paramIdx++}`);
+    values.push(updates.dueDate.trim());
   }
 
-  return null;
+  if (queryParts.length === 0) return { githubSynced: false };
+
+  values.push(taskId);
+  const q = `UPDATE tasks SET ${queryParts.join(", ")} WHERE id = $${paramIdx}`;
+  
+  await pool.query(q, values);
+  return { githubSynced: false }; 
 }
 
 async function createTaskInContext(input: TaskCreatePayload) {
   const contextId = input.contextId?.trim();
-  const contextType = input.contextType;
   const title = input.title?.trim();
 
-  if (!contextId || !contextType || !title) {
+  if (!contextId || !title) {
     throw new Error("Dados insuficientes para criar tarefa.");
   }
 
-  const target = contextType === "projeto" ? { relativePath: PROJECTS_PATH } : { relativePath: INITIATIVES_PATH };
-  const boardFile = await readJsonFile<BoardFile>(target.relativePath);
+  const newTaskId = `task-${contextId}-${randomUUID().slice(0, 8)}`;
+  const trimmedAssignee = input.assignee?.trim() || "";
+  const status = mapStatusToRaw(input.status || "Pendente");
+  const dueDate = input.dueDate?.trim() || "";
 
-  for (const board of boardFile.boards || []) {
-    for (const card of board.cards || []) {
-      if (card.id !== contextId) continue;
+  await pool.query(
+    `INSERT INTO tasks (id, project_id, title, assignee, status, due_date) VALUES ($1, $2, $3, $4, $5, $6)`,
+    [newTaskId, contextId, title, trimmedAssignee, status, dueDate]
+  );
 
-      const trimmedAssignee = input.assignee?.trim() || "";
-      const newTaskId = `task-${contextId}-${randomUUID().slice(0, 8)}`;
-      const newTask: RawTask = {
-        id: newTaskId,
-        title,
-        assignee: trimmedAssignee,
-        responsável: trimmedAssignee,
-        status: mapStatusToRaw(input.status || "Pendente"),
-        dueDate: input.dueDate?.trim() || "",
-      };
-
-      card.tasks = [...(card.tasks || []), newTask];
-
-      await writeJsonFile(target.relativePath, boardFile);
-      const githubSynced = await syncJsonFileToGithub(
-        target.relativePath,
-        boardFile,
-        `feat(kanban): cria tarefa ${newTask.id} via copilotx`,
-      ).catch((error) => {
-        console.error("Failed to sync task creation to GitHub:", error);
-        return false;
-      });
-
-      return { taskId: newTaskId, githubSynced };
-    }
-  }
-
-  return null;
+  return { taskId: newTaskId, githubSynced: false };
 }
 
 function summarizeDashboardForPrompt(payload: DashboardPayload) {

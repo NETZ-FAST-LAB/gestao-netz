@@ -44,23 +44,26 @@ async def init_db():
     return engine
 
 async def migrate_json_to_pg():
-    try:
-        with open("Operacional/Kanban/projetos.json", "r", encoding="utf-8") as f:
-            data = json.load(f)
-    except FileNotFoundError:
-        print("projetos.json not found locally.")
-        return
-
     engine = await init_db()
     if not engine: return
     
     Session = async_sessionmaker(engine)
     
+    files_to_process = ["Operacional/Kanban/projetos.json", "Operacional/Kanban/iniciativas.json"]
+    
     async with Session() as session:
-        for board in data.get("boards", []):
-            for card in board.get("cards", []):
-                # Upsert Project
-                await session.execute(
+        for file_path in files_to_process:
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+            except FileNotFoundError:
+                print(f"{file_path} not found locally, skipping.")
+                continue
+
+            for board in data.get("boards", []):
+                for card in board.get("cards", []):
+                    # Upsert Project
+                    await session.execute(
                     text("""
                     INSERT INTO projects (id, title, client, owner, column_status, tags, meta) 
                     VALUES (:id, :title, :client, :owner, :col, :tags, :meta)

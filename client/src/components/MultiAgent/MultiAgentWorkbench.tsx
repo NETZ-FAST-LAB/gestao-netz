@@ -121,9 +121,9 @@ export function MultiAgentWorkbench() {
         <CardHeader>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <CardTitle>Estação de agentes</CardTitle>
+              <CardTitle>Chat com Mintzie</CardTitle>
               <CardDescription>
-                Abra um agente, mantenha o histórico vivo da conversa e peça ajuda com contexto real da bancada.
+                Converse com o Mintzie para manipular ou extrair informações sobre o laboratório.
               </CardDescription>
             </div>
             <Badge variant="outline" className="border-cyan-300/20 text-cyan-100">
@@ -142,23 +142,7 @@ export function MultiAgentWorkbench() {
         </Card>
       )}
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[320px_1fr]">
-        <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
-          <CardHeader>
-            <CardTitle className="text-lg">Agentes do laboratório</CardTitle>
-            <CardDescription>{agents.length} agentes disponíveis na bancada.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="rounded-2xl border border-dashed border-white/10 px-4 py-8 text-center text-sm text-slate-400">
-                Carregando os agentes...
-              </div>
-            ) : (
-              <AgentList agents={agents} selectedAgentId={selectedAgentId} onSelect={setSelectedAgentId} />
-            )}
-          </CardContent>
-        </Card>
-
+      <div className="flex w-full">
         <AgentDetail
           agent={selectedAgent}
           draft={draft}

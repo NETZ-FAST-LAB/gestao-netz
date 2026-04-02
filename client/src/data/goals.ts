@@ -1,4 +1,4 @@
-﻿// Dados das metas trimestrais da NETZ
+// Dados das metas trimestrais da NETZ
 
 export interface Goal {
   id: string;
@@ -49,7 +49,7 @@ export interface TrimestreTotals {
   forecastQuarters: TrimestreProjection[];
 }
 
-const QUARTER_TARGET = 192_000;
+const QUARTER_TARGET = 192_000 + 44_000; // Q1 base + 44k residual distribution
 const QUARTER_MONTHS = 3;
 const MONTHLY_TARGET = Math.round(QUARTER_TARGET / QUARTER_MONTHS);
 const COST_PERCENTAGE = 0.15;
@@ -57,31 +57,31 @@ const FORECAST_QUARTERS = 3;
 
 export const goals: Goal[] = [
   {
-    id: "goal-1",
-    month: 1,
-    monthName: "Janeiro",
+    id: "goal-4",
+    month: 4,
+    monthName: "Abril",
     targetRevenue: MONTHLY_TARGET,
     targetCosts: Math.round(MONTHLY_TARGET * COST_PERCENTAGE),
     targetNetRevenue: Math.round(MONTHLY_TARGET * (1 - COST_PERCENTAGE)),
-    currentRevenue: 32_000,
-    currentCosts: Math.round(32_000 * COST_PERCENTAGE),
+    currentRevenue: 0,
+    currentCosts: 0,
     status: "em-progresso",
   },
   {
-    id: "goal-2",
-    month: 2,
-    monthName: "Fevereiro",
+    id: "goal-5",
+    month: 5,
+    monthName: "Maio",
     targetRevenue: MONTHLY_TARGET,
     targetCosts: Math.round(MONTHLY_TARGET * COST_PERCENTAGE),
     targetNetRevenue: Math.round(MONTHLY_TARGET * (1 - COST_PERCENTAGE)),
-    currentRevenue: 28_000,
-    currentCosts: Math.round(28_000 * COST_PERCENTAGE),
-    status: "em-progresso",
+    currentRevenue: 0,
+    currentCosts: 0,
+    status: "planejamento",
   },
   {
-    id: "goal-3",
-    month: 3,
-    monthName: "Março",
+    id: "goal-6",
+    month: 6,
+    monthName: "Junho",
     targetRevenue: MONTHLY_TARGET,
     targetCosts: Math.round(MONTHLY_TARGET * COST_PERCENTAGE),
     targetNetRevenue: Math.round(MONTHLY_TARGET * (1 - COST_PERCENTAGE)),

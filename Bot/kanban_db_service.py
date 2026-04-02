@@ -3,7 +3,7 @@ import re
 import unicodedata
 import uuid
 from datetime import date, datetime
-from Bot.database import get_db_session
+from database import get_db_session
 from sqlalchemy import text
 
 

@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AlertCircle, FolderKanban, Pencil, RefreshCcw, Rocket, Siren, Users } from "lucide-react";
 
 import { KanbanBoard } from "@/components/Kanban/Board";
@@ -338,7 +338,7 @@ export default function Home() {
                 Sócios
               </TabsTrigger>
               <TabsTrigger value="agentes" className="rounded-xl">
-                Agentes
+                Mintzie
               </TabsTrigger>
             </TabsList>
 
