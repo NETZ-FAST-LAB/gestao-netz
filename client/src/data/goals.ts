@@ -94,15 +94,15 @@ export const goals: Goal[] = [
 export const milestones: Milestone[] = [
   {
     id: "milestone-1",
-    title: "LanÃ§amento SEBRAE Unio",
-    description: "Parceria oficial com SEBRAE para programas de inovaÃ§Ã£o",
+    title: "Lançamento SEBRAE Unio",
+    description: "Parceria oficial com SEBRAE para programas de inovação",
     date: "2026-03-31",
     type: "sebrae",
     status: "em-progresso",
   },
   {
     id: "milestone-2",
-    title: "SubmissÃ£o FINEP",
+    title: "Submissão FINEP",
     description: "Envio de propostas para o programa FINEP (R$300M)",
     date: "2026-04-15",
     type: "finep",
@@ -111,15 +111,15 @@ export const milestones: Milestone[] = [
   {
     id: "milestone-3",
     title: "Projeto CORSAN/AEGEA",
-    description: "ImplementaÃ§Ã£o de IA para gestÃ£o de infraestrutura",
+    description: "Implementação de IA para gestão de infraestrutura",
     date: "2026-05-31",
     type: "projeto",
     status: "em-progresso",
   },
   {
     id: "milestone-4",
-    title: "LanÃ§amento Squad as a Service",
-    description: "FormalizaÃ§Ã£o do modelo de squads dedicados",
+    title: "Lançamento Squad as a Service",
+    description: "Formalização do modelo de squads dedicados",
     date: "2026-06-15",
     type: "interno",
     status: "planejado",
@@ -127,7 +127,7 @@ export const milestones: Milestone[] = [
   {
     id: "milestone-5",
     title: "Resultado FINEP",
-    description: "DivulgaÃ§Ã£o dos resultados da submissÃ£o FINEP",
+    description: "Divulgação dos resultados da submissão FINEP",
     date: "2026-08-31",
     type: "finep",
     status: "planejado",
@@ -135,7 +135,7 @@ export const milestones: Milestone[] = [
 ];
 
 function getQuarterName(quarter: number) {
-  return `${quarter}Âº trimestre`;
+  return `${quarter}º trimestre`;
 }
 
 function getCycleDates(referenceDate = new Date()) {

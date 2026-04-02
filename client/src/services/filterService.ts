@@ -52,11 +52,11 @@ export function canonicalizeAssigneeLabel(assignee: string) {
   }
 
   if (["denis", "denis polidoro", "denis p", "denis p.", "denis polidoro netz", "denis polidoro."].includes(normalized)) {
-    return "Denis";
+    return "Dênis Polidoro";
   }
 
-  if (["gui stacke", "guilherme stacke", "gui s", "tak", "stacke"].includes(normalized)) {
-    return "Guilherme Stacke";
+  if (["gui stacke", "guilherme stacke", "guilherme stack", "gui s", "tak", "stacke"].includes(normalized)) {
+    return "tak";
   }
 
   return assignee.trim();

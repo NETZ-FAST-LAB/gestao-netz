@@ -47,9 +47,7 @@ export interface AgentSummary {
 
 export interface AgentDetail extends AgentSummary {
   memory: AgentMemoryEntry[];
-  collaborators: AgentCollaboration[];
   workspace: AgentWorkspace;
-  availableActions: string[];
 }
 
 export interface AgentChatResponse {

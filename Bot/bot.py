@@ -13,7 +13,7 @@ import discord
 from discord.ext import commands, tasks
 
 import github_client
-import kanban_service
+import kanban_db_service as kanban_service
 from config import settings
 from mintzie_persona import (
     EMPTY_PROMPT_REPLY,
@@ -229,7 +229,7 @@ def management_channel():
 
 async def send_low_workload_nudges(channel):
     await resolve_runtime_member_mentions(getattr(channel, "guild", None))
-    workload = kanban_service.get_partner_workload_snapshot(
+    workload = await kanban_service.get_partner_workload_snapshot(
         PARTNER_WORKLOAD_TARGETS,
         threshold=LOW_WORKLOAD_THRESHOLD,
     )
@@ -239,7 +239,7 @@ async def send_low_workload_nudges(channel):
 
 async def send_open_tasks_checkins(channel):
     await resolve_runtime_member_mentions(getattr(channel, "guild", None))
-    workload = kanban_service.get_partner_workload_snapshot(
+    workload = await kanban_service.get_partner_workload_snapshot(
         PARTNER_WORKLOAD_TARGETS,
         threshold=LOW_WORKLOAD_THRESHOLD,
     )
@@ -779,7 +779,7 @@ async def provocacao_operacional_semana():
     if not channel:
         return
 
-    snapshot = kanban_service.get_operational_snapshot(reference_date=now.date())
+    snapshot = await kanban_service.get_operational_snapshot(reference_date=now.date())
     await channel.send(build_operational_provocation_message(snapshot))
 
 
@@ -796,7 +796,7 @@ async def gargalo_da_semana():
     if not channel:
         return
 
-    snapshot = kanban_service.get_operational_snapshot(reference_date=now.date())
+    snapshot = await kanban_service.get_operational_snapshot(reference_date=now.date())
     await channel.send(build_weekly_bottleneck_message(snapshot))
 
 
@@ -941,20 +941,20 @@ async def cmd_teste_deploy_msg(interaction: discord.Interaction):
 
 @bot.tree.command(name="teste_provocacao_semana", description="[Teste] Envia agora a provocação operacional da semana")
 async def cmd_teste_provocacao_semana(interaction: discord.Interaction):
-    snapshot = kanban_service.get_operational_snapshot(reference_date=brasilia_now().date())
+    snapshot = await kanban_service.get_operational_snapshot(reference_date=brasilia_now().date())
     await interaction.response.send_message(build_operational_provocation_message(snapshot))
 
 
 @bot.tree.command(name="teste_gargalo_semana", description="[Teste] Envia agora a mensagem de gargalo da semana")
 async def cmd_teste_gargalo_semana(interaction: discord.Interaction):
-    snapshot = kanban_service.get_operational_snapshot(reference_date=brasilia_now().date())
+    snapshot = await kanban_service.get_operational_snapshot(reference_date=brasilia_now().date())
     await interaction.response.send_message(build_weekly_bottleneck_message(snapshot))
 
 
 @bot.tree.command(name="teste_socios_sem_tarefa", description="[Teste] Cutuca sócios com menos de 3 tarefas ativas")
 async def cmd_teste_socios_sem_tarefa(interaction: discord.Interaction):
     await resolve_runtime_member_mentions(interaction.guild)
-    workload = kanban_service.get_partner_workload_snapshot(
+    workload = await kanban_service.get_partner_workload_snapshot(
         PARTNER_WORKLOAD_TARGETS,
         threshold=LOW_WORKLOAD_THRESHOLD,
     )
@@ -974,7 +974,7 @@ async def cmd_teste_socios_sem_tarefa(interaction: discord.Interaction):
 @bot.tree.command(name="teste_checkin_tarefas_abertas", description="[Teste] Envia o check-in de terça e quinta das tarefas em aberto")
 async def cmd_teste_checkin_tarefas_abertas(interaction: discord.Interaction):
     await resolve_runtime_member_mentions(interaction.guild)
-    workload = kanban_service.get_partner_workload_snapshot(
+    workload = await kanban_service.get_partner_workload_snapshot(
         PARTNER_WORKLOAD_TARGETS,
         threshold=LOW_WORKLOAD_THRESHOLD,
     )
@@ -997,26 +997,6 @@ async def on_message(message: discord.Message):
 
     if message.author == bot.user:
         return
-
-    if _has_fresh_pending_task_update(message):
-        pending_key = _task_update_pending_key(message)
-        pending_plan = pending_task_update_plans[pending_key]
-        clean_pending_text = message.content.strip()
-
-        if _is_confirmation_message(clean_pending_text):
-            result = kanban_service.execute_task_update_plan(
-                pending_plan,
-                actor_name=message.author.display_name,
-                channel_id=str(message.channel.id),
-                user_id=str(message.author.id),
-            )
-            pending_task_update_plans.pop(pending_key, None)
-            if result.get("status") == "success":
-                await send_chunked(message.channel, _build_plan_execution_summary(result), reply_to=message)
-            else:
-                await message.reply(result.get("message", "Falhei ao aplicar as alteracoes."))
-            await bot.process_commands(message)
-            return
 
         if _is_cancel_message(clean_pending_text):
             pending_task_update_plans.pop(pending_key, None)
@@ -1091,21 +1071,6 @@ async def on_message(message: discord.Message):
             await message.reply(EMPTY_PROMPT_REPLY)
             return
 
-        if _looks_like_task_update_request(clean_prompt):
-            try:
-                proposed_plan = build_task_update_plan_from_message(clean_prompt, message.author.display_name)
-            except Exception:
-                error_traceback = traceback.format_exc()
-                print(f"Erro ao propor plano de alteracoes:\n{error_traceback}")
-                await message.reply(
-                    "Tentei estruturar as alterações de tarefa e derrubei reagente no parser. Vou precisar que você tente de novo."
-                )
-                await log_error_to_discord(
-                    f"Erro ao propor plano de alteracoes:\nMensagem de {message.author}: {clean_prompt}\n\n{error_traceback}"
-                )
-                await bot.process_commands(message)
-                return
-
             if proposed_plan.get("status") == "success" and proposed_plan.get("operations"):
                 proposed_plan["created_at"] = time.time()
                 pending_task_update_plans[_task_update_pending_key(message)] = proposed_plan
@@ -1145,7 +1110,7 @@ async def on_message(message: discord.Message):
                 )
                 prompt_enriquecido = f"[Mensagem de: {message.author.display_name}] {clean_prompt} {contexto}"
 
-                response = chat_session.send_message(prompt_enriquecido)
+                response = await chat_session.send_message(prompt_enriquecido)
                 response_text = response.text
                 await send_chunked(message.channel, response_text, reply_to=message)
             except Exception:

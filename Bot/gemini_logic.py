@@ -1,12 +1,12 @@
 import json
 
-from openai import APIStatusError, OpenAI
+from openai import APIStatusError, AsyncOpenAI
 
 from config import settings
-from kanban_service import available_functions, tool_schemas
+from kanban_db_service import available_functions, tool_schemas
 from mintzie_persona import SYSTEM_INSTRUCTION
 
-client = OpenAI(
+client = AsyncOpenAI(
     base_url=settings.llm_base_url,
     api_key=settings.llm_api_key,
 )
@@ -32,11 +32,11 @@ class ChatSession:
         self.session_id = session_id
         self.messages = [{"role": "system", "content": SYSTEM_INSTRUCTION}]
 
-    def send_message(self, text: str):
+    async def send_message(self, text: str):
         self._append_message({"role": "user", "content": text})
 
         while True:
-            response = self._create_completion()
+            response = await self._create_completion()
 
             response_message = response.choices[0].message
             self._append_message(response_message)
@@ -49,7 +49,7 @@ class ChatSession:
                     try:
                         function_args = json.loads(tool_call.function.arguments)
                         print(f"Executando ferramenta '{function_name}' com argumentos: {function_args}")
-                        function_response = function_to_call(**function_args)
+                        function_response = await function_to_call(**function_args)
                     except Exception as e:
                         print(f"Erro ao executar a ferramenta {function_name}: {e}")
                         function_response = json.dumps({"status": "error", "message": str(e)})
@@ -69,10 +69,10 @@ class ChatSession:
 
                 return LegacyResponseWrapper(response_message.content)
 
-    def _create_completion(self):
+    async def _create_completion(self):
         self._compact_history()
         try:
-            return client.chat.completions.create(
+            return await client.chat.completions.create(
                 model=settings.llm_model,
                 messages=self.messages,
                 tools=tool_schemas,
@@ -88,7 +88,7 @@ class ChatSession:
             )
             self._compact_history(max_non_system_messages=MAX_RECOVERY_MESSAGES, aggressive=True)
 
-            return client.chat.completions.create(
+            return await client.chat.completions.create(
                 model=settings.llm_model,
                 messages=self.messages,
                 tools=tool_schemas,

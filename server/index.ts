@@ -11,9 +11,10 @@ const APP_ROOT = path.resolve(__dirname, "..");
 
 const PROJECTS_PATH = "Operacional/Kanban/projetos.json";
 const INITIATIVES_PATH = "Operacional/Kanban/iniciativas.json";
+const FINANCE_DIR = "finance";
 
 const GITHUB_OWNER = process.env.GITHUB_OWNER || "NETZ-FAST-LAB";
-const GITHUB_REPO = process.env.GITHUB_REPO || "gestáo-netz";
+const GITHUB_REPO = process.env.GITHUB_REPO || "gestao-netz";
 const GITHUB_BRANCH = process.env.GITHUB_BRANCH || "master";
 const GITHUB_TOKEN =
   process.env.GITHUB_TOKEN || process.env.GH_TOKEN || process.env.GITHUB_PAT || "";
@@ -88,6 +89,11 @@ type DashboardPayload = {
     overdueTaskCount: number;
     dueSoonTaskCount: number;
     examples: string[];
+    quarterTarget: number;
+    realizedAmount: number;
+    provisionedAmount: number;
+    achievedAmount: number;
+    achievedPercentage: number;
   }>;
   tasks: DashboardTask[];
   cards: Array<{
@@ -199,10 +205,14 @@ type AgentApiSummary = {
 };
 
 type AgentApiDetail = AgentApiSummary & {
-  memory: AgentMemoryEntry[];
-  collaborators: AgentCollaboration[];
   workspace: AgentWorkspace;
-  availableActions: string[];
+  memory: AgentMemoryEntry[];
+};
+
+type FinanceMovement = {
+  date: string;
+  description: string;
+  amount: number;
 };
 
 const AGENT_PROFILES: Record<string, AgentProfile> = {
@@ -338,7 +348,7 @@ const AGENT_PROFILES: Record<string, AgentProfile> = {
   },
   tiopatinhas: {
     id: "tiopatinhas",
-    name: "Professor ROI",
+    name: "Tio Patinhas",
     role: "Gerente Financeiro",
     ala: "Segurança e Ética",
     expertise: ["receita", "margem", "viabilidade"],
@@ -537,6 +547,13 @@ function normalizeName(value: string): string {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 }
 
+const PARTNER_ALIASES: Record<string, string[]> = {
+  joao: ["joao", "joao henrique", "joao henrique zborowski scholz", "joao scholz", "joe", "john", "joaozissimo"],
+  gui: ["gui", "gui r", "gui r.", "roennau", "guilherme roennau", "guilherme r"],
+  denis: ["denis", "denis polidoro", "denis p", "denis p."],
+  stacke: ["stacke", "tak", "gui s", "gui stacke", "guilherme stacke"],
+};
+
 function getFullPath(relativePath: string) {
   return path.join(APP_ROOT, relativePath);
 }
@@ -562,6 +579,41 @@ async function readJsonFileWithFallback<T>(relativePaths: string[]): Promise<T> 
 
 async function writeJsonFile<T>(relativePath: string, data: T) {
   await fs.writeFile(getFullPath(relativePath), `${JSON.stringify(data, null, 2)}\n`, "utf8");
+}
+
+async function readFinanceMovements(): Promise<FinanceMovement[]> {
+  try {
+    const financeDir = getFullPath(FINANCE_DIR);
+    const files = await fs.readdir(financeDir);
+    const extractFile = files.find((file) => /^Extrato-.*\.csv$/i.test(file));
+
+    if (!extractFile) {
+      return [];
+    }
+
+    const raw = await fs.readFile(path.join(financeDir, extractFile), "utf8");
+    const lines = sanitizeDeep(raw)
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    const dataStart = lines.findIndex((line) => normalizeName(line).startsWith("data lancamento;descricao;valor;saldo"));
+    if (dataStart === -1) {
+      return [];
+    }
+
+    return lines.slice(dataStart + 1).flatMap((line) => {
+      const [date = "", description = "", amount = "0"] = line.split(";");
+      const parsedAmount = Number.parseFloat(amount.replace(/\./g, "").replace(",", "."));
+      if (!date || Number.isNaN(parsedAmount)) {
+        return [];
+      }
+
+      return [{ date, description, amount: parsedAmount }];
+    });
+  } catch {
+    return [];
+  }
 }
 
 function getTaskAssignee(task: RawTask): string {
@@ -611,41 +663,27 @@ function isOverdue(dateString: string, today: Date): boolean {
 
 function getPartnerId(assignee: string): string | null {
   const normalized = normalizeName(assignee);
-
-  if (
-    ["joao", "joao henrique", "joao henrique zborowski scholz", "joao scholz", "joe", "john", "joaozissimo"].includes(
-      normalized,
-    )
-  ) {
-    return "joao";
-  }
-
-  if (["gui", "gui r", "gui r.", "roennau", "guilherme roennau", "guilherme r"].includes(normalized)) {
-    return "gui";
-  }
-
-  if (["denis", "denis polidoro", "denis p", "denis p."].includes(normalized)) {
-    return "denis";
-  }
-
-  if (["stacke", "tak", "gui s", "gui stacke", "guilherme stacke"].includes(normalized)) {
-    return "stacke";
+  for (const [partnerId, aliases] of Object.entries(PARTNER_ALIASES)) {
+    if (aliases.includes(normalized)) {
+      return partnerId;
+    }
   }
 
   return null;
 }
 
 async function readBoardFiles() {
-  const [organization, projectsFile, initiativesFile] = await Promise.all([
+  const [organization, projectsFile, initiativesFile, financeMovements] = await Promise.all([
     readJsonFileWithFallback<{ name: string; members: string[] }>([
       "Operacional/organizacao.json",
       "Operacional/organização.json",
     ]),
     readJsonFile<BoardFile>(PROJECTS_PATH),
     readJsonFile<BoardFile>(INITIATIVES_PATH),
+    readFinanceMovements(),
   ]);
 
-  return { organization, projectsFile, initiativesFile };
+  return { organization, projectsFile, initiativesFile, financeMovements };
 }
 
 function buildCards(projectsFile: BoardFile, initiativesFile: BoardFile) {
@@ -683,7 +721,7 @@ async function buildDashboardPayload(): Promise<DashboardPayload> {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const { organization, projectsFile, initiativesFile } = await readBoardFiles();
+  const { organization, projectsFile, initiativesFile, financeMovements } = await readBoardFiles();
   const cards = buildCards(projectsFile, initiativesFile);
   const tasks = buildTasks(cards, today);
 
@@ -759,11 +797,60 @@ async function buildDashboardPayload(): Promise<DashboardPayload> {
     return [...alignmentMilestones, ...reminderMilestones];
   });
 
+  const quarterTargetPerPartner = Math.round(192_000 / 4);
   const partners = [
-    { id: "joao", name: "Joãozíssimo", activeTaskCount: 0, overdueTaskCount: 0, dueSoonTaskCount: 0, examples: [] as string[] },
-    { id: "gui", name: "Gui R.", activeTaskCount: 0, overdueTaskCount: 0, dueSoonTaskCount: 0, examples: [] as string[] },
-    { id: "denis", name: "Denis", activeTaskCount: 0, overdueTaskCount: 0, dueSoonTaskCount: 0, examples: [] as string[] },
-    { id: "stacke", name: "Guilherme Stacke", activeTaskCount: 0, overdueTaskCount: 0, dueSoonTaskCount: 0, examples: [] as string[] },
+    {
+      id: "joao",
+      name: "Joãozíssimo",
+      activeTaskCount: 0,
+      overdueTaskCount: 0,
+      dueSoonTaskCount: 0,
+      examples: [] as string[],
+      quarterTarget: quarterTargetPerPartner,
+      realizedAmount: 0,
+      provisionedAmount: 0,
+      achievedAmount: 0,
+      achievedPercentage: 0,
+    },
+    {
+      id: "gui",
+      name: "Gui R.",
+      activeTaskCount: 0,
+      overdueTaskCount: 0,
+      dueSoonTaskCount: 0,
+      examples: [] as string[],
+      quarterTarget: quarterTargetPerPartner,
+      realizedAmount: 0,
+      provisionedAmount: 0,
+      achievedAmount: 0,
+      achievedPercentage: 0,
+    },
+    {
+      id: "denis",
+      name: "Denis",
+      activeTaskCount: 0,
+      overdueTaskCount: 0,
+      dueSoonTaskCount: 0,
+      examples: [] as string[],
+      quarterTarget: quarterTargetPerPartner,
+      realizedAmount: 0,
+      provisionedAmount: 0,
+      achievedAmount: 0,
+      achievedPercentage: 0,
+    },
+    {
+      id: "stacke",
+      name: "Guilherme Stacke",
+      activeTaskCount: 0,
+      overdueTaskCount: 0,
+      dueSoonTaskCount: 0,
+      examples: [] as string[],
+      quarterTarget: quarterTargetPerPartner,
+      realizedAmount: 0,
+      provisionedAmount: 0,
+      achievedAmount: 0,
+      achievedPercentage: 0,
+    },
   ];
 
   for (const task of tasks) {
@@ -778,6 +865,29 @@ async function buildDashboardPayload(): Promise<DashboardPayload> {
     if (partner.examples.length < 3) {
       partner.examples.push(`${task.contextTitle}: ${task.title}`);
     }
+  }
+
+  const outboundFinance = financeMovements.filter((movement) => movement.amount < 0);
+  for (const movement of outboundFinance) {
+    const partnerId = getPartnerId(movement.description);
+    if (!partnerId) continue;
+    const partner = partners.find((item) => item.id === partnerId);
+    if (!partner) continue;
+    partner.realizedAmount += Math.abs(movement.amount);
+  }
+
+  const provisionBase = Math.max(0, 192_000 - partners.reduce((sum, partner) => sum + partner.realizedAmount, 0));
+  const totalActiveWeight = partners.reduce((sum, partner) => sum + partner.activeTaskCount, 0);
+
+  for (const partner of partners) {
+    const activityShare =
+      totalActiveWeight > 0 ? partner.activeTaskCount / totalActiveWeight : 1 / Math.max(1, partners.length);
+    partner.provisionedAmount = Math.round(provisionBase * activityShare * 0.25);
+    partner.achievedAmount = partner.realizedAmount + partner.provisionedAmount;
+    partner.achievedPercentage = Math.min(
+      100,
+      Math.round((partner.achievedAmount / Math.max(1, partner.quarterTarget)) * 100),
+    );
   }
 
   return {
@@ -1038,10 +1148,8 @@ function buildAgentDetail(profile: AgentProfile, dashboard: DashboardPayload, me
 
   return {
     ...summary,
-    memory: runtime.memory,
-    collaborators: buildAgentCollaborations(profile, dashboard, message),
     workspace: buildAgentWorkspace(profile, dashboard, message),
-    availableActions: buildAgentActions(profile),
+    memory: runtime.memory,
   };
 }
 
@@ -1207,6 +1315,11 @@ function summarizeDashboardForPrompt(payload: DashboardPayload) {
 
 function buildAgentSystemPrompt(profile: AgentProfile, dashboard: DashboardPayload) {
   const context = summarizeDashboardForPrompt(dashboard);
+  const runtime = ensureAgentRuntime(profile);
+  const recentMemory = runtime.memory
+    .slice(-4)
+    .map((entry) => `${entry.role}: ${entry.content}`)
+    .join(" | ");
 
   return [
     `Você é ${profile.name}, ${profile.role} da ala ${profile.ala} do Laboratório Maluco da NETZ.`,
@@ -1218,8 +1331,11 @@ function buildAgentSystemPrompt(profile: AgentProfile, dashboard: DashboardPaylo
     "Não aja como assistente genérico.",
     "Fale em primeira pessoa, encarnando o agente.",
     "Seja específico, útil e orientado a ação.",
+    "Evite abrir toda resposta com a mesma fórmula. Varie a estrutura, puxe o contexto e responda com inteligência real.",
+    "Não repita blocos padronizados como 'eu seguiria em 3 movimentos' a menos que isso realmente faça sentido para este pedido.",
     `Estado atual do laboratório: ${context.summary.openTasks} tarefas abertas, ${context.summary.overdueTasks} em risco de explosão, ${context.summary.totalProjects} projetos e ${context.summary.totalInitiatives} experimentos internos.`,
     context.criticalTasks.length > 0 ? `Riscos quentes agora: ${context.criticalTasks.join(" | ")}.` : "Não há riscos quentes destacados agora.",
+    recentMemory ? `Memória recente desta conversa: ${recentMemory}.` : "Ainda sem memória recente desta conversa.",
   ].join("\n");
 }
 
@@ -1293,11 +1409,18 @@ async function callOpenAI(systemPrompt: string, userMessage: string) {
 function detectTopics(message: string) {
   const normalized = normalizeName(message);
   return {
+    greeting: /(^|\s)(oi|ola|olá|eai|eae|fala|opa|salve)\b/.test(normalized),
     interface: /site|ux|ui|dashboard|layout|design|interface|landing/.test(normalized),
     operations: /tarefa|kanban|prazo|responsável|status|processo|fluxo|backlog/.test(normalized),
     engineering: /api|backend|código|deploy|bug|integração|banco inter|webhook|infra/.test(normalized),
     finance: /receita|caixa|margem|tesouraria|orçamento|custo|roi|banco/.test(normalized),
   };
+}
+
+function pickVariant(message: string, options: string[]) {
+  if (options.length === 0) return "";
+  const seed = Array.from(message).reduce((total, char) => total + char.charCodeAt(0), 0);
+  return options[seed % options.length];
 }
 
 function buildFallbackMoves(profile: AgentProfile, message: string) {
@@ -1358,34 +1481,199 @@ function buildFallbackMoves(profile: AgentProfile, message: string) {
 
 function buildFallbackOpening(profile: AgentProfile, message: string) {
   const trimmed = message.trim();
+  const topics = detectTopics(trimmed);
 
   if (profile.id === "mintz") {
-    return `Você me trouxe "${trimmed}". Naturalmente sobrou para o felino superior aqui farejar se isso é visão ou bagunça.`;
+    return pickVariant(trimmed, [
+      `Você me trouxe "${trimmed}". Naturalmente sobrou para o felino superior aqui farejar se isso é visão ou bagunça.`,
+      `"${trimmed}" caiu no meu colo. Vou assumir que vocês querem elegância, não desordem perfumada.`,
+      `Recebi "${trimmed}". Vamos ver se isso merece protocolo ou só uma leve humilhação felina.`,
+    ]);
+  }
+
+  if (topics.greeting && profile.id === "picles") {
+    return pickVariant(trimmed, [
+      `E aí. Cumprimentos suficientes; agora me diga o que realmente precisa sair da névoa em "${trimmed}".`,
+      `Saudação registrada. Agora corta o aquecimento e me diz qual decisão "${trimmed}" está escondendo.`,
+      `Certo, bom dia, boa tarde, o que for. O ponto é: o que em "${trimmed}" precisa virar ação agora?`,
+    ]);
   }
 
   if (profile.id === "picles") {
-    return `Li seu pedido sobre "${trimmed}". Vou poupar o laboratório da enrolação e cortar direto para o que move a bancada.`;
+    return pickVariant(trimmed, [
+      `Li seu pedido sobre "${trimmed}". Vou poupar o laboratório da enrolação e cortar direto para o que move a bancada.`,
+      `Sobre "${trimmed}": vou ignorar o ruído e puxar só o pedaço que realmente desloca a operação.`,
+      `"${trimmed}" pode virar névoa rápido. Então eu vou responder já no corte de prioridade, não no charme.`,
+    ]);
   }
 
   if (profile.id === "spark") {
-    return `Sobre "${trimmed}": antes de qualquer entusiasmo, eu olho arquitetura, contrato e persistência.`;
+    return pickVariant(trimmed, [
+      `Sobre "${trimmed}": antes de qualquer entusiasmo, eu olho arquitetura, contrato e persistência.`,
+      `Se o tema é "${trimmed}", eu começo pelo que sustenta isso sem explodir no próximo deploy.`,
+      `"${trimmed}" não me convence por discurso. Me convence por arquitetura, fronteira e dado bem tratado.`,
+    ]);
+  }
+
+  if (profile.id === "tiopatinhas") {
+    return pickVariant(trimmed, [
+      `Recebi "${trimmed}". Antes de romantizar, eu quero saber quanto isso rende, custa e trava.`,
+      `Sobre "${trimmed}": eu não penso em brilho; penso em caixa, retorno e prioridade.`,
+      `"${trimmed}" só me interessa se fizer a tesouraria respirar melhor. Vamos ao ponto.`,
+    ]);
   }
 
   return `Recebi seu pedido sobre "${trimmed}". Vou responder como ${profile.name}, não como assistente genérico domesticado.`;
 }
 
+function buildAgentLead(profile: AgentProfile, dashboard: DashboardPayload, message: string) {
+  const workspace = buildAgentWorkspace(profile, dashboard, message);
+  const hottestTask = workspace.relevantTasks[0];
+
+  if (profile.id === "picles") {
+    return hottestTask
+      ? `O corte quente aqui encosta em ${hottestTask}. Não é hora de floreio; é hora de decidir foco.`
+      : "Ainda há espaço para escolher a frente com melhor efeito dominó.";
+  }
+
+  if (profile.id === "spark") {
+    return hottestTask
+      ? `Se eu puxar por arquitetura, o ponto mais concreto agora é ${hottestTask}.`
+      : "Sem pressão técnica gritante agora, então dá para desenhar com cabeça fria.";
+  }
+
+  if (profile.id === "mintz") {
+    return hottestTask
+      ? `O cheiro mais forte de atrito cultural ou operacional está perto de ${hottestTask}.`
+      : "Hoje o laboratório está mais arrumado do que vocês merecem, então dá para falar de alinhamento com menos fumaça.";
+  }
+
+  if (profile.id === "tiopatinhas") {
+    return `No caixa, a distância para o alvo ainda é de ${dashboard.summary.openTasks} frentes abertas disputando atenção e caixa curto pedindo critério.`;
+  }
+
+  return hottestTask
+    ? `Do meu recorte, a frente mais visível agora é ${hottestTask}.`
+    : `Do meu recorte, o melhor movimento é escolher uma frente concreta para puxar já.`;
+}
+
+function buildAgentClosing(profile: AgentProfile) {
+  if (profile.id === "spark") {
+    return "Se você quiser, eu converto isso em arquitetura mínima, contrato de dados e sequência de implementação.";
+  }
+
+  if (profile.id === "tiopatinhas") {
+    return "Se fizer sentido, eu desdobro isso em leitura de ROI, tesouraria e corte de prioridade econômica.";
+  }
+
+  if (profile.id === "mintz") {
+    return "Se insistirem, eu também posso transformar isso em mensagem, cobrança ou ajuste de tom sem deixar o laboratório feder.";
+  }
+
+  return "Se quiser, eu transformo isso em próxima ação objetiva para a bancada ou direto para o Kanban.";
+}
+
+function buildReplySectionTitle(profile: AgentProfile, message: string) {
+  const topics = detectTopics(message);
+
+  if (profile.id === "spark") {
+    return pickVariant(message, [
+      "Eu atacaria isso nesta sequência:",
+      "Meu corte técnico seria este:",
+      "A implementação mínima que presta começaria assim:",
+    ]);
+  }
+
+  if (profile.id === "tiopatinhas") {
+    return pickVariant(message, [
+      "Eu abriria essa frente por três lentes:",
+      "O recorte financeiro que importa é este:",
+      "Se a pergunta é viabilidade, eu leria assim:",
+    ]);
+  }
+
+  if (profile.id === "mintz") {
+    return pickVariant(message, [
+      "O meu faro aponta para isto:",
+      "O desalinhamento ou acerto mais claro está aqui:",
+      "Se eu tiver que cortar a fumaça, eu diria o seguinte:",
+    ]);
+  }
+
+  if (profile.id === "picles" && topics.operations) {
+    return pickVariant(message, [
+      "Eu puxaria a operação por aqui:",
+      "O recorte útil para a bancada é este:",
+      "Se a ideia é destravar, eu faria assim:",
+    ]);
+  }
+
+  return pickVariant(message, [
+    "Meu corte prático seria este:",
+    "Eu responderia por este caminho:",
+    "O que move a bancada daqui para frente é isto:",
+  ]);
+}
+
 function buildFallbackAgentReply(profile: AgentProfile, message: string, dashboard: DashboardPayload) {
   const moves = buildFallbackMoves(profile, message);
+  const topics = detectTopics(message);
+  const opening = buildFallbackOpening(profile, message);
+  const lead = buildAgentLead(profile, dashboard, message);
+  const labState = `Laboratório agora: ${dashboard.summary.openTasks} tarefas abertas, ${dashboard.summary.overdueTasks} em risco de explosão e ${dashboard.summary.totalInitiatives} experimentos internos em curso.`;
+  const sectionTitle = buildReplySectionTitle(profile, message);
+
+  if (topics.greeting && message.trim().split(/\s+/).length <= 4) {
+    return [opening, lead, buildAgentClosing(profile)].join("\n\n");
+  }
+
+  if (profile.id === "tiopatinhas") {
+    return [
+      opening,
+      `Leitura de caixa: ${labState}`,
+      lead,
+      sectionTitle,
+      `1. retorno capturável: ${moves[0]}.`,
+      `2. esforço versus margem: ${moves[1]}.`,
+      `3. prioridade econômica real: ${moves[2]}.`,
+      buildAgentClosing(profile),
+    ].join("\n\n");
+  }
+
+  if (profile.id === "mintz") {
+    return [
+      opening,
+      lead,
+      sectionTitle,
+      `1. ${moves[0]}.`,
+      `2. ${moves[1]}.`,
+      `3. ${moves[2]}.`,
+      buildAgentClosing(profile),
+    ].join("\n\n");
+  }
+
+  if (profile.id === "spark") {
+    return [
+      opening,
+      lead,
+      sectionTitle,
+      `1. arquitetura: ${moves[0]}.`,
+      `2. implementação: ${moves[1]}.`,
+      `3. risco de bancada: ${moves[2]}.`,
+      buildAgentClosing(profile),
+    ].join("\n\n");
+  }
 
   return [
-    buildFallbackOpening(profile, message),
-    `Agora o laboratório está com ${dashboard.summary.openTasks} tarefas abertas, ${dashboard.summary.overdueTasks} em risco de explosão e ${dashboard.summary.totalInitiatives} experimentos internos correndo em paralelo.`,
-    "Eu seguiria em 3 movimentos:",
+    opening,
+    labState,
+    lead,
+    sectionTitle,
     `1. ${moves[0]}.`,
     `2. ${moves[1]}.`,
     `3. ${moves[2]}.`,
-    "Se quiser, eu posso transformar isso na próxima ação operacional exata para o CopilotX ou para o Kanban.",
-  ].join("\n");
+    buildAgentClosing(profile),
+  ].join("\n\n");
 }
 
 async function generateAgentReply(agentId: string, userMessage: string, dashboard: DashboardPayload) {
@@ -1550,7 +1838,7 @@ async function startServer() {
         agent,
         suggestions: {
           nextActions: buildAgentActions(profile),
-          suggestedCollaborators: agent.collaborators,
+          suggestedCollaborators: buildAgentCollaborations(profile, dashboard, message),
         },
       });
     } catch (error) {

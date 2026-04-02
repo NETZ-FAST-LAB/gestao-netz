@@ -15,6 +15,11 @@ export interface DashboardPartner {
   overdueTaskCount: number;
   dueSoonTaskCount: number;
   examples: string[];
+  quarterTarget: number;
+  realizedAmount: number;
+  provisionedAmount: number;
+  achievedAmount: number;
+  achievedPercentage: number;
 }
 
 export interface DashboardTask {
