@@ -1,4 +1,4 @@
-﻿import asyncio
+import asyncio
 import datetime
 import json
 import random
@@ -879,7 +879,7 @@ async def gerar_e_enviar_resumo(destination_channel):
         import gemini_logic
 
         await destination_channel.send(SUMMARY_THINKING_MESSAGE)
-        response = gemini_logic.client.chat.completions.create(
+        response = await gemini_logic.client.chat.completions.create(
             model=settings.llm_model,
             messages=[
                 {

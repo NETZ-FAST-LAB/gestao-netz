@@ -710,7 +710,7 @@ async function readBoardFiles() {
                 title: t.title,
                 assignee: t.assignee,
                 responsável: t.assignee, // retro
-                status: t.status, // Postgres is raw status
+                status: mapStatus(t.status), // Postgres is raw status
                 dueDate: t.due_date
               }))
             };
@@ -721,7 +721,7 @@ async function readBoardFiles() {
   };
 
   const projectsFile = buildBoard("proj-");
-  const initiativesFile = buildBoard("ini-");
+  const initiativesFile = buildBoard("inic-");
 
   return { organization, projectsFile, initiativesFile, financeMovements };
 }
