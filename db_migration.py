@@ -77,19 +77,20 @@ async def migrate_json_to_pg():
                     }
                 )
                 
-                # Upsert Tasks
-                for task in card.get("tasks", []):
-                    await session.execute(
-                        text("""
-                        INSERT INTO tasks (id, project_id, title, assignee, status, due_date)
-                        VALUES (:id, :pid, :title, :assignee, :status, :date)
-                        ON CONFLICT (id) DO NOTHING
-                        """),
-                        {
-                            "id": task.get("id"), "pid": card.get("id"), "title": task.get("title"),
-                            "assignee": task.get("assignee", ""), "status": task.get("status", ""), "date": task.get("dueDate", "")
-                        }
-                    )
+                    # Upsert Tasks
+                    for task in card.get("tasks", []):
+                        await session.execute(
+                            text("""
+                            INSERT INTO tasks (id, project_id, title, assignee, status, due_date)
+                            VALUES (:id, :pid, :title, :assignee, :status, :date)
+                            ON CONFLICT (id) DO NOTHING
+                            """),
+                            {
+                                "id": task.get("id"), "pid": card.get("id"), "title": task.get("title"),
+                                "assignee": task.get("assignee", task.get("responsável", "")),
+                                "status": task.get("status", "pending"), "date": task.get("dueDate", "")
+                            }
+                        )
         await session.commit()
         print("Migration JSON -> Postgres successful.")
 
