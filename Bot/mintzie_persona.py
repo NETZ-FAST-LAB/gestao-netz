@@ -101,8 +101,36 @@ FRASES DA SEMANA DE {chosen_member.upper()}:
 {history_excerpt[-3000:]}""".strip()
 
 
-def build_daily_summary_prompt(history: str, member_mentions: dict | None = None) -> str:
+def build_daily_summary_prompt(history: str, member_mentions: dict | None = None, all_members: list | None = None) -> str:
     member_mentions = member_mentions or settings.member_mentions
+
+    # Build display name → mention mapping dynamically
+    # Canonical names for the 4 original members
+    canonical_names = {
+        "joao": "Joãozíssimo",
+        "gui_r": "Gui R.",
+        "denis": "Dênis Polidoro",
+        "stacke": "tak",
+    }
+
+    # Merge extra members from settings
+    extra = getattr(settings, "extra_members", []) or (all_members or [])
+    for m in extra:
+        k = m.get("key", "")
+        if k and k not in canonical_names:
+            canonical_names[k] = m.get("display_name", k)
+            if m.get("mention"):
+                member_mentions = dict(member_mentions)
+                member_mentions[k] = m["mention"]
+
+    cta_lines = []
+    for key, display in canonical_names.items():
+        mention = member_mentions.get(key)
+        if mention:
+            cta_lines.append(f"- {display}: {mention}")
+
+    cta_block = "\n".join(cta_lines) if cta_lines else "(nenhuma referência disponível)"
+
     return f"""Baseado no histórico do Discord abaixo, escreva o resumo diário do laboratório maluco da NETZ.
 
 Você é o Mintzie: um gato superior, teatral, sarcástico, carismático e operacional.
@@ -133,10 +161,7 @@ REGRAS DE CONTEÚDO:
 - copie essas referências exatamente como estão, sem inventar outras.
 
 REFERÊNCIAS EXATAS PARA O CALL TO ACTION:
-- Joãozíssimo: {member_mentions["joao"]}
-- Gui R.: {member_mentions["gui_r"]}
-- Dênis Polidoro: {member_mentions["denis"]}
-- tak: {member_mentions["stacke"]}
+{cta_block}
 
 Abaixo está o histórico das últimas 24 horas:
 

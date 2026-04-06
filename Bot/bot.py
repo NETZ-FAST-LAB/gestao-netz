@@ -110,6 +110,17 @@ PARTNER_WORKLOAD_TARGETS = [
         ],
     },
 ]
+
+# Merge extra members from settings (loaded from MINTZIE_EXTRA_MEMBERS_JSON env var)
+for _extra in settings.extra_members:
+    _key = _extra.get("key", "")
+    if _key and not any(p["key"] == _key for p in PARTNER_WORKLOAD_TARGETS):
+        PARTNER_WORKLOAD_TARGETS.append({
+            "key": _key,
+            "display_name": _extra.get("display_name", _key),
+            "mention": RUNTIME_MEMBER_MENTIONS.get(_key, _extra.get("mention", f"@{_key}")),
+            "aliases": _extra.get("aliases", [_key]),
+        })
 LOW_WORKLOAD_THRESHOLD = 3
 
 
@@ -300,7 +311,13 @@ def _is_confirmation_message(text: str) -> bool:
 
 def _is_cancel_message(text: str) -> bool:
     normalized = _normalize_person_name(text)
-    return normalized in {"cancela", "cancelar", "descarta", "ignora isso", "nao aplica", "não aplica"}
+    return normalized in {"cancela", "cancelar", "descarta", "ignora isso", "nao aplica", "não aplica", "nao", "não"}
+
+
+def _is_confirm_message(text: str) -> bool:
+    normalized = _normalize_person_name(text.strip())
+    return normalized in {"sim", "confirma", "confirmar", "aplica", "aplicar", "ok", "pode", "pode aplicar", "vai", "s", "yes"}
+
 
 
 def _looks_like_task_update_request(text: str) -> bool:
@@ -400,12 +417,12 @@ def _display_tipo(tipo: str) -> str:
     return "Projeto" if (tipo or "").lower().startswith("proj") else "Iniciativa"
 
 
-def build_task_update_plan_from_message(message_text: str, author_display_name: str, previous_plan: dict | None = None) -> dict:
+async def build_task_update_plan_from_message(message_text: str, author_display_name: str, previous_plan: dict | None = None) -> dict:
     import gemini_logic
 
-    catalog_snapshot = kanban_service.build_task_catalog_prompt_snippet()
+    catalog_snapshot = await kanban_service.build_task_catalog_prompt_snippet()
     prompt = _build_task_update_parser_prompt(message_text, author_display_name, catalog_snapshot, previous_plan=previous_plan)
-    response = gemini_logic.client.chat.completions.create(
+    response = await gemini_logic.client.chat.completions.create(
         model=settings.llm_model,
         messages=[
             {"role": "system", "content": "Você extrai alterações de tarefas e responde apenas JSON válido."},
@@ -1002,14 +1019,34 @@ async def on_message(message: discord.Message):
     if message.author == bot.user:
         return
 
+    # ── Plano pendente de atualização em lote ─────────────────────────────────
+    pending_key = _task_update_pending_key(message)
+    if _has_fresh_pending_task_update(message):
+        pending_plan = pending_task_update_plans.get(pending_key)
+        clean_pending_text = message.content.strip()
+
         if _is_cancel_message(clean_pending_text):
             pending_task_update_plans.pop(pending_key, None)
             await message.reply("Plano descartado. Nenhuma pata tocou no Kanban.")
             await bot.process_commands(message)
             return
 
+        if _is_confirm_message(clean_pending_text):
+            try:
+                result = await kanban_service.apply_task_update_plan(pending_plan)
+                pending_task_update_plans.pop(pending_key, None)
+                summary = _build_plan_execution_summary(result)
+                await send_chunked(message.channel, summary, reply_to=message)
+            except Exception:
+                error_traceback = traceback.format_exc()
+                print(f"Erro ao aplicar plano:\n{error_traceback}")
+                await message.reply("Erro ao aplicar as alterações. Os logs foram enviados.")
+                await log_error_to_discord(f"Erro ao aplicar plano:\n{error_traceback}")
+            await bot.process_commands(message)
+            return
+
         try:
-            revised_plan = build_task_update_plan_from_message(
+            revised_plan = await build_task_update_plan_from_message(
                 clean_pending_text,
                 message.author.display_name,
                 previous_plan=pending_plan,

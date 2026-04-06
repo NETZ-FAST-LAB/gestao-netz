@@ -1,7 +1,7 @@
 import json
 import os
-from dataclasses import dataclass
-from typing import Dict
+from dataclasses import dataclass, field
+from typing import Dict, List
 
 from dotenv import load_dotenv
 
@@ -35,6 +35,26 @@ def _get_member_mentions() -> Dict[str, str]:
     }
 
 
+def _get_extra_members() -> List[Dict]:
+    """
+    Returns a list of extra member configs from MINTZIE_EXTRA_MEMBERS_JSON.
+    Each entry should have: key, display_name, mention, aliases (list of strings).
+
+    Example env var value:
+    [
+      {"key": "ana", "display_name": "Ana", "mention": "<@123456>", "aliases": ["Ana", "ana"]},
+      {"key": "leo", "display_name": "Leo", "mention": "<@789012>", "aliases": ["Leo", "Leonardo"]}
+    ]
+    """
+    raw = os.getenv("MINTZIE_EXTRA_MEMBERS_JSON")
+    if not raw:
+        return []
+    try:
+        return json.loads(raw)
+    except Exception:
+        return []
+
+
 @dataclass(frozen=True)
 class Settings:
     discord_token: str
@@ -49,6 +69,7 @@ class Settings:
     member_mentions: Dict[str, str]
     kanban_url: str
     database_url: str
+    extra_members: List[Dict] = field(default_factory=list)
 
 
 settings = Settings(
@@ -64,4 +85,6 @@ settings = Settings(
     member_mentions=_get_member_mentions(),
     kanban_url=os.getenv("MINTZIE_KANBAN_URL", ""),
     database_url=os.getenv("DATABASE_URL", ""),
+    extra_members=_get_extra_members(),
 )
+

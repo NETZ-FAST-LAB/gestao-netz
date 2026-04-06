@@ -220,42 +220,123 @@ tool_schemas = [
         "type": "function",
         "function": {
             "name": "get_tasks",
-            "description": "Busca tarefas no banco de dados.",
-            "parameters": {"type": "object", "properties": {"filtro_responsavel": {"type": "string"}}, "required": ["filtro_responsavel"]},
+            "description": (
+                "Busca tarefas no banco de dados do Kanban. "
+                "Use filtro_responsavel='todas' para listar tudo, "
+                "'unassigned' para tarefas sem dono, "
+                "ou o nome de uma pessoa para filtrar por responsável."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "filtro_responsavel": {
+                        "type": "string",
+                        "description": "Valor do filtro: 'todas', 'unassigned', ou o nome/apelido de uma pessoa.",
+                    }
+                },
+                "required": ["filtro_responsavel"],
+            },
         },
     },
     {
         "type": "function",
         "function": {
             "name": "assign_all_unassigned_tasks",
-            "description": "Atribui tarefas sem dono.",
-            "parameters": {"type": "object", "properties": {"novo_responsavel": {"type": "string"}}, "required": ["novo_responsavel"]},
+            "description": "Atribui TODAS as tarefas atualmente sem dono para um único responsável. Use apenas quando o usuário pedir explicitamente para atribuir tudo a uma pessoa.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "novo_responsavel": {
+                        "type": "string",
+                        "description": "Nome completo ou apelido canônico da pessoa que vai receber todas as tarefas sem dono.",
+                    }
+                },
+                "required": ["novo_responsavel"],
+            },
         },
     },
     {
         "type": "function",
         "function": {
             "name": "create_new_kanban_card",
-            "description": "Cria um novo Projeto ou Iniciativa.",
-            "parameters": {"type": "object", "properties": {"tipo": {"type": "string"}, "titulo": {"type": "string"}, "responsavel": {"type": "string"}}, "required": ["tipo", "titulo", "responsavel"]},
+            "description": "Cria um novo Projeto ou Iniciativa (experimento interno) no Kanban. Use quando o usuário quiser cadastrar um contexto novo, não uma tarefa.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "tipo": {
+                        "type": "string",
+                        "description": "Tipo do card: 'projeto' (trabalho para cliente) ou 'iniciativa' (experimento interno da NETZ).",
+                    },
+                    "titulo": {"type": "string", "description": "Nome do projeto ou iniciativa."},
+                    "responsavel": {"type": "string", "description": "Nome da pessoa responsável pelo projeto ou iniciativa."},
+                },
+                "required": ["tipo", "titulo", "responsavel"],
+            },
         },
     },
     {
         "type": "function",
         "function": {
             "name": "create_github_task",
-            "description": "Cria nova tarefa.",
-            "parameters": {"type": "object", "properties": {"tipo": {"type": "string"}, "contexto_id": {"type": "string"}, "titulo_tarefa": {"type": "string"}, "responsavel": {"type": "string"}}, "required": ["tipo", "contexto_id", "titulo_tarefa", "responsavel"]},
+            "description": (
+                "Cria uma nova tarefa dentro de um projeto ou iniciativa existente no Kanban. "
+                "Antes de usar, confirme o nome exato do projeto/iniciativa com o usuário ou via get_tasks."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "tipo": {
+                        "type": "string",
+                        "description": "Tipo de contexto: 'projeto' ou 'iniciativa'.",
+                    },
+                    "contexto_id": {
+                        "type": "string",
+                        "description": "Nome ou parte do nome do projeto/iniciativa onde a tarefa deve ser criada.",
+                    },
+                    "titulo_tarefa": {"type": "string", "description": "Título da nova tarefa."},
+                    "responsavel": {"type": "string", "description": "Nome da pessoa responsável pela tarefa."},
+                },
+                "required": ["tipo", "contexto_id", "titulo_tarefa", "responsavel"],
+            },
         },
     },
     {
         "type": "function",
         "function": {
             "name": "edit_github_task",
-            "description": "Edita tarefa.",
-            "parameters": {"type": "object", "properties": {"tipo": {"type": "string"}, "titulo_tarefa_atual": {"type": "string"}, "novo_responsavel": {"type": "string"}, "novo_status": {"type": "string"}, "nova_data": {"type": "string"}}, "required": ["tipo", "titulo_tarefa_atual"]},
+            "description": (
+                "Edita uma tarefa existente no Kanban: muda status, responsável ou data. "
+                "Use o título atual da tarefa para identificá-la. "
+                "Para múltiplas tarefas, prefira bulk_update_tasks_from_message."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "tipo": {
+                        "type": "string",
+                        "description": "Tipo de contexto: 'projeto' ou 'iniciativa'. Pode ser null se desconhecido.",
+                    },
+                    "titulo_tarefa_atual": {
+                        "type": "string",
+                        "description": "Título atual (ou parte dele) da tarefa a ser editada.",
+                    },
+                    "novo_responsavel": {
+                        "type": "string",
+                        "description": "Novo responsável pela tarefa. Omita se não houver mudança.",
+                    },
+                    "novo_status": {
+                        "type": "string",
+                        "description": "Novo status: 'Pendente', 'Em andamento', 'Em revisão' ou 'Concluída'. Omita se não houver mudança.",
+                    },
+                    "nova_data": {
+                        "type": "string",
+                        "description": "Nova data de vencimento no formato DD/MM ou DD/MM/AAAA. Omita se não houver mudança.",
+                    },
+                },
+                "required": ["tipo", "titulo_tarefa_atual"],
+            },
         },
-    }
+    },
 ]
 
 available_functions = {
@@ -265,6 +346,138 @@ available_functions = {
     "create_github_task": create_github_task,
     "edit_github_task": edit_github_task,
 }
+
+
+def resolve_task_update_plan(updates: list, message_text: str, author_display_name: str) -> dict:
+    """
+    Matches LLM-extracted update intents against the live task catalog.
+    Returns a structured plan with resolved task IDs ready for confirmation.
+    """
+    import asyncio
+
+    async def _fetch_catalog():
+        async with get_db_session() as session:
+            res = await session.execute(
+                text("SELECT p.id as pid, p.title as ptitle, t.id as tid, t.title as ttitle, t.status, t.assignee, t.due_date FROM projects p LEFT JOIN tasks t ON p.id = t.project_id")
+            )
+            return res.fetchall()
+
+    try:
+        loop = asyncio.get_event_loop()
+        rows = loop.run_until_complete(_fetch_catalog())
+    except Exception as e:
+        return {"status": "error", "message": f"Erro ao buscar catálogo: {e}"}
+
+    operations = []
+    unmatched = []
+
+    for update in updates:
+        titulo = _normalize_person_name(update.get("titulo", ""))
+        contexto = _normalize_person_name(update.get("contexto") or "")
+
+        best_match = None
+        best_score = 0
+
+        for row in rows:
+            if not row.tid:
+                continue
+            row_title = _normalize_person_name(row.ttitle or "")
+            row_ctx = _normalize_person_name(row.ptitle or "")
+
+            score = 0
+            if titulo and titulo in row_title:
+                score += 2
+            if titulo and row_title in titulo:
+                score += 1
+            if contexto and contexto in row_ctx:
+                score += 1
+
+            if score > best_score:
+                best_score = score
+                best_match = row
+
+        if best_match and best_score >= 2:
+            nova_data_raw = update.get("nova_data") or ""
+            nova_data_iso = _parse_brazilian_due_date(nova_data_raw) if nova_data_raw else (best_match.due_date or "")
+            tipo = "projeto" if "proj" in (best_match.pid or "").lower() else "iniciativa"
+            operations.append({
+                "task_id": best_match.tid,
+                "task_title": best_match.ttitle,
+                "contexto": best_match.ptitle,
+                "tipo": tipo,
+                "after": {
+                    "status": _status_to_db(update.get("status") or "") if update.get("status") else (best_match.status or "pending"),
+                    "assignee": update.get("responsavel") or best_match.assignee or "",
+                    "dueDate": nova_data_iso,
+                },
+            })
+        else:
+            unmatched.append(update.get("titulo", "?"))
+
+    if not operations:
+        msg = "Não consegui identificar as tarefas mencionadas com clareza suficiente."
+        if unmatched:
+            msg += f" Títulos não encontrados: {', '.join(unmatched)}."
+        return {"status": "error", "message": msg}
+
+    result = {"status": "success", "operations": operations, "created_at": 0.0}
+    if unmatched:
+        result["warnings"] = f"Não encontrei correspondência para: {', '.join(unmatched)}."
+    return result
+
+
+async def apply_task_update_plan(plan: dict) -> dict:
+    """Applies all confirmed operations from a resolved plan to the database."""
+    operations = plan.get("operations", [])
+    applied = []
+
+    async with get_db_session() as session:
+        for op in operations:
+            task_id = op["task_id"]
+            after = op["after"]
+            parts = []
+            params: dict = {"tid": task_id}
+
+            if after.get("status"):
+                parts.append("status = :status")
+                params["status"] = after["status"]
+            if after.get("assignee") is not None:
+                parts.append("assignee = :assignee")
+                params["assignee"] = after["assignee"]
+            if after.get("dueDate") is not None:
+                parts.append("due_date = :due")
+                params["due"] = after["dueDate"]
+
+            if parts:
+                await session.execute(text(f"UPDATE tasks SET {', '.join(parts)} WHERE id = :tid"), params)
+                applied.append(op)
+
+        await session.commit()
+
+    return {"status": "success", "operations": applied}
+
+
+def format_task_update_plan(plan: dict) -> str:
+    """Formats a pending update plan as a readable confirmation message for the user."""
+    operations = plan.get("operations", [])
+    if not operations:
+        return "Não há alterações para confirmar."
+
+    lines = [f"Encontrei {len(operations)} alteração(ões) para aplicar. Confirme com **sim** ou cancele com **não**:\n"]
+    for op in operations:
+        after = op.get("after", {})
+        status_display = _status_to_display(after.get("status", ""))
+        assignee = after.get("assignee") or "Sem dono"
+        due = _iso_to_display_date(after.get("dueDate", ""))
+        lines.append(f"- **{op['contexto']}**: {op['task_title']} → {status_display}, responsável: {assignee}, prazo: {due}")
+
+    warnings = plan.get("warnings")
+    if warnings:
+        lines.append(f"\n⚠️ {warnings}")
+
+    return "\n".join(lines)
+
+
 
 async def get_partner_workload_snapshot(partners: list[dict], threshold: int = 3) -> dict:
     partner_rows = []
