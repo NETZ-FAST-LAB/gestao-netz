@@ -245,7 +245,20 @@ async def send_low_workload_nudges(channel):
         threshold=LOW_WORKLOAD_THRESHOLD,
     )
     for partner in workload["low_workload_partners"]:
-        await channel.send(build_low_workload_nudge_message(partner, LOW_WORKLOAD_THRESHOLD))
+        text = build_low_workload_nudge_message(partner, LOW_WORKLOAD_THRESHOLD)
+        sent_dm = False
+        mention = partner.get("mention", "")
+        if mention.startswith("<@") and mention.endswith(">"):
+            user_id = mention.strip("<@!>")
+            try:
+                user = await bot.fetch_user(int(user_id))
+                await user.send(text)
+                sent_dm = True
+            except Exception as e:
+                print(f"Failed to DM {mention} for low workload: {e}")
+        
+        if not sent_dm and channel:
+            await channel.send(text)
 
 
 async def send_open_tasks_checkins(channel):
@@ -255,7 +268,20 @@ async def send_open_tasks_checkins(channel):
         threshold=LOW_WORKLOAD_THRESHOLD,
     )
     for partner in workload["partners"]:
-        await channel.send(build_open_tasks_checkin_message(partner))
+        text = build_open_tasks_checkin_message(partner)
+        sent_dm = False
+        mention = partner.get("mention", "")
+        if mention.startswith("<@") and mention.endswith(">"):
+            user_id = mention.strip("<@!>")
+            try:
+                user = await bot.fetch_user(int(user_id))
+                await user.send(text)
+                sent_dm = True
+            except Exception as e:
+                print(f"Failed to DM {mention} for open tasks: {e}")
+        
+        if not sent_dm and channel:
+            await channel.send(text)
 
 
 def chunk_message(text: str, max_size: int = 1900) -> list[str]:
@@ -1081,7 +1107,11 @@ async def on_message(message: discord.Message):
         if time.time() - last_complaint > 3600:
             night_watch_cache[message.author.id] = time.time()
             replies = [message_template.format(mention=message.author.mention) for message_template in NIGHT_WATCH_MESSAGES]
-            await message.reply(random.choice(replies))
+            reply_text = random.choice(replies)
+            try:
+                await message.author.send(reply_text)
+            except discord.Forbidden:
+                await message.reply(reply_text)
 
     channel_id = message.channel.id
     gossip_tracker.setdefault(channel_id, [])
@@ -1100,7 +1130,8 @@ async def on_message(message: discord.Message):
         print(f"LOG MESSAGE: <Mensagem não compatível com o terminal> FROM: {message.author}")
 
     bot_mention = f"<@{bot.user.id}>"
-    if bot.user in message.mentions or bot_mention in message.content or any(
+    is_dm = isinstance(message.channel, discord.DMChannel) or not hasattr(message.channel, "name")
+    if is_dm or bot.user in message.mentions or bot_mention in message.content or any(
         role.name.lower() == "mintzie" for role in message.role_mentions
     ):
         clean_prompt = message.content.replace(bot_mention, "").strip()
