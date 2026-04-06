@@ -577,7 +577,7 @@ hora_10am = datetime.time(hour=10, minute=0, tzinfo=BRASILIA_TZ)
 
 @tasks.loop(time=hora_10am)
 async def reclamacao_10am():
-    if not rituals_enabled_now():
+    if not rituals_enabled_now() or not await kanban_service.is_ritual_enabled("reclamacao_10am"):
         return
 
     channel = management_channel()
@@ -594,6 +594,8 @@ async def reclamacao_10am():
 async def ronronado_surpresa():
     now = brasilia_now()
     if should_run_surprise_purr_ritual(now) and random.random() < (1.0 / 180.0):
+        if not await kanban_service.is_ritual_enabled("ronronado_surpresa"):
+            return
         last_purr = night_watch_cache.get("last_purr", 0)
         if time.time() - last_purr > 43200:
             night_watch_cache["last_purr"] = time.time()
@@ -607,7 +609,7 @@ hora_sexta_17h = datetime.time(hour=17, minute=0, tzinfo=BRASILIA_TZ)
 
 @tasks.loop(time=hora_sexta_17h)
 async def funcionario_da_semana():
-    if not should_run_employee_of_week_ritual(brasilia_now()):
+    if not should_run_employee_of_week_ritual(brasilia_now()) or not await kanban_service.is_ritual_enabled("funcionario_da_semana"):
         return
 
     channel = management_channel()
@@ -673,7 +675,7 @@ hora_9am = datetime.time(hour=9, minute=0, tzinfo=BRASILIA_TZ)
 
 @tasks.loop(time=hora_9am)
 async def verificador_de_projetos():
-    if not rituals_enabled_now():
+    if not rituals_enabled_now() or not await kanban_service.is_ritual_enabled("verificador_de_projetos"):
         return
 
     channel = management_channel()
@@ -772,7 +774,7 @@ hora_provocacao_semana = datetime.time(hour=11, minute=11, tzinfo=BRASILIA_TZ)
 @tasks.loop(time=hora_provocacao_semana)
 async def provocacao_operacional_semana():
     now = brasilia_now()
-    if not should_run_weekly_provocation_ritual(now):
+    if not should_run_weekly_provocation_ritual(now) or not await kanban_service.is_ritual_enabled("provocacao_operacional_semana"):
         return
 
     channel = management_channel()
@@ -789,7 +791,7 @@ hora_gargalo_semana = datetime.time(hour=15, minute=30, tzinfo=BRASILIA_TZ)
 @tasks.loop(time=hora_gargalo_semana)
 async def gargalo_da_semana():
     now = brasilia_now()
-    if not should_run_weekly_bottleneck_ritual(now):
+    if not should_run_weekly_bottleneck_ritual(now) or not await kanban_service.is_ritual_enabled("gargalo_da_semana"):
         return
 
     channel = management_channel()
@@ -806,7 +808,7 @@ hora_socios_sem_tarefa = datetime.time(hour=9, minute=30, tzinfo=BRASILIA_TZ)
 @tasks.loop(time=hora_socios_sem_tarefa)
 async def socios_sem_tarefa():
     now = brasilia_now()
-    if not should_run_partner_workload_nudge_ritual(now):
+    if not should_run_partner_workload_nudge_ritual(now) or not await kanban_service.is_ritual_enabled("socios_sem_tarefa"):
         return
 
     channel = management_channel()
@@ -822,7 +824,7 @@ hora_checkin_tarefas_abertas = datetime.time(hour=15, minute=45, tzinfo=BRASILIA
 @tasks.loop(time=hora_checkin_tarefas_abertas)
 async def checkin_tarefas_abertas_semana():
     now = brasilia_now()
-    if not should_run_partner_open_tasks_checkin_ritual(now):
+    if not should_run_partner_open_tasks_checkin_ritual(now) or not await kanban_service.is_ritual_enabled("checkin_tarefas_abertas"):
         return
 
     channel = management_channel()
@@ -900,6 +902,8 @@ async def gerar_e_enviar_resumo(destination_channel):
 
 @tasks.loop(time=hora_resumo)
 async def rotina_resumo_diario():
+    if not await kanban_service.is_ritual_enabled("rotina_resumo_diario"):
+        return
     channel = management_channel()
     if channel:
         await gerar_e_enviar_resumo(channel)

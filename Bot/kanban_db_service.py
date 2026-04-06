@@ -287,3 +287,19 @@ async def get_partner_workload_snapshot(partners: list[dict], threshold: int = 3
         p["below_threshold"] = p["active_task_count"] < threshold
         p.pop("aliases", None)
     return {"threshold": threshold, "partners": partner_rows, "low_workload_partners": [p for p in partner_rows if p["below_threshold"]]}
+
+
+async def is_ritual_enabled(ritual_id: str) -> bool:
+    """Check if a ritual is enabled in the rituals_config table. Defaults to True if not configured."""
+    try:
+        async with get_db_session() as session:
+            result = await session.execute(
+                text("SELECT enabled FROM rituals_config WHERE id = :id"),
+                {"id": ritual_id}
+            )
+            row = result.fetchone()
+            if row is None:
+                return True  # Default: enabled
+            return bool(row.enabled)
+    except Exception:
+        return True  # Fallback: always run if DB check fails

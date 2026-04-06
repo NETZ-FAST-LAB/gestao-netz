@@ -1835,6 +1835,120 @@ async function startServer() {
     }
   });
 
+  // ─── Rituals Config ───────────────────────────────────────────────────────
+
+  const RITUAL_DEFAULTS = [
+    {
+      id: "reclamacao_10am",
+      name: "Reclamação 10h",
+      description: "Se ninguém falou nada no canal até as 10h, o Mintzie manda uma provocação de bom dia.",
+      schedule: "Seg–Sex às 10:00",
+      enabled: true,
+    },
+    {
+      id: "ronronado_surpresa",
+      name: "Ronronado Surpresa",
+      description: "Eventualmente, entre 14h e 17h, o Mintzie manifesta presença com uma mensagem aleatória e felina.",
+      schedule: "Aleatório Seg–Sex 14h–17h",
+      enabled: true,
+    },
+    {
+      id: "funcionario_da_semana",
+      name: "Funcionário da Semana",
+      description: "Toda sexta às 17h, o Mintzie sorteia um sócio e proclama o funcionário da semana.",
+      schedule: "Sexta às 17:00",
+      enabled: true,
+    },
+    {
+      id: "verificador_de_projetos",
+      name: "Verificador de Projetos",
+      description: "Todo dia útil às 9h, o Mintzie checa projetos com prazo ultrapassado e dispara alertas.",
+      schedule: "Seg–Sex às 9:00",
+      enabled: true,
+    },
+    {
+      id: "provocacao_operacional_semana",
+      name: "Provocação Operacional (Segunda)",
+      description: "Toda segunda às 10h, envia um relatório semanal de tarefas sem dono e projetos travados.",
+      schedule: "Segunda às 10:00",
+      enabled: true,
+    },
+    {
+      id: "gargalo_da_semana",
+      name: "Gargalo da Semana (Quarta)",
+      description: "Toda quarta às 15h30, aponta o maior gargalo operacional do laboratório.",
+      schedule: "Quarta às 15:30",
+      enabled: true,
+    },
+    {
+      id: "socios_sem_tarefa",
+      name: "Sócios Sem Tarefa (Terça)",
+      description: "Toda terça às 9h30, alerta qualquer sócio com poucas ou nenhuma tarefa ativa.",
+      schedule: "Terça às 9:30",
+      enabled: true,
+    },
+    {
+      id: "checkin_tarefas_abertas",
+      name: "Check-in de Tarefas Abertas",
+      description: "Terça e quinta às 15h45, faz check-in individual com cada sócio sobre suas tarefas abertas.",
+      schedule: "Ter/Qui às 15:45",
+      enabled: true,
+    },
+    {
+      id: "rotina_resumo_diario",
+      name: "Resumo Diário",
+      description: "Todo dia útil às 18h, gera um resumo executivo das conversas e tarefas do dia.",
+      schedule: "Seg–Sex às 18:00",
+      enabled: true,
+    },
+  ];
+
+  async function ensureRitualsTable() {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS rituals_config (
+        id VARCHAR(100) PRIMARY KEY,
+        enabled BOOLEAN NOT NULL DEFAULT TRUE
+      )
+    `);
+  }
+
+  app.get("/api/rituals", async (_req, res) => {
+    try {
+      await ensureRitualsTable();
+      const result = await pool.query("SELECT id, enabled FROM rituals_config");
+      const overrides = Object.fromEntries(result.rows.map((r: any) => [r.id, r.enabled]));
+      const rituals = RITUAL_DEFAULTS.map((r) => ({
+        ...r,
+        enabled: r.id in overrides ? overrides[r.id] : r.enabled,
+      }));
+      res.json({ rituals });
+    } catch (error) {
+      console.error("Failed to fetch rituals config:", error);
+      res.status(500).json({ message: "Falha ao buscar configuração de rotinas." });
+    }
+  });
+
+  app.patch("/api/rituals/:ritualId", async (req, res) => {
+    try {
+      await ensureRitualsTable();
+      const { ritualId } = req.params;
+      const { enabled } = req.body as { enabled: boolean };
+      if (typeof enabled !== "boolean") {
+        res.status(400).json({ message: "Campo 'enabled' deve ser boolean." });
+        return;
+      }
+      await pool.query(
+        `INSERT INTO rituals_config (id, enabled) VALUES ($1, $2)
+         ON CONFLICT (id) DO UPDATE SET enabled = EXCLUDED.enabled`,
+        [ritualId, enabled],
+      );
+      res.json({ id: ritualId, enabled });
+    } catch (error) {
+      console.error("Failed to update ritual config:", error);
+      res.status(500).json({ message: "Falha ao atualizar rotina." });
+    }
+  });
+
   const staticPath =
     process.env.NODE_ENV === "production"
       ? path.resolve(__dirname, "public")
