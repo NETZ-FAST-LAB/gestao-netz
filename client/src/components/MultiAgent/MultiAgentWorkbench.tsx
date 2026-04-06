@@ -221,7 +221,7 @@ export function MultiAgentWorkbench() {
         <CardHeader>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <CardTitle>Chat com Mintzie</CardTitle>
+              <CardTitle>Central de Comando Mintzie</CardTitle>
               <CardDescription>
                 Converse com o Mintzie para manipular ou extrair informações sobre o laboratório.
               </CardDescription>
