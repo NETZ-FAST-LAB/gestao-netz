@@ -12,6 +12,98 @@
       ],
       "cards": [
         {
+          "id": "inic-visita-sebrae",
+          "title": "Visita ao Sebrae",
+          "owner": "Time NETZ",
+          "column": "To Do",
+          "health_status": "No Prazo",
+          "tags": [
+            "Parcerias",
+            "Evento"
+          ],
+          "artifacts": [],
+          "tasks": [
+            {
+              "id": "task-ai-1",
+              "title": "Comunicar os sócios sobre a ida ao SEBRAE (prazo: amanhã)",
+              "assignee": "Joãozíssimo",
+              "status": "completed",
+              "dueDate": "",
+              "reminders": []
+            },
+            {
+              "id": "task-ai-2",
+              "title": "Passar as informações do SEBRAE para o Gui",
+              "assignee": "Joãozíssimo",
+              "status": "review",
+              "dueDate": "",
+              "reminders": []
+            },
+            {
+              "id": "task-ai-3",
+              "title": "Dar sequência na estratégia do SEBRAE",
+              "assignee": "Gui",
+              "status": "in_progress",
+              "dueDate": "",
+              "reminders": []
+            },
+            {
+              "id": "task-sebrae-e6f4b40c",
+              "title": "Complementar e coordenar cadastro da NETZ na plataforma Unio",
+              "assignee": "Joãozíssimo",
+              "status": "pending",
+              "dueDate": "",
+              "reminders": []
+            },
+            {
+              "id": "task-sebrae-cf8d7bd5",
+              "title": "Coordenar a participação da NETZ em eventos estratégicos",
+              "assignee": "Joãozíssimo",
+              "status": "pending",
+              "dueDate": "",
+              "reminders": []
+            }
+          ]
+        },
+        {
+          "id": "inic-atualizacao-site",
+          "title": "Atualização do Site",
+          "owner": "Time de Comunicação/Marketing",
+          "column": "To Do",
+          "health_status": "No Prazo",
+          "tags": [
+            "Comunicação",
+            "Web"
+          ],
+          "artifacts": [],
+          "tasks": [
+            {
+              "id": "task-ai-1",
+              "title": "Revisar o site no dia 12/03/26",
+              "assignee": "Joãozíssimo",
+              "status": "pending",
+              "dueDate": "",
+              "reminders": []
+            },
+            {
+              "id": "task-ai-2",
+              "title": "Revisar o ICP até quinta-feira",
+              "assignee": "Dênis",
+              "status": "pending",
+              "dueDate": "",
+              "reminders": []
+            },
+            {
+              "id": "task-ai-3",
+              "title": "Revisar o ICP até quinta-feira",
+              "assignee": "Gui R",
+              "status": "pending",
+              "dueDate": "",
+              "reminders": []
+            }
+          ]
+        },
+        {
           "id": "inic-assistente-tarefas",
           "title": "Assistente de Gestão de Tarefas",
           "owner": "Time de Operações / Antigravity",
@@ -52,14 +144,6 @@
               "status": "in_progress",
               "dueDate": "2026-03-20",
               "reminders": []
-            },
-            {
-              "id": "task-4-3ca60476",
-              "title": "Criar grupo do WhatsApp",
-              "assignee": "Joãozíssimo",
-              "status": "completed",
-              "dueDate": "",
-              "reminders": []
             }
           ]
         },
@@ -77,6 +161,14 @@
               "id": "task-ai-1",
               "title": "Revisar a estratégia de parceria VIEX até quinta-feira",
               "assignee": "Dênis",
+              "status": "pending",
+              "dueDate": "",
+              "reminders": []
+            },
+            {
+              "id": "task-ai-2",
+              "title": "Revisar a estratégia de parceria VIEX até quinta-feira",
+              "assignee": "Gui R",
               "status": "pending",
               "dueDate": "",
               "reminders": []
@@ -98,7 +190,7 @@
               "id": "task-ai-1",
               "title": "Criar um agente de pesquisa de concorrentes, um agente espião",
               "assignee": "Joãozíssimo",
-              "status": "completed",
+              "status": "pending",
               "dueDate": "",
               "reminders": []
             }
@@ -124,10 +216,34 @@
               "reminders": []
             },
             {
+              "id": "task-netz-fcdd7d42",
+              "title": "Trabalhar junto com Guilherme e João na atualização e fortalecimento do site",
+              "assignee": "Denis",
+              "status": "pending",
+              "dueDate": "",
+              "reminders": []
+            },
+            {
               "id": "task-netz-eec39227",
               "title": "Implementar a gestão de tarefas",
               "assignee": "Denis",
               "status": "pending",
+              "dueDate": "",
+              "reminders": []
+            },
+            {
+              "id": "task-netz-4c4b392a",
+              "title": "Organizar e enviar o canvas preenchido para o David",
+              "assignee": "Gui R",
+              "status": "pending",
+              "dueDate": "",
+              "reminders": []
+            },
+            {
+              "id": "task-netz-a4b2b7e4",
+              "title": "Acompanhar e apoiar a atualização do site e portfólio da NETZ",
+              "assignee": "Gui R",
+              "status": "review",
               "dueDate": "",
               "reminders": []
             },
@@ -151,78 +267,12 @@
               "id": "task-netz-3c25076d",
               "title": "Disponibilizar o site no GitHub",
               "assignee": "Denis",
-              "status": "completed",
+              "status": "pending",
               "dueDate": "",
               "reminders": []
             }
           ],
           "owner": "Joãozíssimo"
-        },
-        {
-          "id": "inic-site-netz",
-          "title": "Site Netz",
-          "owner": "Gui R",
-          "column": "Doing",
-          "health_status": "No Prazo",
-          "tags": [
-            "Web"
-          ],
-          "artifacts": [],
-          "tasks": [
-            {
-              "id": "task-sn-1",
-              "title": "Finalizar construção de páginas de portfólio",
-              "assignee": "Gui R",
-              "status": "in_progress",
-              "dueDate": "",
-              "reminders": []
-            },
-            {
-              "id": "task-ai-1",
-              "title": "Revisar o site no dia 12/03/26",
-              "assignee": "Joãozíssimo",
-              "status": "pending",
-              "dueDate": "",
-              "reminders": []
-            },
-            {
-              "id": "task-ai-2",
-              "title": "Revisar o ICP até quinta-feira",
-              "assignee": "Dênis",
-              "status": "pending",
-              "dueDate": "",
-              "reminders": []
-            },
-            {
-              "id": "task-netz-fcdd7d42",
-              "title": "Trabalhar junto com Guilherme e João na atualização e fortalecimento do site",
-              "assignee": "Denis",
-              "status": "pending",
-              "dueDate": "",
-              "reminders": []
-            }
-          ]
-        },
-        {
-          "id": "inic-consultoria-sebrae",
-          "title": "Consultoria SEBRAE",
-          "owner": "Gui R",
-          "column": "To Do",
-          "health_status": "No Prazo",
-          "tags": [
-            "Consultoria"
-          ],
-          "artifacts": [],
-          "tasks": [
-            {
-              "id": "task-cs-1",
-              "title": "Reunião agendada com Deivid dia 06/04",
-              "assignee": "Gui R",
-              "status": "pending",
-              "dueDate": "2026-04-06",
-              "reminders": []
-            }
-          ]
         }
       ]
     }
