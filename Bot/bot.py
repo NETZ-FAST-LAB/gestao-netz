@@ -945,6 +945,11 @@ async def gerar_e_enviar_resumo(destination_channel):
 
 @tasks.loop(time=hora_resumo)
 async def rotina_resumo_diario():
+    now = brasilia_now()
+    # Wednesday is 2 (0=Monday, 1=Tuesday, 2=Wednesday...)
+    if now.weekday() != 2:
+        return
+
     if not await kanban_service.is_ritual_enabled("rotina_resumo_diario"):
         return
     channel = management_channel()
