@@ -1574,13 +1574,7 @@ async function startServer() {
   // ─── Rituals Config ───────────────────────────────────────────────────────
 
   const RITUAL_DEFAULTS = [
-    {
-      id: "reclamacao_10am",
-      name: "Reclamação 10h",
-      description: "Se ninguém falou nada no canal até as 10h, o Mintzie manda uma provocação de bom dia.",
-      schedule: "Seg–Sex às 10:00",
-      enabled: false,
-    },
+
     {
       id: "ronronado_surpresa",
       name: "Ronronado Surpresa",
@@ -1595,13 +1589,7 @@ async function startServer() {
       schedule: "Sexta às 17:00",
       enabled: false,
     },
-    {
-      id: "verificador_de_projetos",
-      name: "Verificador de Projetos",
-      description: "Todo dia útil às 9h, o Mintzie checa projetos com prazo ultrapassado e dispara alertas.",
-      schedule: "Seg–Sex às 9:00",
-      enabled: false,
-    },
+
     {
       id: "provocacao_operacional_semana",
       name: "Provocação Operacional (Segunda)",

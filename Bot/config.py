@@ -69,6 +69,7 @@ class Settings:
     member_mentions: Dict[str, str]
     kanban_url: str
     database_url: str
+    enable_dms: bool = False
     extra_members: List[Dict] = field(default_factory=list)
 
 
@@ -85,6 +86,7 @@ settings = Settings(
     member_mentions=_get_member_mentions(),
     kanban_url=os.getenv("MINTZIE_KANBAN_URL", ""),
     database_url=os.getenv("DATABASE_URL", ""),
+    enable_dms=os.getenv("MINTZIE_ENABLE_DMS", "false").lower() == "true",
     extra_members=_get_extra_members(),
 )
 

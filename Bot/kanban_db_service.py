@@ -512,7 +512,7 @@ async def is_ritual_enabled(ritual_id: str) -> bool:
             )
             row = result.fetchone()
             if row is None:
-                return True  # Default: enabled
+                return False  # Default to disabled for safety
             return bool(row.enabled)
     except Exception:
-        return True  # Fallback: always run if DB check fails
+        return False  # Fallback to disabled if DB check fails

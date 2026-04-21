@@ -248,7 +248,7 @@ async def send_low_workload_nudges(channel):
         text = build_low_workload_nudge_message(partner, LOW_WORKLOAD_THRESHOLD)
         sent_dm = False
         mention = partner.get("mention", "")
-        if mention.startswith("<@") and mention.endswith(">"):
+        if settings.enable_dms and mention.startswith("<@") and mention.endswith(">"):
             user_id = mention.strip("<@!>")
             try:
                 user = await bot.fetch_user(int(user_id))
@@ -271,7 +271,7 @@ async def send_open_tasks_checkins(channel):
         text = build_open_tasks_checkin_message(partner)
         sent_dm = False
         mention = partner.get("mention", "")
-        if mention.startswith("<@") and mention.endswith(">"):
+        if settings.enable_dms and mention.startswith("<@") and mention.endswith(">"):
             user_id = mention.strip("<@!>")
             try:
                 user = await bot.fetch_user(int(user_id))
@@ -514,14 +514,11 @@ async def ensure_deploy_announcement():
 async def ensure_background_tasks():
     for loop in (
         rotina_resumo_diario,
-        reclamacao_10am,
         ronronado_surpresa,
         funcionario_da_semana,
-        verificador_de_projetos,
         provocacao_operacional_semana,
         gargalo_da_semana,
         socios_sem_tarefa,
-        checkin_tarefas_abertas_semana,
     ):
         if not loop.is_running():
             loop.start()
@@ -618,19 +615,7 @@ async def on_app_command_error(interaction: discord.Interaction, error: discord.
 hora_10am = datetime.time(hour=10, minute=0, tzinfo=BRASILIA_TZ)
 
 
-@tasks.loop(time=hora_10am)
-async def reclamacao_10am():
-    if not rituals_enabled_now() or not await kanban_service.is_ritual_enabled("reclamacao_10am"):
-        return
 
-    channel = management_channel()
-    if not channel:
-        return
-
-    inicio_dia = discord.utils.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-    messages = [msg async for msg in channel.history(limit=50, after=inicio_dia) if msg.author != bot.user]
-    if not messages:
-        await channel.send(MORNING_NUDGE_MESSAGE)
 
 
 @tasks.loop(minutes=1)
@@ -716,99 +701,7 @@ async def funcionario_da_semana():
 hora_9am = datetime.time(hour=9, minute=0, tzinfo=BRASILIA_TZ)
 
 
-@tasks.loop(time=hora_9am)
-async def verificador_de_projetos():
-    if not rituals_enabled_now() or not await kanban_service.is_ritual_enabled("verificador_de_projetos"):
-        return
 
-    channel = management_channel()
-    if not channel:
-        return
-
-    projetos_data = github_client.get_projetos()
-    if not projetos_data:
-        return
-
-    hoje = brasilia_now().date()
-    amanha = hoje + datetime.timedelta(days=1)
-    mensagens_hoje = []
-    mensagens_amanha = []
-
-    def registrar_linha(data_alvo: datetime.date, texto: str):
-        if data_alvo == hoje:
-            mensagens_hoje.append(texto)
-        elif data_alvo == amanha:
-            mensagens_amanha.append(texto)
-
-    for board in projetos_data.get("boards", []):
-        for proj in board.get("cards", []):
-            nome_proj = proj.get("title", "Projeto Desconhecido")
-            lider = proj.get("owner") or proj.get("client") or "Equipe"
-            lider_ref = _partner_reference_by_name(lider)
-
-            for marco in proj.get("marcos_alinhamento", []):
-                try:
-                    data_marco = datetime.datetime.strptime(marco.get("data", ""), "%Y-%m-%d").date()
-                    titulo = marco.get("titulo", "")
-                    registrar_linha(
-                        data_marco,
-                        f"- **{titulo}**\n  Projeto: {nome_proj}\n  Responsável: {lider_ref}",
-                    )
-                except Exception:
-                    pass
-
-            lembretes = proj.get("lembretes_mintzie", {})
-            for cp in lembretes.get("checkpoints", []):
-                try:
-                    data_cp = datetime.datetime.strptime(cp.get("data", ""), "%Y-%m-%d").date()
-                    checkpoint_text = f"- **{cp.get('titulo')}**\n  Projeto: {nome_proj}"
-                    if data_cp == hoje and cp.get("mensagem"):
-                        checkpoint_text += f"\n  Recado do laboratório: {cp.get('mensagem')}"
-                    registrar_linha(data_cp, checkpoint_text)
-                except Exception:
-                    pass
-
-            fechamento = lembretes.get("fechamento", {})
-            try:
-                data_fech = datetime.datetime.strptime(fechamento.get("data", ""), "%Y-%m-%d").date()
-                fechamento_text = f"- **Fechamento do projeto**\n  Projeto: {nome_proj}"
-                if data_fech == hoje and fechamento.get("mensagem"):
-                    fechamento_text += f"\n  Recado do laboratório: {fechamento.get('mensagem')}"
-                registrar_linha(data_fech, fechamento_text)
-            except Exception:
-                pass
-
-            upsell = lembretes.get("upsell", {})
-            try:
-                data_upsell = datetime.datetime.strptime(upsell.get("data", ""), "%Y-%m-%d").date()
-                upsell_text = f"- **Movimento comercial**\n  Projeto: {nome_proj}"
-                if data_upsell == hoje and upsell.get("mensagem"):
-                    upsell_text += f"\n  Recado do laboratório: {upsell.get('mensagem')}"
-                elif data_upsell == amanha:
-                    upsell_text += "\n  Preparar proposta ou próximo empurrão comercial."
-                registrar_linha(data_upsell, upsell_text)
-            except Exception:
-                pass
-
-    if mensagens_hoje or mensagens_amanha:
-        blocos = [
-            "Bom dia, bons humanos.\n\n"
-            "Passei pela bancada com meu jaleco impecável, uma dose mínima de palhaçaria científica e o dever moral de evitar desastres evitáveis.\n\n"
-            "Aqui estão os checkpoints que realmente importam entre hoje e amanhã:"
-        ]
-
-        if mensagens_hoje:
-            blocos.append("**Hoje**\n" + "\n\n".join(mensagens_hoje))
-
-        if mensagens_amanha:
-            blocos.append("**Amanhã**\n" + "\n\n".join(mensagens_amanha))
-
-        blocos.append(
-            "Se algo estiver fora do lugar, ajustem a bancada agora.\n\n"
-            "Vocês são bons humanos. Não me façam desperdiçar esse raro momento de apreciação felina."
-        )
-
-        await channel.send("\n\n".join(blocos))
 
 
 hora_provocacao_semana = datetime.time(hour=11, minute=11, tzinfo=BRASILIA_TZ)
@@ -971,11 +864,7 @@ async def cmd_teste_funcionario(interaction: discord.Interaction):
     await funcionario_da_semana.coro()
 
 
-@bot.tree.command(name="teste_projetos_manus", description="[Teste] Vasculha os tarefas.json e alerta as datas imediatamente")
-async def cmd_teste_projetos(interaction: discord.Interaction):
-    await interaction.response.defer(thinking=False)
-    await interaction.followup.send("Lendo projetos no GitHub... procurando pendências para hoje ou amanhã...")
-    await verificador_de_projetos.coro()
+
 
 
 @bot.tree.command(name="teste_deploy_msg", description="[Teste] Envia agora a mensagem de deploy no canal configurado")
@@ -1147,7 +1036,8 @@ async def on_message(message: discord.Message):
         if not clean_prompt:
             await message.reply(EMPTY_PROMPT_REPLY)
             return
-
+        if _looks_like_task_update_request(clean_prompt):
+            proposed_plan = await build_task_update_plan_from_message(clean_prompt, message.author.display_name)
             if proposed_plan.get("status") == "success" and proposed_plan.get("operations"):
                 proposed_plan["created_at"] = time.time()
                 pending_task_update_plans[_task_update_pending_key(message)] = proposed_plan
